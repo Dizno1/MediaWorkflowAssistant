@@ -1,0 +1,14 @@
+{
+  "id": "create-captions",
+  "name": "Create captions",
+  "supportedMedia": ["video"],
+  "goal": "Create a caption file from spoken audio in a video.",
+  "steps": [
+    "Extract audio",
+    "Detect speech",
+    "Create transcript",
+    "Synchronize timestamps",
+    "Export VTT caption file"
+  ],
+  "status": "placeholder"
+}

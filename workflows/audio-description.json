@@ -1,0 +1,13 @@
+{
+  "id": "audio-description",
+  "name": "Add audio description",
+  "supportedMedia": ["video"],
+  "goal": "Prepare a workflow for describing important visual content.",
+  "steps": [
+    "Inspect video structure",
+    "Identify likely description points",
+    "Create description script workspace",
+    "Prepare export options"
+  ],
+  "status": "placeholder"
+}

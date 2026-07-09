@@ -1,0 +1,13 @@
+{
+  "id": "prepare-for-ai",
+  "name": "Prepare for AI",
+  "supportedMedia": ["video", "audio", "image", "document", "archive", "unknown"],
+  "goal": "Prepare media or extracted content for analysis by an AI assistant.",
+  "steps": [
+    "Inspect file",
+    "Choose useful extracts",
+    "Create AI-ready package",
+    "Suggest prompt starter"
+  ],
+  "status": "placeholder"
+}

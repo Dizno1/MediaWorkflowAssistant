@@ -1,0 +1,13 @@
+{
+  "id": "create-transcript",
+  "name": "Create transcript",
+  "supportedMedia": ["video", "audio"],
+  "goal": "Create readable text from speech.",
+  "steps": [
+    "Extract or read audio",
+    "Detect speech",
+    "Create draft transcript",
+    "Prepare transcript for review"
+  ],
+  "status": "placeholder"
+}

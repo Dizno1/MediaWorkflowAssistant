@@ -1,0 +1,13 @@
+{
+  "id": "compress-video",
+  "name": "Compress video",
+  "supportedMedia": ["video"],
+  "goal": "Make a video smaller for sharing, uploading, or AI review.",
+  "steps": [
+    "Analyze current size",
+    "Recommend target settings",
+    "Compress copy",
+    "Compare original and compressed files"
+  ],
+  "status": "placeholder"
+}

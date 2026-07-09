@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Workflow Assistant - Open Door Design</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <p class="eyebrow">Open Door Design</p>
+      <h1>Media Workflow Assistant</h1>
+      <p class="tagline">Drop in media. Choose the outcome. Let the workflow assemble itself.</p>
+    </div>
+  </header>
+
+  <main id="main" class="wrap" tabindex="-1">
+    <section class="panel" aria-labelledby="start-heading">
+      <h2 id="start-heading">Start with a file</h2>
+      <p>
+        Add an audio, video, image, document, or archive file. The assistant will inspect it and recommend useful next actions.
+      </p>
+
+      <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-describedby="drop-help">
+        <strong>Drop media here</strong>
+        <span>or press Enter to choose a file</span>
+      </div>
+      <p id="drop-help" class="help-text">You can also use the file picker below.</p>
+
+      <label class="file-label" for="file-input">Choose a file</label>
+      <input id="file-input" type="file" aria-describedby="file-help">
+      <p id="file-help" class="help-text">No file is uploaded anywhere. This first shell only inspects the file in your browser.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="status-heading">
+      <h2 id="status-heading">Current media</h2>
+      <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No media loaded.</div>
+      <div id="inspection-output" class="inspection-output" hidden></div>
+    </section>
+
+    <section class="panel" aria-labelledby="recommendations-heading">
+      <h2 id="recommendations-heading">Recommended actions</h2>
+      <p id="recommendations-intro">Recommendations will appear after a file is inspected.</p>
+      <div id="recommendations" class="recommendations" aria-describedby="recommendations-intro"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="workflow-heading">
+      <h2 id="workflow-heading">Workflow preview</h2>
+      <div id="workflow-preview">Select a recommended action to preview its workflow steps.</div>
+    </section>
+  </main>
+
+  <script src="js/workflow-registry.js"></script>
+  <script src="js/media-inspector.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

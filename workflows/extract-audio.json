@@ -1,0 +1,12 @@
+{
+  "id": "extract-audio",
+  "name": "Extract audio",
+  "supportedMedia": ["video", "audio"],
+  "goal": "Create an audio-only file from a video or normalize an existing audio file.",
+  "steps": [
+    "Read source media",
+    "Select audio track",
+    "Export MP3 or WAV copy"
+  ],
+  "status": "placeholder"
+}
