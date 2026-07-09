@@ -105,3 +105,5 @@
     getProviderSummary
   };
 })();
+
+window.ProviderManager.browserProvider=new window.BrowserProvider();
