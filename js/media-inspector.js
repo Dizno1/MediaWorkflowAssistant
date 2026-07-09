@@ -1,7 +1,7 @@
 (function () {
   const extensionMap = {
-    video: ['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi'],
-    audio: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'],
+    video: ['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi', 'wmv', '3gp', '3g2', 'mpg', 'mpeg', 'mts', 'm2ts'],
+    audio: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'wma', 'aiff', 'aif', 'opus'],
     image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tif', 'tiff'],
     document: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'rtf', 'md', 'csv'],
     archive: ['zip', '7z', 'rar', 'tar', 'gz']
@@ -53,7 +53,9 @@
 
   function createBaseInspection(file) {
     const extension = getExtension(file.name);
-    const mediaType = typeFromMime(file.type) || typeFromExtension(extension);
+    const mimeType = typeFromMime(file.type);
+    const extensionType = typeFromExtension(extension);
+    const mediaType = mimeType || extensionType;
 
     return {
       name: file.name,

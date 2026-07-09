@@ -57,3 +57,8 @@ No build step is required.
 ## Next Sprint
 
 The next development step is the first real workflow implementation. Extract Audio is the recommended starting point because it can prove workflow execution, progress reporting, output handling, and error states before AI-based transcription, captioning, OCR, or audio description are added.
+
+
+## Sprint 3
+
+Sprint 3 adds the reusable workflow runner, job model, progress panel, and results panel. Recommended workflows can now be reviewed and run as browser-based workflow jobs with accessible status updates.

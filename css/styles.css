@@ -218,3 +218,69 @@ button:hover,
 [hidden] {
   display: none !important;
 }
+
+
+.progress-meter {
+  background: #e8e0d8;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  height: 1.25rem;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: var(--accent);
+  height: 100%;
+  width: 0%;
+}
+
+.progress-steps {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.progress-steps li {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  margin-bottom: 0.5rem;
+  padding: 0.65rem;
+}
+
+.progress-steps li[data-step-status="current"] {
+  border-width: 3px;
+}
+
+.progress-steps li[data-step-status="done"] {
+  background: #f0f5ef;
+}
+
+.step-state {
+  display: inline-block;
+  font-weight: 700;
+  margin-right: 0.65rem;
+  min-width: 4rem;
+}
+
+.results-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+}
+
+.results-list li {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+}
+
+.results-list strong,
+.results-list span {
+  display: block;
+}
+
+.results-list span {
+  color: var(--muted);
+}

@@ -8,8 +8,18 @@
   const recommendations = document.getElementById('recommendations');
   const workflowSection = document.getElementById('workflow-section');
   const workflowPreview = document.getElementById('workflow-preview');
+  const progressSection = document.getElementById('progress-section');
+  const jobStatus = document.getElementById('job-status');
+  const progressBar = document.getElementById('progress-bar');
+  const progressSteps = document.getElementById('progress-steps');
+  const resultsSection = document.getElementById('results-section');
+  const resultsOutput = document.getElementById('results-output');
+  const fileHelp = document.getElementById('file-help');
 
   let currentInspection = null;
+  let currentFile = null;
+  let activeWorkflow = null;
+  let activeJob = null;
 
   function setStatus(message) {
     statusRegion.textContent = message;
@@ -18,7 +28,19 @@
   async function handleFile(file) {
     if (!file) return;
 
+    currentFile = file;
+    currentInspection = null;
+    activeWorkflow = null;
+    activeJob = null;
+
     resetWorkflow();
+    resetProgress();
+    resetResults();
+
+    fileHelp.textContent = `${file.name} selected. The file stays on this device and is inspected in your browser.`;
+    dropZone.querySelector('strong').textContent = file.name;
+    dropZone.querySelector('span').textContent = 'Press Enter to choose a different file';
+
     setStatus(`Analyzing ${file.name}.`);
     inspectionOutput.hidden = false;
     inspectionOutput.innerHTML = '<p class="muted">Analyzing media...</p>';
@@ -70,11 +92,11 @@
     recommendationsSection.hidden = false;
 
     if (!recommended.length) {
-      recommendationsIntro.textContent = 'No recommendations are available for this file yet.';
+      recommendationsIntro.textContent = 'No available outcomes were found for this file yet.';
       return;
     }
 
-    recommendationsIntro.textContent = `${recommended.length} recommended action${recommended.length === 1 ? '' : 's'} found. Choose an outcome to preview the workflow.`;
+    recommendationsIntro.textContent = `${recommended.length} available outcome${recommended.length === 1 ? '' : 's'} found.`;
 
     recommended.forEach((workflow) => {
       const card = document.createElement('article');
@@ -98,8 +120,8 @@
 
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = `Preview ${workflow.name}`;
-      button.setAttribute('aria-describedby', `workflow-desc-${workflow.id}`);
+      button.textContent = 'Review workflow';
+      button.setAttribute('aria-label', `Review ${workflow.name} workflow`);
       button.addEventListener('click', () => renderWorkflow(workflow));
       card.appendChild(button);
 
@@ -108,6 +130,10 @@
   }
 
   function renderWorkflow(workflow) {
+    activeWorkflow = workflow;
+    resetProgress();
+    resetResults();
+
     workflowSection.hidden = false;
     workflowPreview.innerHTML = `
       <article class="workflow-card" aria-labelledby="workflow-${workflow.id}-heading">
@@ -122,16 +148,126 @@
         <ul>
           ${workflow.outputs.map((output) => `<li>${escapeHtml(output)}</li>`).join('')}
         </ul>
-        <p class="muted">This is a preview only. Real processing begins in the next implementation sprint.</p>
+        <button type="button" id="run-workflow">Run ${escapeHtml(workflow.name)}</button>
+        <p class="muted">Sprint 3 runs the workflow engine and progress experience. Media processing outputs are represented as planned results until the local processing provider is connected.</p>
       </article>
     `;
-    setStatus(`${workflow.name} workflow preview loaded.`);
+
+    document.getElementById('run-workflow').addEventListener('click', runActiveWorkflow);
+    setStatus(`${workflow.name} workflow ready.`);
     workflowSection.focus();
+  }
+
+  async function runActiveWorkflow() {
+    if (!activeWorkflow || !currentFile || !currentInspection) return;
+
+    activeJob = window.createJob(activeWorkflow, currentFile, currentInspection);
+    renderProgress(activeJob);
+
+    const runner = new window.WorkflowRunner({
+      onUpdate: updateProgress,
+      onComplete: completeProgress,
+      onError: failProgress
+    });
+
+    progressSection.hidden = false;
+    progressSection.focus();
+    await runner.run(activeJob);
+  }
+
+  function renderProgress(job) {
+    progressSection.hidden = false;
+    jobStatus.textContent = `${job.workflow.name} is ready to start.`;
+    progressBar.style.width = '0%';
+    progressSteps.innerHTML = job.workflow.steps.map((step) => `
+      <li data-step-status="pending">
+        <span class="step-state">Waiting</span>
+        <span>${escapeHtml(step)}</span>
+      </li>
+    `).join('');
+  }
+
+  function updateProgress(job, detail) {
+    jobStatus.textContent = detail.message;
+    progressBar.style.width = `${job.progress}%`;
+
+    Array.from(progressSteps.children).forEach((item, index) => {
+      let state = 'pending';
+      let label = 'Waiting';
+
+      if (index < job.currentStepIndex) {
+        state = 'done';
+        label = 'Done';
+      } else if (index === job.currentStepIndex) {
+        state = 'current';
+        label = 'Now';
+      }
+
+      item.dataset.stepStatus = state;
+      item.querySelector('.step-state').textContent = label;
+    });
+  }
+
+  function completeProgress(job) {
+    jobStatus.textContent = `${job.workflow.name} completed. ${job.outputs.length} result${job.outputs.length === 1 ? '' : 's'} available.`;
+    progressBar.style.width = '100%';
+
+    Array.from(progressSteps.children).forEach((item) => {
+      item.dataset.stepStatus = 'done';
+      item.querySelector('.step-state').textContent = 'Done';
+    });
+
+    renderResults(job);
+  }
+
+  function failProgress(job, error) {
+    jobStatus.textContent = `${job.workflow.name} failed. ${error.message}`;
+  }
+
+  function renderResults(job) {
+    resultsSection.hidden = false;
+
+    resultsOutput.innerHTML = `
+      <p>${escapeHtml(job.workflow.name)} finished for ${escapeHtml(job.sourceFileName)}.</p>
+      <ul class="results-list">
+        ${job.outputs.map((output) => `
+          <li>
+            <strong>${escapeHtml(output.name)}</strong>
+            <span>${escapeHtml(output.type)}</span>
+            <p>${escapeHtml(output.description)}</p>
+          </li>
+        `).join('')}
+      </ul>
+      <button type="button" id="choose-another-workflow">Choose another workflow for this file</button>
+      <button type="button" id="process-another-file">Process another file</button>
+    `;
+
+    document.getElementById('choose-another-workflow').addEventListener('click', () => {
+      recommendationsSection.focus();
+    });
+
+    document.getElementById('process-another-file').addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    resultsSection.focus();
   }
 
   function resetWorkflow() {
     workflowPreview.textContent = 'Select a recommended action to preview its workflow steps.';
     workflowSection.hidden = true;
+  }
+
+  function resetProgress() {
+    progressSection.hidden = true;
+    jobStatus.textContent = 'No workflow running.';
+    progressBar.style.width = '0%';
+    progressSteps.innerHTML = '';
+  }
+
+  function resetResults() {
+    resultsSection.hidden = true;
+    resultsOutput.textContent = 'No results yet.';
   }
 
   function titleCase(value) {
