@@ -277,12 +277,24 @@
           </li>
         `).join('')}
       </ul>
+      <button type="button" id="download-first-artifact">Download first artifact</button>
 
       <div class="next-actions" aria-label="Next actions">
         <button type="button" id="choose-another-workflow">Choose another workflow for this file</button>
         <button type="button" id="process-another-file">Process another file</button>
       </div>
     `;
+
+    const dl=document.getElementById('download-first-artifact');
+    if(dl){
+      dl.addEventListener('click',()=>{
+        if(job.provider && job.provider.id==='browser' && window.ProviderManager.browserProvider && job.outputs[0]?.url){
+          window.ProviderManager.browserProvider.downloadArtifact(job.outputs[0]);
+        } else {
+          alert('Download is available for browser-generated artifacts.');
+        }
+      });
+    }
 
     document.getElementById('choose-another-workflow').addEventListener('click', () => {
       recommendationsSection.focus();

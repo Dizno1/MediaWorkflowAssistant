@@ -20,8 +20,10 @@ job.inspection.recommendedSummary,
   ].join('\n');
   const blob=new Blob([md],{type:'text/markdown'});
   const url=URL.createObjectURL(blob);
-  return [{name:job.sourceFileName.replace(/\.[^.]+$/,'')+'-AI-Package.md',url:url,type:'Markdown'}];
+  const artifacts=[{name:job.sourceFileName.replace(/\.[^.]+$/,'')+'-AI-Package.md',url:url,type:'Markdown'}];
+  return artifacts;
  }
 }
+BrowserProvider.prototype.downloadArtifact=function(artifact){const a=document.createElement('a');a.href=artifact.url;a.download=artifact.name;document.body.appendChild(a);a.click();a.remove();};
 window.BrowserProvider=BrowserProvider;
 })();
