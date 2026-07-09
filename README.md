@@ -4,16 +4,19 @@ An accessibility-first media workflow application that automatically analyzes me
 
 ## Current Milestone
 
-This repository now contains the first working application shell.
+This repository now contains the Sprint 2 Media Inspector shell.
 
 The application can:
 
 - Accept a file through a drop zone or file picker.
 - Inspect the file in the browser.
 - Identify the general media type from MIME type and extension.
+- Read supported audio and video duration metadata.
+- Read supported video dimensions.
+- Build a reusable media inspection object.
 - Announce status changes through a polite live region.
-- Recommend possible goal-oriented workflows.
-- Preview placeholder workflow steps.
+- Recommend possible goal-oriented workflows from registry rules.
+- Preview placeholder workflow steps and expected outputs.
 
 ## Design Principle
 
@@ -42,6 +45,7 @@ MediaWorkflowAssistant/
     prepare-for-ai.json
   docs/
     First Sprint Notes.md
+    Sprint 2 Notes.md
 ```
 
 ## Local Use
@@ -52,11 +56,4 @@ No build step is required.
 
 ## Next Sprint
 
-The next development step is the richer Media Inspector:
-
-- Video duration.
-- Video dimensions.
-- Audio duration.
-- Better document and archive recognition.
-- More detailed recommendation rules.
-- A workflow execution model that can run placeholder steps one at a time before real processing is added.
+The next development step is the first real workflow implementation. Extract Audio is the recommended starting point because it can prove workflow execution, progress reporting, output handling, and error states before AI-based transcription, captioning, OCR, or audio description are added.

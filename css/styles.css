@@ -180,3 +180,41 @@ button:hover,
   outline: 4px solid var(--focus);
   outline-offset: 3px;
 }
+
+.inspection-summary {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.recommendations {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.recommendation-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.recommendation-card h3 {
+  margin-top: 0.25rem;
+}
+
+.category-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.workflow-card h4 {
+  margin-bottom: 0.25rem;
+}
+
+[hidden] {
+  display: none !important;
+}
