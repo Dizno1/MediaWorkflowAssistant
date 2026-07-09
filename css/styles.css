@@ -284,3 +284,51 @@ button:hover,
 .results-list span {
   color: var(--muted);
 }
+
+
+.provider-status {
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  padding: 0.85rem;
+}
+
+.provider-status h4 {
+  margin-top: 0;
+}
+
+.provider-status.is-ready {
+  background: #f0f5ef;
+}
+
+.provider-status.is-planned {
+  background: #fbf3df;
+}
+
+.job-summary {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin: 1rem 0;
+}
+
+.job-summary div {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.job-summary dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.job-summary dd {
+  margin: 0.2rem 0 0;
+}
+
+.next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

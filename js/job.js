@@ -1,13 +1,16 @@
 (function () {
-  function createJob(workflow, file, inspection) {
+  function createJob(workflow, file, inspection, capability) {
     return {
       id: `job-${Date.now()}`,
       workflow,
       sourceFile: file,
       sourceFileName: file ? file.name : 'Unknown',
       inspection,
+      capability,
+      provider: capability ? capability.provider : null,
       startedAt: new Date(),
       completedAt: null,
+      durationMs: null,
       status: 'ready',
       currentStepIndex: -1,
       progress: 0,
@@ -16,5 +19,23 @@
     };
   }
 
+  function finishJob(job) {
+    job.completedAt = new Date();
+    job.durationMs = job.completedAt - job.startedAt;
+    return job;
+  }
+
+  function formatDurationMs(milliseconds) {
+    if (!Number.isFinite(milliseconds)) return 'Unknown';
+    if (milliseconds < 1000) return `${milliseconds} ms`;
+    const seconds = Math.round(milliseconds / 1000);
+    if (seconds < 60) return `${seconds} second${seconds === 1 ? '' : 's'}`;
+    const minutes = Math.floor(seconds / 60);
+    const remaining = seconds % 60;
+    return `${minutes} minute${minutes === 1 ? '' : 's'} ${remaining} second${remaining === 1 ? '' : 's'}`;
+  }
+
   window.createJob = createJob;
+  window.finishJob = finishJob;
+  window.formatJobDuration = formatDurationMs;
 })();

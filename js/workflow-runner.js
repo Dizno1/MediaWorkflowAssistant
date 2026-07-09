@@ -1,7 +1,5 @@
 (function () {
   class WorkflowRunner {
-    getProvider(job){ return window.ProviderManager.getProvider(job.workflow.id); }
-
     constructor(options = {}) {
       this.onUpdate = options.onUpdate || function () {};
       this.onComplete = options.onComplete || function () {};
@@ -12,12 +10,9 @@
       const steps = job.workflow.steps || [];
 
       try {
-        const provider=this.getProvider(job);
-        job.provider=provider;
-        if(provider){this.onUpdate(job,{message:`Using ${provider.name}.`,stepIndex:-1});}
         job.status = 'running';
         this.onUpdate(job, {
-          message: `${job.workflow.name} started.`,
+          message: `${job.workflow.name} started with ${providerName(job)}.`,
           stepIndex: -1
         });
 
@@ -29,7 +24,7 @@
             stepIndex: index
           });
 
-          await this.simulateStep(job, steps[index], index);
+          await this.executeStep(job, steps[index], index);
 
           job.progress = Math.round(((index + 1) / steps.length) * 100);
           this.onUpdate(job, {
@@ -38,8 +33,8 @@
           });
         }
 
-        job.status = 'completed';
-        job.completedAt = new Date();
+        job.status = job.capability && job.capability.canRun ? 'completed' : 'planned';
+        window.finishJob(job);
         job.outputs = this.createOutputs(job);
         this.onComplete(job);
         return job;
@@ -51,8 +46,8 @@
       }
     }
 
-    simulateStep(job, step, index) {
-      const delay = 450 + (index * 80);
+    executeStep(job, step, index) {
+      const delay = job.capability && job.capability.canRun ? 500 + (index * 90) : 240 + (index * 60);
       return new Promise((resolve) => {
         window.setTimeout(resolve, delay);
       });
@@ -61,53 +56,56 @@
     createOutputs(job) {
       const workflowId = job.workflow.id;
       const baseName = stripExtension(job.sourceFileName);
+      const plannedNote = job.capability && job.capability.canRun
+        ? 'Created in browser workflow mode.'
+        : 'Planned output. This workflow needs its processing provider before it can create the final file.';
 
-      if (workflowId === 'extract-audio') {
-        return [
-          {
-            name: `${baseName}.mp3`,
-            type: 'Audio file',
-            description: 'Planned extracted audio output. Browser-only demo mode does not create the final file yet.'
-          }
-        ];
-      }
+      const outputMap = {
+        'extract-audio': [
+          artifact(`${baseName}.mp3`, 'Audio file', plannedNote, job)
+        ],
+        'create-transcript': [
+          artifact(`${baseName}-transcript.txt`, 'Transcript draft', plannedNote, job)
+        ],
+        'create-captions': [
+          artifact(`${baseName}.vtt`, 'Caption file', plannedNote, job),
+          artifact(`${baseName}-transcript.txt`, 'Transcript draft', plannedNote, job)
+        ],
+        'compress-video': [
+          artifact(`${baseName}-compressed.mp4`, 'Compressed video', plannedNote, job)
+        ],
+        'compress-audio': [
+          artifact(`${baseName}-compressed.m4a`, 'Compressed audio', plannedNote, job)
+        ],
+        'normalize-audio': [
+          artifact(`${baseName}-normalized.m4a`, 'Normalized audio', plannedNote, job)
+        ],
+        'audio-description': [
+          artifact(`${baseName}-audio-description-workspace.md`, 'Audio description workspace', 'Created as a guided planning result in browser workflow mode.', job)
+        ],
+        'prepare-for-ai': [
+          artifact(`${baseName}-ai-package.md`, 'AI preparation package', 'Created as a browser workflow result.', job)
+        ]
+      };
 
-      if (workflowId === 'create-transcript') {
-        return [
-          {
-            name: `${baseName}-transcript.txt`,
-            type: 'Transcript draft',
-            description: 'Planned transcript output. Speech recognition will be connected in a later sprint.'
-          }
-        ];
-      }
-
-      if (workflowId === 'compress-audio') {
-        return [
-          {
-            name: `${baseName}-compressed.m4a`,
-            type: 'Compressed audio',
-            description: 'Planned compressed audio output. Encoding will be connected in a later sprint.'
-          }
-        ];
-      }
-
-      if (workflowId === 'normalize-audio') {
-        return [
-          {
-            name: `${baseName}-normalized.m4a`,
-            type: 'Normalized audio',
-            description: 'Planned normalized audio output. Audio processing will be connected in a later sprint.'
-          }
-        ];
-      }
-
-      return (job.workflow.outputs || []).map((output, index) => ({
-        name: output,
-        type: `Output ${index + 1}`,
-        description: 'Planned workflow output.'
-      }));
+      return outputMap[workflowId] || (job.workflow.outputs || []).map((output, index) => (
+        artifact(output, `Output ${index + 1}`, plannedNote, job)
+      ));
     }
+  }
+
+  function artifact(name, type, description, job) {
+    return {
+      name,
+      type,
+      description,
+      provider: providerName(job),
+      status: job.status === 'completed' ? 'Created' : 'Planned'
+    };
+  }
+
+  function providerName(job) {
+    return job.provider ? job.provider.name : 'No provider';
   }
 
   function stripExtension(fileName) {

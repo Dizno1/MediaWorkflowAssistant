@@ -62,3 +62,8 @@ The next development step is the first real workflow implementation. Extract Aud
 ## Sprint 3
 
 Sprint 3 adds the reusable workflow runner, job model, progress panel, and results panel. Recommended workflows can now be reviewed and run as browser-based workflow jobs with accessible status updates.
+
+
+## Sprint 4 Part 2
+
+Sprint 4 Part 2 adds status-aware providers, workflow capability checks, provider messages in the workflow review panel, richer job metadata, and structured results that distinguish created artifacts from planned artifacts.

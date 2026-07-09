@@ -131,6 +131,8 @@
 
   function renderWorkflow(workflow) {
     activeWorkflow = workflow;
+    const capability = window.ProviderManager.getCapability(workflow);
+
     resetProgress();
     resetResults();
 
@@ -140,6 +142,13 @@
         <p class="category-label">${escapeHtml(workflow.category)}</p>
         <h3 id="workflow-${workflow.id}-heading">${escapeHtml(workflow.name)}</h3>
         <p>${escapeHtml(workflow.description)}</p>
+
+        <div class="provider-status ${capability.canRun ? 'is-ready' : 'is-planned'}" role="note">
+          <h4>Provider status</h4>
+          <p><strong>${escapeHtml(capability.status)}:</strong> ${escapeHtml(capability.message)}</p>
+          ${capability.provider ? `<p class="muted">Provider: ${escapeHtml(capability.provider.name)}. Type: ${escapeHtml(capability.provider.kind)}.</p>` : ''}
+        </div>
+
         <h4>Workflow steps</h4>
         <ol>
           ${workflow.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}
@@ -148,20 +157,20 @@
         <ul>
           ${workflow.outputs.map((output) => `<li>${escapeHtml(output)}</li>`).join('')}
         </ul>
-        <button type="button" id="run-workflow">Run ${escapeHtml(workflow.name)}</button>
-        <p class="muted">Sprint 3 runs the workflow engine and progress experience. Media processing outputs are represented as planned results until the local processing provider is connected.</p>
+        <button type="button" id="run-workflow">${capability.canRun ? 'Run workflow' : 'Build planned job'}</button>
+        <p class="muted">${capability.canRun ? 'This workflow can run in the current browser prototype.' : 'This workflow will run as a planned job so the engine, progress, results, and provider handoff can be tested before desktop processing is connected.'}</p>
       </article>
     `;
 
-    document.getElementById('run-workflow').addEventListener('click', runActiveWorkflow);
-    setStatus(`${workflow.name} workflow ready.`);
+    document.getElementById('run-workflow').addEventListener('click', () => runActiveWorkflow(capability));
+    setStatus(`${workflow.name} workflow ready. ${capability.status}.`);
     workflowSection.focus();
   }
 
-  async function runActiveWorkflow() {
+  async function runActiveWorkflow(capability) {
     if (!activeWorkflow || !currentFile || !currentInspection) return;
 
-    activeJob = window.createJob(activeWorkflow, currentFile, currentInspection);
+    activeJob = window.createJob(activeWorkflow, currentFile, currentInspection, capability);
     renderProgress(activeJob);
 
     const runner = new window.WorkflowRunner({
@@ -177,7 +186,7 @@
 
   function renderProgress(job) {
     progressSection.hidden = false;
-    jobStatus.textContent = `${job.workflow.name} is ready to start.`;
+    jobStatus.textContent = `${job.workflow.name} is ready to start using ${job.provider ? job.provider.name : 'no provider'}.`;
     progressBar.style.width = '0%';
     progressSteps.innerHTML = job.workflow.steps.map((step) => `
       <li data-step-status="pending">
@@ -209,7 +218,9 @@
   }
 
   function completeProgress(job) {
-    jobStatus.textContent = `${job.workflow.name} completed. ${job.outputs.length} result${job.outputs.length === 1 ? '' : 's'} available.`;
+    const resultWord = job.outputs.length === 1 ? 'result' : 'results';
+    const verb = job.status === 'completed' ? 'completed' : 'planned';
+    jobStatus.textContent = `${job.workflow.name} ${verb}. ${job.outputs.length} ${resultWord} available.`;
     progressBar.style.width = '100%';
 
     Array.from(progressSteps.children).forEach((item) => {
@@ -227,19 +238,50 @@
   function renderResults(job) {
     resultsSection.hidden = false;
 
+    const durationLabel = window.formatJobDuration(job.durationMs);
+    const statusLabel = job.status === 'completed' ? 'Completed' : job.status === 'planned' ? 'Planned' : titleCase(job.status);
+    const providerLabel = job.provider ? job.provider.name : 'No provider';
+
     resultsOutput.innerHTML = `
-      <p>${escapeHtml(job.workflow.name)} finished for ${escapeHtml(job.sourceFileName)}.</p>
+      <dl class="job-summary">
+        <div>
+          <dt>Workflow</dt>
+          <dd>${escapeHtml(job.workflow.name)}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>${escapeHtml(statusLabel)}</dd>
+        </div>
+        <div>
+          <dt>Provider</dt>
+          <dd>${escapeHtml(providerLabel)}</dd>
+        </div>
+        <div>
+          <dt>Duration</dt>
+          <dd>${escapeHtml(durationLabel)}</dd>
+        </div>
+        <div>
+          <dt>Source file</dt>
+          <dd>${escapeHtml(job.sourceFileName)}</dd>
+        </div>
+      </dl>
+
+      <h3>Artifacts</h3>
       <ul class="results-list">
         ${job.outputs.map((output) => `
           <li>
             <strong>${escapeHtml(output.name)}</strong>
-            <span>${escapeHtml(output.type)}</span>
+            <span>${escapeHtml(output.type)}. ${escapeHtml(output.status)}.</span>
             <p>${escapeHtml(output.description)}</p>
+            <p class="muted">Provider: ${escapeHtml(output.provider)}</p>
           </li>
         `).join('')}
       </ul>
-      <button type="button" id="choose-another-workflow">Choose another workflow for this file</button>
-      <button type="button" id="process-another-file">Process another file</button>
+
+      <div class="next-actions" aria-label="Next actions">
+        <button type="button" id="choose-another-workflow">Choose another workflow for this file</button>
+        <button type="button" id="process-another-file">Process another file</button>
+      </div>
     `;
 
     document.getElementById('choose-another-workflow').addEventListener('click', () => {
