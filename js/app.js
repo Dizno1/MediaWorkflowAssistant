@@ -241,8 +241,18 @@
     const durationLabel = window.formatJobDuration(job.durationMs);
     const statusLabel = job.status === 'completed' ? 'Completed' : job.status === 'planned' ? 'Planned' : titleCase(job.status);
     const providerLabel = job.provider ? job.provider.name : 'No provider';
+    const downloadableCount = job.outputs.filter((output) => output.url).length;
 
     resultsOutput.innerHTML = `
+      <section class="result-explanation" aria-labelledby="result-explanation-heading">
+        <h3 id="result-explanation-heading">What happened</h3>
+        <p>
+          ${escapeHtml(job.workflow.name)} finished. The app created ${job.outputs.length} artifact${job.outputs.length === 1 ? '' : 's'} from the inspected file metadata.
+          ${downloadableCount ? `${downloadableCount} artifact${downloadableCount === 1 ? ' is' : 's are'} ready to download.` : 'No downloadable artifact was created yet.'}
+        </p>
+        <p class="muted">Nothing is uploaded. Browser-created files appear in your Downloads folder only after you activate a Download button.</p>
+      </section>
+
       <dl class="job-summary">
         <div>
           <dt>Workflow</dt>
@@ -268,16 +278,23 @@
 
       <h3>Artifacts</h3>
       <ul class="results-list">
-        ${job.outputs.map((output) => `
+        ${job.outputs.map((output, index) => `
           <li>
             <strong>${escapeHtml(output.name)}</strong>
             <span>${escapeHtml(output.type)}. ${escapeHtml(output.status)}.</span>
             <p>${escapeHtml(output.description)}</p>
             <p class="muted">Provider: ${escapeHtml(output.provider)}</p>
+            ${output.url ? `<button type="button" data-download-index="${index}">Download ${escapeHtml(output.name)}</button>` : '<p class="muted">Download is not available for this artifact yet.</p>'}
+            ${output.content ? `<button type="button" data-preview-index="${index}">Preview text for ${escapeHtml(output.name)}</button>` : ''}
+            ${output.content ? `<button type="button" data-copy-index="${index}">Copy text for ${escapeHtml(output.name)}</button>` : ''}
           </li>
         `).join('')}
       </ul>
-      <button type="button" id="download-first-artifact">Download first artifact</button>
+
+      <section id="artifact-preview" class="artifact-preview" aria-labelledby="artifact-preview-heading" hidden>
+        <h3 id="artifact-preview-heading">Artifact preview</h3>
+        <pre id="artifact-preview-content" tabindex="0"></pre>
+      </section>
 
       <div class="next-actions" aria-label="Next actions">
         <button type="button" id="choose-another-workflow">Choose another workflow for this file</button>
@@ -285,16 +302,47 @@
       </div>
     `;
 
-    const dl=document.getElementById('download-first-artifact');
-    if(dl){
-      dl.addEventListener('click',()=>{
-        if(job.provider && job.provider.id==='browser' && window.ProviderManager.browserProvider && job.outputs[0]?.url){
-          window.ProviderManager.browserProvider.downloadArtifact(job.outputs[0]);
-        } else {
-          alert('Download is available for browser-generated artifacts.');
+    Array.from(resultsOutput.querySelectorAll('[data-download-index]')).forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = Number(button.getAttribute('data-download-index'));
+        const artifact = job.outputs[index];
+
+        try {
+          window.ProviderManager.downloadArtifact(artifact);
+          setStatus(`${artifact.name} download started. Check your browser Downloads folder.`);
+        } catch (error) {
+          setStatus(error.message);
         }
       });
-    }
+    });
+
+    Array.from(resultsOutput.querySelectorAll('[data-preview-index]')).forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = Number(button.getAttribute('data-preview-index'));
+        const artifact = job.outputs[index];
+        const preview = document.getElementById('artifact-preview');
+        const previewContent = document.getElementById('artifact-preview-content');
+
+        preview.hidden = false;
+        previewContent.textContent = artifact.content || 'No preview content is available.';
+        setStatus(`${artifact.name} preview loaded.`);
+        previewContent.focus();
+      });
+    });
+
+    Array.from(resultsOutput.querySelectorAll('[data-copy-index]')).forEach((button) => {
+      button.addEventListener('click', async () => {
+        const index = Number(button.getAttribute('data-copy-index'));
+        const artifact = job.outputs[index];
+
+        try {
+          await navigator.clipboard.writeText(artifact.content || '');
+          setStatus(`${artifact.name} text copied to clipboard.`);
+        } catch (error) {
+          setStatus('Copy failed. Use the preview button and copy the text manually.');
+        }
+      });
+    });
 
     document.getElementById('choose-another-workflow').addEventListener('click', () => {
       recommendationsSection.focus();

@@ -67,3 +67,13 @@ Sprint 3 adds the reusable workflow runner, job model, progress panel, and resul
 ## Sprint 4 Part 2
 
 Sprint 4 Part 2 adds status-aware providers, workflow capability checks, provider messages in the workflow review panel, richer job metadata, and structured results that distinguish created artifacts from planned artifacts.
+
+
+## Sprint 4 Part 5
+
+Sprint 4 Part 5 fixes the provider execution path. Prepare for AI now uses the Browser Provider to create a real downloadable Markdown artifact from the inspected media metadata.
+
+
+## Sprint 4 Part 6
+
+Sprint 4 Part 6 improves the first real artifact workflow with a clear results explanation, artifact preview, copy-to-clipboard support, and clearer download instructions.
