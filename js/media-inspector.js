@@ -143,6 +143,79 @@
     return `I found ${article} ${inspection.mediaType} file${details.length ? ` with ${details.join(', ')}` : ''}.`;
   }
 
+  function nameFromUrl(url) {
+    try {
+      const parsed = new URL(url);
+      const pathName = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || parsed.hostname);
+      return pathName || parsed.hostname;
+    } catch (error) {
+      return 'Web source';
+    }
+  }
+
+  function getYouTubeId(url) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1).split('/')[0] || null;
+      if (parsed.hostname.endsWith('youtube.com')) {
+        if (parsed.pathname === '/watch') return parsed.searchParams.get('v');
+        const match = parsed.pathname.match(/^\/(?:embed|shorts|live)\/([^/?#]+)/);
+        return match ? match[1] : null;
+      }
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
+
+  function inspectUrl(rawUrl) {
+    const parsed = new URL(rawUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('Use a web address that begins with http or https.');
+    }
+
+    const url = parsed.href;
+    const name = nameFromUrl(url);
+    const extension = getExtension(parsed.pathname);
+    const youtubeId = getYouTubeId(url);
+    let mediaType = youtubeId ? 'video' : typeFromExtension(extension);
+    if (mediaType === 'unknown' && ['html', 'htm', 'php', 'asp', 'aspx'].includes(extension)) mediaType = 'document';
+
+    const isDirectMedia = ['video', 'audio', 'image'].includes(mediaType) || extension === 'pdf' || ['txt', 'md', 'csv', 'json', 'xml'].includes(extension);
+    const inspection = {
+      name,
+      sourceType: 'url',
+      sourceUrl: url,
+      sourceHost: parsed.hostname,
+      mediaType,
+      mimeType: 'Not available from the address alone',
+      extension: extension || 'None',
+      size: null,
+      sizeLabel: 'Unknown',
+      lastModified: 'Unknown',
+      hasAudio: mediaType === 'audio' || mediaType === 'video',
+      hasVideo: mediaType === 'video',
+      hasImages: mediaType === 'image',
+      hasReadableText: mediaType === 'document' || ['txt', 'md', 'csv', 'json', 'xml'].includes(extension),
+      hasCaptions: false,
+      hasTranscript: false,
+      hasAudioDescription: false,
+      durationSeconds: null,
+      durationLabel: 'Unknown',
+      width: null,
+      height: null,
+      dimensionsLabel: 'Unknown',
+      capabilities: inferCapabilities(mediaType),
+      isDirectMedia,
+      youtubeId,
+      recommendedSummary: ''
+    };
+
+    const kind = youtubeId ? 'a video page' : mediaType === 'unknown' ? 'a web page or link' : `a ${mediaType} source`;
+    inspection.recommendedSummary = `I found ${kind} on ${parsed.hostname}.`;
+    return Promise.resolve(inspection);
+  }
+
   async function inspect(file) {
     const inspection = createBaseInspection(file);
     await inspectMediaElement(file, inspection);
@@ -150,5 +223,5 @@
     return inspection;
   }
 
-  window.MediaInspector = { inspect, formatBytes, formatDuration };
+  window.MediaInspector = { inspect, inspectUrl, formatBytes, formatDuration };
 })();

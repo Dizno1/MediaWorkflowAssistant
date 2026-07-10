@@ -5,7 +5,7 @@
       intent,
       workflow: intent.workflow,
       sourceFile: file,
-      sourceFileName: file ? file.name : 'Unknown',
+      sourceFileName: file ? (file.name || file.url || 'Unknown') : (inspection.sourceUrl || inspection.name || 'Unknown'),
       inspection,
       capability: intent.capability,
       provider: intent.capability ? intent.capability.provider : null,

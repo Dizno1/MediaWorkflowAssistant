@@ -31,10 +31,21 @@
       <label class="file-label" for="file-input">Choose a file</label>
       <input id="file-input" type="file" aria-describedby="file-help">
       <p id="file-help" class="help-text">The file stays on this device.</p>
+
+      <div class="source-divider" aria-hidden="true"><span>or</span></div>
+
+      <form id="url-form" class="url-form">
+        <label for="url-input">Use a web address</label>
+        <div class="url-controls">
+          <input id="url-input" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/media" aria-describedby="url-help" required>
+          <button type="submit">Use this address</button>
+        </div>
+        <p id="url-help" class="help-text">Paste a link to media or a page containing media.</p>
+      </form>
     </section>
 
     <section class="panel" aria-labelledby="current-heading">
-      <h2 id="current-heading">Current file</h2>
+      <h2 id="current-heading">Current source</h2>
       <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No file selected.</div>
       <div id="inspection-output" class="inspection-output" hidden></div>
     </section>

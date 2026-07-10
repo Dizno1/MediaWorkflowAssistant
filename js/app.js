@@ -2,6 +2,9 @@
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const fileHelp = document.getElementById('file-help');
+  const urlForm = document.getElementById('url-form');
+  const urlInput = document.getElementById('url-input');
+  const urlHelp = document.getElementById('url-help');
   const statusRegion = document.getElementById('status-region');
   const inspectionOutput = document.getElementById('inspection-output');
   const viewerSection = document.getElementById('viewer-section');
@@ -17,6 +20,7 @@
   const resultsOutput = document.getElementById('results-output');
 
   let currentFile = null;
+  let currentSource = null;
   let currentInspection = null;
   let activeJob = null;
 
@@ -28,8 +32,11 @@
     if (!file) return;
 
     currentFile = file;
+    currentSource = { type: 'file', name: file.name, file };
     currentInspection = null;
     activeJob = null;
+    urlInput.value = '';
+    urlHelp.textContent = 'Paste a link to media or a page containing media.';
     resetViewer();
     resetProgress();
     resetResults();
@@ -55,9 +62,53 @@
     }
   }
 
+  async function handleUrl(rawUrl) {
+    const value = String(rawUrl || '').trim();
+    if (!value) return;
+
+    currentFile = null;
+    currentSource = null;
+    currentInspection = null;
+    activeJob = null;
+    resetViewer();
+    resetProgress();
+    resetResults();
+
+    inspectionOutput.hidden = false;
+    inspectionOutput.innerHTML = '<p class="muted">Checking the web address...</p>';
+    setStatus('Checking the web address.');
+
+    try {
+      currentInspection = await window.MediaInspector.inspectUrl(value);
+      currentSource = {
+        type: 'url',
+        name: currentInspection.name,
+        url: currentInspection.sourceUrl
+      };
+      urlInput.value = currentInspection.sourceUrl;
+      urlHelp.textContent = `Using ${currentInspection.sourceHost}.`;
+      fileInput.value = '';
+      fileHelp.textContent = 'No local file selected.';
+      dropZone.querySelector('strong').textContent = 'Drop a file here';
+      dropZone.querySelector('span').textContent = 'or press Enter to choose a file';
+
+      renderInspection(currentInspection);
+      await renderViewer(currentSource, currentInspection);
+      renderGoals(currentInspection);
+      setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
+    } catch (error) {
+      console.error(error);
+      currentSource = null;
+      setStatus('That web address could not be used. Check it and try again.');
+      inspectionOutput.innerHTML = `<p role="alert">${escapeHtml(error.message || 'That web address could not be used. Check it and try again.')}</p>`;
+      urlInput.focus();
+    }
+  }
+
   function renderInspection(inspection) {
     const details = [
-      ['File name', inspection.name],
+      [inspection.sourceType === 'url' ? 'Source name' : 'File name', inspection.name],
+      ...(inspection.sourceType === 'url' ? [['Website', inspection.sourceHost], ['Web address', inspection.sourceUrl]] : []),
       ['Type', titleCase(inspection.mediaType)],
       ['Size', inspection.sizeLabel],
       ['Duration', inspection.durationLabel],
@@ -71,7 +122,7 @@
 
     inspectionOutput.innerHTML = `
       <p class="inspection-summary">${escapeHtml(inspection.recommendedSummary)}</p>
-      <div class="inspection-grid" aria-label="File details">
+      <div class="inspection-grid" aria-label="Source details">
         ${details.map(([label, value]) => fact(label, value)).join('')}
       </div>
     `;
@@ -82,10 +133,16 @@
   }
 
 
-  async function renderViewer(file, inspection) {
+  async function renderViewer(source, inspection) {
     viewerSection.hidden = false;
     viewerOutput.innerHTML = '';
 
+    if (inspection.sourceType === 'url') {
+      renderUrlViewer(source, inspection);
+      return;
+    }
+
+    const file = source;
     const objectUrl = URL.createObjectURL(file);
     const type = inspection.mediaType;
 
@@ -154,6 +211,84 @@
     viewerOutput.innerHTML = '<p>This file cannot be shown here yet. The file details and available choices are still available below.</p>';
   }
 
+  function renderUrlViewer(source, inspection) {
+    const url = inspection.sourceUrl;
+
+    if (inspection.youtubeId) {
+      const frame = document.createElement('iframe');
+      frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(inspection.youtubeId)}`;
+      frame.title = `Video viewer for ${inspection.name}`;
+      frame.className = 'video-embed';
+      frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      frame.allowFullscreen = true;
+      viewerOutput.appendChild(frame);
+      appendOpenLink(url, 'Open the video on its website');
+      return;
+    }
+
+    if (inspection.mediaType === 'video' && inspection.isDirectMedia) {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.preload = 'metadata';
+      video.src = url;
+      video.className = 'media-viewer';
+      video.setAttribute('aria-label', `Video from ${inspection.sourceHost}`);
+      viewerOutput.appendChild(video);
+      appendOpenLink(url, 'Open the original video');
+      return;
+    }
+
+    if (inspection.mediaType === 'audio' && inspection.isDirectMedia) {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.preload = 'metadata';
+      audio.src = url;
+      audio.className = 'media-viewer';
+      audio.setAttribute('aria-label', `Audio from ${inspection.sourceHost}`);
+      viewerOutput.appendChild(audio);
+      appendOpenLink(url, 'Open the original audio');
+      return;
+    }
+
+    if (inspection.mediaType === 'image' && inspection.isDirectMedia) {
+      const image = document.createElement('img');
+      image.src = url;
+      image.alt = `Image from ${inspection.sourceHost}`;
+      image.className = 'image-viewer';
+      viewerOutput.appendChild(image);
+      appendOpenLink(url, 'Open the original image');
+      return;
+    }
+
+    if (inspection.extension === 'pdf') {
+      const frame = document.createElement('iframe');
+      frame.src = url;
+      frame.title = `PDF viewer for ${inspection.name}`;
+      frame.className = 'document-viewer';
+      viewerOutput.appendChild(frame);
+      appendOpenLink(url, 'Open the PDF in a new tab');
+      return;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'viewer-link-card';
+    card.innerHTML = '<p>This web source cannot be displayed safely inside the assistant. You can open it in a new tab and continue using the choices below.</p>';
+    viewerOutput.appendChild(card);
+    appendOpenLink(url, 'Open this web source');
+  }
+
+  function appendOpenLink(url, label) {
+    const paragraph = document.createElement('p');
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'web-source-link';
+    link.textContent = label;
+    paragraph.appendChild(link);
+    viewerOutput.appendChild(paragraph);
+  }
+
   function resetViewer() {
     viewerSection.hidden = true;
     viewerOutput.innerHTML = '';
@@ -204,9 +339,9 @@
   }
 
   async function runIntent(intent) {
-    if (!currentFile || !currentInspection || !intent.capability.canRun) return;
+    if (!currentSource || !currentInspection || !intent.capability.canRun) return;
 
-    activeJob = window.createJob(intent, currentFile, currentInspection);
+    activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
     renderProgress(activeJob);
 
     const runner = new window.WorkflowRunner({
@@ -410,5 +545,10 @@
 
   fileInput.addEventListener('change', (event) => {
     handleFile(event.target.files[0]);
+  });
+
+  urlForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    handleUrl(urlInput.value);
   });
 })();

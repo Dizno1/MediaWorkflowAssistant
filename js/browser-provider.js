@@ -57,7 +57,7 @@
         : [];
 
       const rows = [
-        ['File name', job.sourceFileName],
+        [inspection.sourceType === 'url' ? 'Web address' : 'File name', inspection.sourceType === 'url' ? inspection.sourceUrl : job.sourceFileName],
         ['Media type', titleCase(inspection.mediaType || 'unknown')],
         ['File size', inspection.sizeLabel || 'Unknown'],
         ['Duration', inspection.durationLabel || 'Unknown'],
@@ -76,7 +76,7 @@
         '',
         '## Source',
         '',
-        `- File: ${job.sourceFileName}`,
+        inspection.sourceType === 'url' ? `- Web address: ${inspection.sourceUrl}` : `- File: ${job.sourceFileName}`, 
         `- Requested action: Save information about this file`,
                 `- Generated: ${new Date().toLocaleString()}`,
         '',
@@ -103,7 +103,9 @@
         '',
         '## Notes',
         '',
-        'This information file was generated locally in the browser. The original media file was not uploaded.',
+        inspection.sourceType === 'url'
+          ? 'This information file was generated in the browser from the web address. The linked media was not copied or uploaded.'
+          : 'This information file was generated locally in the browser. The original media file was not uploaded.',
         ''
       ].join('\n');
     }

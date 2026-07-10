@@ -87,3 +87,7 @@ Sprint 5 Part 1 introduces the intent-first interface. Users choose plain-langua
 ## Sprint 5 Part 2
 
 Added the Viewer for video, audio, images, text, Markdown, and PDF files while preserving the intent-first experience.
+
+## Sprint 5 Part 3
+
+Added web address input and source recognition. The assistant can recognize likely media from a URL, display supported direct media and YouTube videos in the Viewer, provide safe external links for unsupported pages, and use the same goal-driven choices for local and web sources.
