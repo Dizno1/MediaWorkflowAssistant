@@ -356,3 +356,15 @@ button:hover,
   padding: 1rem;
   white-space: pre-wrap;
 }
+
+
+button:disabled {
+  background: #d8d3cd;
+  border-color: #817970;
+  color: #342f2b;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: #d8d3cd;
+}

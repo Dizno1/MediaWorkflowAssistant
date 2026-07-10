@@ -18,16 +18,16 @@
         throw new Error(`${this.name} cannot run ${job.workflow.name}.`);
       }
 
-      const markdown = this.buildAiPackage(job);
+      const markdown = this.buildFileInformation(job);
       const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const baseName = stripExtension(job.sourceFileName);
 
       return [
         {
-          name: `${baseName}-ai-package.md`,
-          type: 'AI preparation package',
-          description: 'Markdown package created in the browser from the inspected media metadata.',
+          name: `${baseName}-file-information.md`,
+          type: 'Media file information',
+          description: 'Readable file containing the media details and available next steps.',
           provider: this.name,
           status: 'Created',
           url,
@@ -50,10 +50,10 @@
       link.remove();
     }
 
-    buildAiPackage(job) {
+    buildFileInformation(job) {
       const inspection = job.inspection || {};
-      const recommendations = window.WorkflowRegistry
-        ? window.WorkflowRegistry.getRecommendations(inspection).map((workflow) => workflow.name)
+      const recommendations = window.IntentEngine
+        ? window.IntentEngine.getIntents(inspection).map((intent) => intent.title)
         : [];
 
       const rows = [
@@ -72,14 +72,13 @@
       ];
 
       return [
-        '# AI Preparation Package',
+        '# Media File Information',
         '',
         '## Source',
         '',
         `- File: ${job.sourceFileName}`,
-        `- Workflow: ${job.workflow.name}`,
-        `- Provider: ${this.name}`,
-        `- Generated: ${new Date().toLocaleString()}`,
+        `- Requested action: Save information about this file`,
+                `- Generated: ${new Date().toLocaleString()}`,
         '',
         '## Inspection Summary',
         '',
@@ -89,22 +88,22 @@
         '',
         ...rows.map(([label, value]) => `- ${label}: ${value}`),
         '',
-        '## Available Outcomes',
+        '## Available Choices',
         '',
         ...(recommendations.length ? recommendations.map((name) => `- ${name}`) : ['- No recommendations were available.']),
         '',
-        '## Suggested AI Prompts',
+        '## Helpful Questions',
         '',
-        'Use one of these prompts with the media file, transcript, or extracted content:',
+        'These questions may help you decide what to do next:',
         '',
-        '1. Summarize this media in plain language and identify the main purpose.',
-        '2. Identify accessibility issues or production concerns that may affect screen reader users, caption users, or audio description users.',
-        '3. Create a concise description of this media for someone deciding whether it is relevant.',
-        '4. List likely next workflow steps, such as transcript, captions, audio description, compression, or review.',
+        '1. Do I need captions or a transcript?',
+        '2. Is important visual information missing from the audio?',
+        '3. Does the file need to be smaller before I share it?',
+        '4. Do I need an audio-only copy?',
         '',
         '## Notes',
         '',
-        'This package was generated locally in the browser. The original media file was not uploaded by this prototype.',
+        'This information file was generated locally in the browser. The original media file was not uploaded.',
         ''
       ].join('\n');
     }

@@ -13,48 +13,41 @@
     <div class="wrap">
       <p class="eyebrow">Open Door Design</p>
       <h1>Media Workflow Assistant</h1>
-      <p class="tagline">Drop in media. Choose the outcome. Let the workflow assemble itself.</p>
+      <p class="tagline">Add a file. Choose what you want to do. The assistant handles the rest.</p>
     </div>
   </header>
 
   <main id="main" class="wrap" tabindex="-1">
     <section class="panel" aria-labelledby="start-heading">
       <h2 id="start-heading">Start with a file</h2>
-      <p>
-        Add an audio, video, image, document, or archive file. The assistant will inspect it and recommend useful next actions.
-      </p>
+      <p>Add an audio, video, image, document, or archive file.</p>
 
       <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-describedby="drop-help">
-        <strong>Drop media here</strong>
+        <strong>Drop a file here</strong>
         <span>or press Enter to choose a file</span>
       </div>
       <p id="drop-help" class="help-text">You can also use the file picker below.</p>
 
       <label class="file-label" for="file-input">Choose a file</label>
       <input id="file-input" type="file" aria-describedby="file-help">
-      <p id="file-help" class="help-text">The file stays on this device. This app inspects and prepares it in your browser.</p>
+      <p id="file-help" class="help-text">The file stays on this device.</p>
     </section>
 
-    <section class="panel" aria-labelledby="status-heading">
-      <h2 id="status-heading">Current media</h2>
-      <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No media loaded.</div>
+    <section class="panel" aria-labelledby="current-heading">
+      <h2 id="current-heading">Current file</h2>
+      <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No file selected.</div>
       <div id="inspection-output" class="inspection-output" hidden></div>
     </section>
 
-    <section id="recommendations-section" class="panel" aria-labelledby="recommendations-heading" hidden>
-      <h2 id="recommendations-heading">What would you like to accomplish?</h2>
-      <p id="recommendations-intro">Recommendations will appear after a file is inspected.</p>
-      <div id="recommendations" class="recommendations"></div>
-    </section>
-
-    <section id="workflow-section" class="panel" aria-labelledby="workflow-heading" tabindex="-1" hidden>
-      <h2 id="workflow-heading">Workflow</h2>
-      <div id="workflow-preview">Select a recommended action to preview its workflow steps.</div>
+    <section id="goals-section" class="panel" aria-labelledby="goals-heading" tabindex="-1" hidden>
+      <h2 id="goals-heading">What would you like to do?</h2>
+      <p id="goals-intro">Available choices will appear after the file is checked.</p>
+      <div id="goals" class="recommendations"></div>
     </section>
 
     <section id="progress-section" class="panel" aria-labelledby="progress-heading" tabindex="-1" hidden>
-      <h2 id="progress-heading">Progress</h2>
-      <div id="job-status" role="status" aria-live="polite" aria-atomic="true">No workflow running.</div>
+      <h2 id="progress-heading">Working</h2>
+      <div id="job-status" role="status" aria-live="polite" aria-atomic="true">Nothing is running.</div>
       <div class="progress-meter" aria-hidden="true">
         <div id="progress-bar" class="progress-bar"></div>
       </div>
@@ -62,16 +55,17 @@
     </section>
 
     <section id="results-section" class="panel" aria-labelledby="results-heading" tabindex="-1" hidden>
-      <h2 id="results-heading">Results</h2>
-      <div id="results-output">No results yet.</div>
+      <h2 id="results-heading">Your result</h2>
+      <div id="results-output">No result yet.</div>
     </section>
   </main>
 
   <script src="js/workflow-registry.js"></script>
   <script src="js/media-inspector.js"></script>
-  <script src="js/job.js"></script>
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
+  <script src="js/intent-engine.js"></script>
+  <script src="js/job.js"></script>
   <script src="js/workflow-runner.js"></script>
   <script src="js/app.js"></script>
 </body>

@@ -93,12 +93,12 @@
 
     return {
       workflowId: workflow.id,
-      canRun: Boolean(provider.available),
+      canRun: Boolean(provider.available && provider.instance && typeof provider.instance.execute === 'function'),
       provider,
-      status: provider.available ? 'Ready' : 'Provider not connected',
-      message: provider.available
-        ? `${provider.name} is ready to run this workflow.`
-        : `${provider.name} is planned for this workflow. ${provider.unavailableReason}`
+      status: provider.available && provider.instance && typeof provider.instance.execute === 'function' ? 'Ready' : 'Not available yet',
+      message: provider.available && provider.instance && typeof provider.instance.execute === 'function'
+        ? 'This goal is ready.'
+        : 'This goal is not available in the browser version yet.'
     };
   }
 

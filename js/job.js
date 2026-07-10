@@ -1,13 +1,14 @@
 (function () {
-  function createJob(workflow, file, inspection, capability) {
+  function createJob(intent, file, inspection) {
     return {
       id: `job-${Date.now()}`,
-      workflow,
+      intent,
+      workflow: intent.workflow,
       sourceFile: file,
       sourceFileName: file ? file.name : 'Unknown',
       inspection,
-      capability,
-      provider: capability ? capability.provider : null,
+      capability: intent.capability,
+      provider: intent.capability ? intent.capability.provider : null,
       startedAt: new Date(),
       completedAt: null,
       durationMs: null,

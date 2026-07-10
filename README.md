@@ -77,3 +77,8 @@ Sprint 4 Part 5 fixes the provider execution path. Prepare for AI now uses the B
 ## Sprint 4 Part 6
 
 Sprint 4 Part 6 improves the first real artifact workflow with a clear results explanation, artifact preview, copy-to-clipboard support, and clearer download instructions.
+
+
+## Sprint 5 Part 1
+
+Sprint 5 Part 1 introduces the intent-first interface. Users choose plain-language goals while workflows, providers, AI, and other implementation details remain internal. URL input is documented as a planned source option.

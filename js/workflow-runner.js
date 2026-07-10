@@ -7,12 +7,12 @@
     }
 
     async run(job) {
-      const steps = job.workflow.steps || [];
+      const steps = job.intent.steps || [];
 
       try {
         job.status = 'running';
         this.onUpdate(job, {
-          message: `${job.workflow.name} started with ${providerName(job)}.`,
+          message: `${job.intent.title} started.`,
           stepIndex: -1
         });
 
@@ -24,7 +24,7 @@
             stepIndex: index
           });
 
-          await this.executeStep(job, steps[index], index);
+          await this.executeStep(index);
 
           job.progress = Math.round(((index + 1) / steps.length) * 100);
           this.onUpdate(job, {
@@ -33,19 +33,18 @@
           });
         }
 
-        let providerOutputs = null;
-
+        let outputs = null;
         if (job.capability && job.capability.canRun) {
-          this.onUpdate(job, {
-            message: `${providerName(job)} is creating the result.`,
-            stepIndex: steps.length - 1
-          });
-          providerOutputs = await window.ProviderManager.execute(job);
+          outputs = await window.ProviderManager.execute(job);
         }
 
-        job.status = job.capability && job.capability.canRun ? 'completed' : 'planned';
+        if (!outputs || !outputs.length) {
+          throw new Error('The requested result could not be created in this version.');
+        }
+
+        job.status = 'completed';
         window.finishJob(job);
-        job.outputs = providerOutputs && providerOutputs.length ? normalizeProviderOutputs(providerOutputs, job) : this.createPlannedOutputs(job);
+        job.outputs = normalizeOutputs(outputs, job);
         this.onComplete(job);
         return job;
       } catch (error) {
@@ -56,84 +55,24 @@
       }
     }
 
-    executeStep(job, step, index) {
-      const delay = job.capability && job.capability.canRun ? 500 + (index * 90) : 240 + (index * 60);
+    executeStep(index) {
       return new Promise((resolve) => {
-        window.setTimeout(resolve, delay);
+        window.setTimeout(resolve, 450 + (index * 90));
       });
-    }
-
-    createPlannedOutputs(job) {
-      const workflowId = job.workflow.id;
-      const baseName = stripExtension(job.sourceFileName);
-      const plannedNote = 'Planned output. This workflow needs its processing provider before it can create the final file.';
-
-      const outputMap = {
-        'extract-audio': [
-          artifact(`${baseName}.mp3`, 'Audio file', plannedNote, job, false)
-        ],
-        'create-transcript': [
-          artifact(`${baseName}-transcript.txt`, 'Transcript draft', plannedNote, job, false)
-        ],
-        'create-captions': [
-          artifact(`${baseName}.vtt`, 'Caption file', plannedNote, job, false),
-          artifact(`${baseName}-transcript.txt`, 'Transcript draft', plannedNote, job, false)
-        ],
-        'compress-video': [
-          artifact(`${baseName}-compressed.mp4`, 'Compressed video', plannedNote, job, false)
-        ],
-        'compress-audio': [
-          artifact(`${baseName}-compressed.m4a`, 'Compressed audio', plannedNote, job, false)
-        ],
-        'normalize-audio': [
-          artifact(`${baseName}-normalized.m4a`, 'Normalized audio', plannedNote, job, false)
-        ],
-        'audio-description': [
-          artifact(`${baseName}-audio-description-workspace.md`, 'Audio description workspace', 'Created as a guided planning result in browser workflow mode.', job, false)
-        ],
-        'prepare-for-ai': [
-          artifact(`${baseName}-ai-package.md`, 'AI preparation package', plannedNote, job, false)
-        ]
-      };
-
-      return outputMap[workflowId] || (job.workflow.outputs || []).map((output, index) => (
-        artifact(output, `Output ${index + 1}`, plannedNote, job, false)
-      ));
     }
   }
 
-  function normalizeProviderOutputs(outputs, job) {
+  function normalizeOutputs(outputs, job) {
     return outputs.map((output) => ({
       name: output.name,
-      type: output.type || 'Artifact',
-      description: output.description || 'Created by the workflow provider.',
-      provider: output.provider || providerName(job),
+      type: output.type || 'File',
+      description: output.description || 'Your file is ready.',
       providerId: job.provider ? job.provider.id : '',
-      status: output.status || 'Created',
+      status: 'Ready',
       url: output.url || '',
       mimeType: output.mimeType || '',
       content: output.content || ''
     }));
-  }
-
-  function artifact(name, type, description, job, downloadable) {
-    return {
-      name,
-      type,
-      description,
-      provider: providerName(job),
-      providerId: job.provider ? job.provider.id : '',
-      status: job.status === 'completed' ? 'Created' : 'Planned',
-      downloadable: Boolean(downloadable)
-    };
-  }
-
-  function providerName(job) {
-    return job.provider ? job.provider.name : 'No provider';
-  }
-
-  function stripExtension(fileName) {
-    return String(fileName || 'media').replace(/\.[^/.]+$/, '');
   }
 
   window.WorkflowRunner = WorkflowRunner;
