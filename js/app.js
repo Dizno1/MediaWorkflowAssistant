@@ -4,6 +4,8 @@
   const fileHelp = document.getElementById('file-help');
   const statusRegion = document.getElementById('status-region');
   const inspectionOutput = document.getElementById('inspection-output');
+  const viewerSection = document.getElementById('viewer-section');
+  const viewerOutput = document.getElementById('viewer-output');
   const goalsSection = document.getElementById('goals-section');
   const goalsIntro = document.getElementById('goals-intro');
   const goals = document.getElementById('goals');
@@ -28,6 +30,7 @@
     currentFile = file;
     currentInspection = null;
     activeJob = null;
+    resetViewer();
     resetProgress();
     resetResults();
 
@@ -42,6 +45,7 @@
     try {
       currentInspection = await window.MediaInspector.inspect(file);
       renderInspection(currentInspection);
+      await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
     } catch (error) {
@@ -75,6 +79,84 @@
 
   function fact(label, value) {
     return `<div class="fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+  }
+
+
+  async function renderViewer(file, inspection) {
+    viewerSection.hidden = false;
+    viewerOutput.innerHTML = '';
+
+    const objectUrl = URL.createObjectURL(file);
+    const type = inspection.mediaType;
+
+    if (type === 'video') {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.preload = 'metadata';
+      video.src = objectUrl;
+      video.className = 'media-viewer';
+      video.setAttribute('aria-label', `Video preview for ${file.name}`);
+      viewerOutput.appendChild(video);
+      return;
+    }
+
+    if (type === 'audio') {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.preload = 'metadata';
+      audio.src = objectUrl;
+      audio.className = 'media-viewer';
+      audio.setAttribute('aria-label', `Audio player for ${file.name}`);
+      viewerOutput.appendChild(audio);
+      return;
+    }
+
+    if (type === 'image') {
+      const image = document.createElement('img');
+      image.src = objectUrl;
+      image.alt = `Selected image: ${file.name}`;
+      image.className = 'image-viewer';
+      viewerOutput.appendChild(image);
+      return;
+    }
+
+    if (file.type === 'application/pdf' || inspection.extension === 'pdf') {
+      const frame = document.createElement('iframe');
+      frame.src = objectUrl;
+      frame.title = `PDF viewer for ${file.name}`;
+      frame.className = 'document-viewer';
+      viewerOutput.appendChild(frame);
+
+      const fallback = document.createElement('p');
+      fallback.className = 'help-text';
+      fallback.textContent = 'If the PDF does not appear here, open the original file with your usual PDF reader.';
+      viewerOutput.appendChild(fallback);
+      return;
+    }
+
+    if (
+      file.type.startsWith('text/') ||
+      ['txt', 'md', 'csv', 'json', 'xml', 'html', 'htm'].includes(inspection.extension)
+    ) {
+      try {
+        const text = await file.text();
+        const pre = document.createElement('pre');
+        pre.className = 'text-viewer';
+        pre.tabIndex = 0;
+        pre.textContent = text;
+        viewerOutput.appendChild(pre);
+      } catch (error) {
+        viewerOutput.innerHTML = '<p>This text file could not be displayed.</p>';
+      }
+      return;
+    }
+
+    viewerOutput.innerHTML = '<p>This file cannot be shown here yet. The file details and available choices are still available below.</p>';
+  }
+
+  function resetViewer() {
+    viewerSection.hidden = true;
+    viewerOutput.innerHTML = '';
   }
 
   function renderGoals(inspection) {

@@ -368,3 +368,33 @@ button:disabled {
 button:disabled:hover {
   background: #d8d3cd;
 }
+
+
+.media-viewer {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+}
+
+.image-viewer {
+  display: block;
+  height: auto;
+  max-height: 70vh;
+  max-width: 100%;
+}
+
+.document-viewer {
+  border: 1px solid var(--border);
+  min-height: 32rem;
+  width: 100%;
+}
+
+.text-viewer {
+  background: #f7f4ee;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  max-height: 32rem;
+  overflow: auto;
+  padding: 1rem;
+  white-space: pre-wrap;
+}

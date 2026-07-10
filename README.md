@@ -82,3 +82,8 @@ Sprint 4 Part 6 improves the first real artifact workflow with a clear results e
 ## Sprint 5 Part 1
 
 Sprint 5 Part 1 introduces the intent-first interface. Users choose plain-language goals while workflows, providers, AI, and other implementation details remain internal. URL input is documented as a planned source option.
+
+
+## Sprint 5 Part 2
+
+Added the Viewer for video, audio, images, text, Markdown, and PDF files while preserving the intent-first experience.
