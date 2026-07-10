@@ -7,8 +7,8 @@
       name: 'Browser Provider',
       kind: 'local browser',
       available: Boolean(browserProvider),
-      workflows: ['prepare-for-ai'],
-      description: 'Runs lightweight preparation tasks directly in the browser.',
+      workflows: ['prepare-for-ai', 'compress-video', 'extract-audio'],
+      description: 'Runs file information, smaller video, and audio-only tasks directly in the browser.',
       unavailableReason: browserProvider ? '' : 'Browser provider failed to load.',
       instance: browserProvider
     },
@@ -17,7 +17,7 @@
       name: 'FFmpeg Provider',
       kind: 'desktop provider',
       available: false,
-      workflows: ['extract-audio', 'compress-video', 'compress-audio', 'normalize-audio'],
+      workflows: ['compress-audio', 'normalize-audio'],
       description: 'Will run local FFmpeg processing when the desktop runtime is connected.',
       unavailableReason: 'Desktop processing is not connected in this browser prototype yet.',
       instance: null

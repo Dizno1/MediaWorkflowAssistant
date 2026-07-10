@@ -91,3 +91,7 @@ Added the Viewer for video, audio, images, text, Markdown, and PDF files while p
 ## Sprint 5 Part 3
 
 Added web address input and source recognition. The assistant can recognize likely media from a URL, display supported direct media and YouTube videos in the Viewer, provide safe external links for unsupported pages, and use the same goal-driven choices for local and web sources.
+## Sprint 5 Part 4
+
+Local video files can now be made smaller and their audio can be saved as a separate file directly in a supported browser. The original file remains unchanged.
+
