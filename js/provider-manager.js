@@ -7,8 +7,8 @@
       name: 'Browser Provider',
       kind: 'local browser',
       available: Boolean(browserProvider),
-      workflows: ['prepare-for-ai', 'compress-video', 'extract-audio'],
-      description: 'Runs file information, smaller video, and audio-only tasks directly in the browser.',
+      workflows: ['prepare-for-ai', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description'],
+      description: 'Runs file information, media conversion, and guided transcript, caption, and audio description workspaces directly in the browser.',
       unavailableReason: browserProvider ? '' : 'Browser provider failed to load.',
       instance: browserProvider
     },
@@ -27,7 +27,7 @@
       name: 'Speech Provider',
       kind: 'speech provider',
       available: false,
-      workflows: ['create-transcript', 'create-captions'],
+      workflows: [],
       description: 'Will create transcripts and caption timing when speech processing is connected.',
       unavailableReason: 'Speech processing is not connected in this browser prototype yet.',
       instance: null
@@ -37,7 +37,7 @@
       name: 'Description Workspace Provider',
       kind: 'guided browser workflow',
       available: true,
-      workflows: ['audio-description'],
+      workflows: [],
       description: 'Creates a guided planning workspace for audio description review.',
       unavailableReason: '',
       instance: null

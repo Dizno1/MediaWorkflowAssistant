@@ -3,7 +3,7 @@
     constructor() {
       this.id = 'browser';
       this.name = 'Browser Provider';
-      this.supportedWorkflows = ['prepare-for-ai', 'compress-video', 'extract-audio'];
+      this.supportedWorkflows = ['prepare-for-ai', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description'];
     }
 
     initialize() {
@@ -30,6 +30,18 @@
 
       if (job.workflow.id === 'extract-audio') {
         return this.createAudioCopy(job);
+      }
+
+      if (job.workflow.id === 'create-transcript') {
+        return this.createTranscriptWorkspace(job);
+      }
+
+      if (job.workflow.id === 'create-captions') {
+        return this.createCaptionWorkspace(job);
+      }
+
+      if (job.workflow.id === 'audio-description') {
+        return this.createDescriptionWorkspace(job);
       }
 
       return this.createFileInformation(job);
@@ -117,6 +129,53 @@
       ];
     }
 
+
+    createTranscriptWorkspace(job) {
+      const inspection = job.inspection || {};
+      const baseName = stripExtension(job.sourceFileName);
+      const text = [
+        `Transcript worksheet for ${job.sourceFileName}`,
+        '',
+        `Duration: ${inspection.durationLabel || 'Unknown'}`,
+        '',
+        'Instructions',
+        'Play the media in the viewer. Pause as needed and type the spoken words below.',
+        'Identify speakers when that information is important. Include meaningful non-speech audio in brackets.',
+        '',
+        'Transcript',
+        '',
+        '[Begin typing here]',
+        ''
+      ].join('\n');
+      return [createTextArtifact(`${baseName}-transcript.txt`, 'Transcript worksheet', 'An editable plain-text worksheet for creating a transcript while reviewing the media.', text, 'text/plain')];
+    }
+
+    createCaptionWorkspace(job) {
+      const inspection = job.inspection || {};
+      const baseName = stripExtension(job.sourceFileName);
+      const worksheet = buildTimedWorksheet(job.sourceFileName, inspection.durationSeconds, 'Caption text', [
+        'Use the viewer to find the beginning and end of each spoken phrase.',
+        'Keep each caption concise and synchronized with the audio.',
+        'Include meaningful sounds when they are needed to understand the media.'
+      ]);
+      const vtt = ['WEBVTT', '', 'NOTE Add caption cues using this pattern:', 'NOTE 00:00:00.000 --> 00:00:04.000', 'NOTE Caption text', ''].join('\n');
+      return [
+        createTextArtifact(`${baseName}-caption-workspace.md`, 'Caption worksheet', 'A timestamped worksheet for drafting and reviewing captions.', worksheet, 'text/markdown'),
+        createTextArtifact(`${baseName}-captions.vtt`, 'WebVTT caption file', 'A valid WebVTT starter file ready for caption cues.', vtt, 'text/vtt')
+      ];
+    }
+
+    createDescriptionWorkspace(job) {
+      const inspection = job.inspection || {};
+      const baseName = stripExtension(job.sourceFileName);
+      const worksheet = buildTimedWorksheet(job.sourceFileName, inspection.durationSeconds, 'Description note', [
+        'Review the video and note important visual information that is not already explained by the audio.',
+        'Write descriptions in natural language and place them during pauses whenever possible.',
+        'Do not describe decorative details that do not help someone understand the content.'
+      ]);
+      return [createTextArtifact(`${baseName}-audio-description-workspace.md`, 'Audio description worksheet', 'A timestamped worksheet for planning and reviewing audio description.', worksheet, 'text/markdown')];
+    }
+
     downloadArtifact(artifact) {
       if (!artifact || !artifact.url) {
         throw new Error('This file is not available for download.');
@@ -189,6 +248,64 @@
         ''
       ].join('\n');
     }
+  }
+
+
+  function createTextArtifact(name, type, description, content, mimeType) {
+    const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+    return {
+      name,
+      type,
+      description,
+      provider: 'Browser Provider',
+      status: 'Created',
+      url: URL.createObjectURL(blob),
+      mimeType,
+      content
+    };
+  }
+
+  function buildTimedWorksheet(fileName, durationSeconds, entryLabel, instructions) {
+    const seconds = Number(durationSeconds);
+    const safeDuration = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    const interval = safeDuration > 1800 ? 120 : safeDuration > 600 ? 60 : 30;
+    const timestamps = [];
+    if (safeDuration) {
+      for (let current = 0; current < safeDuration; current += interval) {
+        timestamps.push(`- ${formatTimestamp(current)} - ${entryLabel}:`);
+      }
+      if (!timestamps.length || !timestamps[timestamps.length - 1].startsWith(`- ${formatTimestamp(safeDuration)}`)) {
+        timestamps.push(`- ${formatTimestamp(safeDuration)} - End`);
+      }
+    } else {
+      timestamps.push(`- 00:00 - ${entryLabel}:`);
+    }
+
+    return [
+      `# ${entryLabel} workspace`,
+      '',
+      `Source: ${fileName}`,
+      safeDuration ? `Duration: ${formatTimestamp(safeDuration)}` : 'Duration: Unknown',
+      '',
+      '## Instructions',
+      '',
+      ...instructions.map((item) => `- ${item}`),
+      '',
+      '## Notes by time',
+      '',
+      ...timestamps,
+      ''
+    ].join('\n');
+  }
+
+  function formatTimestamp(totalSeconds) {
+    const rounded = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(rounded / 3600);
+    const minutes = Math.floor((rounded % 3600) / 60);
+    const seconds = rounded % 60;
+    return hours
+      ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
   function isLocalFile(value) {

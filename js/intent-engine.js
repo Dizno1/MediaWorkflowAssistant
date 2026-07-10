@@ -3,23 +3,23 @@
     {
       id: 'create-captions',
       workflowId: 'create-captions',
-      title: 'Create captions',
-      description: 'Add timed text so people can read what is being said.',
-      actionLabel: 'Create captions'
+      title: 'Start captions',
+      description: 'Create a timed caption workspace and a WebVTT file you can edit.',
+      actionLabel: 'Start captions'
     },
     {
       id: 'create-transcript',
       workflowId: 'create-transcript',
-      title: 'Create a transcript',
-      description: 'Turn the spoken words into text that can be read, searched, and shared.',
-      actionLabel: 'Create a transcript'
+      title: 'Start a transcript',
+      description: 'Create an editable worksheet for typing and reviewing the spoken words.',
+      actionLabel: 'Start a transcript'
     },
     {
       id: 'audio-description',
       workflowId: 'audio-description',
-      title: 'Add audio description',
-      description: 'Describe important visual information that is not explained by the existing audio.',
-      actionLabel: 'Add audio description'
+      title: 'Plan audio description',
+      description: 'Create a timestamped workspace for writing important visual details.',
+      actionLabel: 'Plan audio description'
     },
     {
       id: 'compress-video',
@@ -45,9 +45,9 @@
     {
       id: 'extract-audio',
       workflowId: 'extract-audio',
-      title: 'Save the audio',
-      description: 'Create an audio-only copy of the video.',
-      actionLabel: 'Save the audio'
+      title: 'Extract the audio',
+      description: 'Create an audio-only copy by removing the video picture.',
+      actionLabel: 'Extract the audio'
     },
     {
       id: 'generate-alt-text',

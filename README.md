@@ -95,3 +95,7 @@ Added web address input and source recognition. The assistant can recognize like
 
 Local video files can now be made smaller and their audio can be saved as a separate file directly in a supported browser. The original file remains unchanged.
 
+
+## Sprint 5 Part 5
+
+Video choices now include working local workspaces for transcripts, captions, and audio description. The audio-only action is labeled "Extract the audio" to make its purpose clear.
