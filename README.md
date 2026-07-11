@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 24 of the executable accessibility workflow roadmap is complete.
+Phase 25 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -40,6 +40,7 @@ The application now includes:
 - Local browser-based audio mixing that ducks the original soundtrack during narration cues and exports a described-audio WAV file while preserving the reviewed script and review record.
 - Local accessible-video rendering that combines the original picture with the approved described-audio soundtrack, then creates a publication ZIP containing the rendered WebM, selectable WebVTT captions, an accessible HTML player, a manifest, and a final validation checklist.
 - A complete Make This Accessible orchestrator that builds a media-specific plan, skips completed work, runs automatic steps, pauses only for required human review, resumes after approval, refreshes dependencies after every result, renders the accessible video when possible, and creates the final accessibility package.
+- Advanced accessibility analysis that scores scene understanding, speaker recognition, caption quality, audio-description quality, visual accessibility, and narration optimization; reports measurable reading-speed and cue-density indicators; refreshes after completed work; and optionally performs deeper provider analysis after privacy and cost confirmation.
 
 
 ## Design Principle
@@ -310,17 +311,21 @@ New architecture and workflow changes:
 - Existing execution, provider, review, Shared Knowledge, Output Manager, project, rendering, and packaging systems are reused.
 - `docs/Phase 24 Make This Accessible Orchestrator.md` documents the completed behavior and architecture.
 
+## Phase 25 - Advanced AI Analysis - Completed
+
+Phase 25 adds an accessible quality-analysis panel that runs automatically after source inspection and refreshes after workflow completion. The local analysis uses inspection data and Shared Knowledge to score scene understanding, speaker recognition, caption quality, audio-description quality, visual accessibility, and narration optimization. It reports measurable indicators including estimated reading speed and cue density, plus actionable findings.
+
+A Run deeper AI analysis action uses the existing provider layer. The application keeps provider choice under the hood, requires the existing privacy and possible-cost confirmation, normalizes structured provider findings, and stores the completed report in Shared Knowledge. The built-in OpenAI adapter now supports the `advanced-accessibility-analysis` capability.
+
+New files and subsystems:
+
+- `js/advanced-analysis.js` provides local scoring, quality findings, metrics, accessible rendering, deeper provider execution, normalization, and persistence.
+- `docs/Phase 25 Advanced AI Analysis.md` documents behavior, architecture, accessibility, and limitations.
+- `index.html`, `css/styles.css`, `js/app.js`, and `js/openai-provider.js` integrate the new panel and provider capability.
+
+See `docs/Phase 25 Advanced AI Analysis.md`.
+
 ## Remaining Roadmap
-
-### Phase 25 - Advanced AI Analysis
-
-- Scene understanding
-- Speaker recognition
-- Caption quality scoring
-- Audio-description quality analysis
-- Visual accessibility analysis
-- Reading-speed analysis
-- Narration optimization
 
 ### Phase 26 - Publication Pipeline
 
@@ -345,4 +350,4 @@ Review completed work like an experienced accessibility consultant, identify iss
 
 ## Next Development Phase
 
-Phase 25 - Advanced AI Analysis.
+Phase 26 - Publication Pipeline.

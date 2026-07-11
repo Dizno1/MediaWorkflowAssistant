@@ -12,10 +12,10 @@
     costCategory: 'may-charge',
     costMessage: 'May charge for usage',
     requiresConfirmation: true,
-    quality: { 'transcription-draft': 96, 'caption-draft': 98, 'visual-analysis': 96, 'audio-description-draft': 94, 'narration-audio': 96 },
-    preferredCapabilities: ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio'],
+    quality: { 'transcription-draft': 96, 'caption-draft': 98, 'visual-analysis': 96, 'audio-description-draft': 94, 'narration-audio': 96, 'advanced-accessibility-analysis': 95 },
+    preferredCapabilities: ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio', 'advanced-accessibility-analysis'],
     isAvailable: () => Boolean(configuration.apiKey),
-    getCapabilities: () => ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio'],
+    getCapabilities: () => ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio', 'advanced-accessibility-analysis'],
     async run(capability, context, options) {
       if (!configuration.apiKey) throw new Error('Add an OpenAI API key in Advanced assistance settings first.');
       if (capability === 'transcription-draft') {
@@ -35,6 +35,7 @@
         return createAudioDescriptionDraft(context, options.signal);
       }
       if (capability === 'narration-audio') return createNarrationAudio(context, options.signal);
+      if (capability === 'advanced-accessibility-analysis') return advancedAccessibilityAnalysis(context, options.signal);
       throw new Error('This OpenAI adapter does not support that task.');
     }
   };
@@ -134,6 +135,27 @@
       clips.push({ cueIndex: index, mimeType: 'audio/mpeg', base64: await blobToBase64(await response.blob()) });
     }
     return { clips, summary: `${clips.length} narration clips were synthesized from the reviewed script.` };
+  }
+
+
+  async function advancedAccessibilityAnalysis(context, signal) {
+    const knowledge = context.knowledge || {};
+    const local = knowledge.analysis && knowledge.analysis.advancedAccessibility ? knowledge.analysis.advancedAccessibility : {};
+    const content = [{ type: 'input_text', text: [
+      'Act as a media accessibility quality analyst. Evaluate the available source and workflow metadata.',
+      'Return JSON only with this shape: {"scores":{"sceneUnderstanding":0,"speakerRecognition":0,"captionQuality":0,"audioDescriptionQuality":0,"visualAccessibility":0,"narrationOptimization":0},"findings":["finding"]}.',
+      'Scores must be integers from 0 to 100. Findings must be concise, actionable, and avoid claiming certainty when evidence is incomplete.',
+      'Evaluate scene coverage, speaker distinction, caption completeness and likely reading burden, audio-description coverage and conflicts, visual accessibility, and narration pacing.',
+      `Workflow knowledge: ${JSON.stringify(knowledge).slice(0, 16000)}`,
+      `Existing local analysis: ${JSON.stringify(local).slice(0, 6000)}`
+    ].join('\n') }];
+    if (context.sourceData && context.sourceData.base64 && String(context.sourceData.mimeType || '').startsWith('image/')) {
+      content.push({ type: 'input_image', image_url: `data:${context.sourceData.mimeType};base64,${context.sourceData.base64}` });
+    }
+    const result = await requestResponse(content, signal);
+    const parsed = parseJsonText(extractResponseText(result));
+    if (!parsed || !parsed.scores || !Array.isArray(parsed.findings)) throw new Error('OpenAI did not return a usable accessibility analysis.');
+    return { report: parsed, summary: 'Advanced accessibility quality analysis completed.' };
   }
 
   function blobToBase64(blob) {

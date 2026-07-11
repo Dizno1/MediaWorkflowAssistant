@@ -442,6 +442,7 @@
       renderPlan(currentInspection);
       renderRecommendations(currentInspection);
       renderKnowledge();
+      window.AdvancedAccessibilityAnalysis.setContext(currentInspection, currentKnowledgeModel, currentFile);
       syncCurrentSourceToProject();
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
@@ -505,6 +506,7 @@
       renderPlan(currentInspection);
       renderRecommendations(currentInspection);
       renderKnowledge();
+      window.AdvancedAccessibilityAnalysis.setContext(currentInspection, currentKnowledgeModel, currentFile);
       syncCurrentSourceToProject();
       await renderViewer(currentSource, currentInspection);
       renderGoals(currentInspection);
@@ -1610,6 +1612,7 @@
     renderRecommendations(currentInspection);
     renderKnowledge();
     renderGoals(currentInspection);
+    window.AdvancedAccessibilityAnalysis.setContext(currentInspection, currentKnowledgeModel, currentFile);
 
     jobStatus.textContent = `${job.intent.title} finished. Your file is ready.`;
     progressBar.style.width = '100%';

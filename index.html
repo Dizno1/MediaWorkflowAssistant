@@ -399,6 +399,15 @@
       <ol id="progress-steps" class="progress-steps"></ol>
     </section>
 
+
+    <section id="advanced-analysis-section" class="panel" aria-labelledby="advanced-analysis-heading" tabindex="-1" hidden>
+      <h2 id="advanced-analysis-heading">Advanced accessibility analysis</h2>
+      <p id="advanced-analysis-summary">Quality analysis will appear after a source is checked.</p>
+      <div id="advanced-analysis-output"></div>
+      <div class="next-actions"><button type="button" id="run-deep-analysis">Run deeper AI analysis</button></div>
+      <div id="advanced-analysis-status" role="status" aria-live="polite" aria-atomic="true"></div>
+    </section>
+
     <section id="results-section" class="panel" aria-labelledby="results-heading" tabindex="-1" hidden>
       <h2 id="results-heading">Your result</h2>
       <div id="results-output">No result yet.</div>
@@ -420,6 +429,7 @@
   <script src="js/caption-drafting.js"></script>
   <script src="js/ad-drafting.js"></script>
   <script src="js/local-assist-provider.js"></script>
+  <script src="js/advanced-analysis.js"></script>
   <script src="js/connected-ai-provider.js"></script>
   <script src="js/openai-provider.js"></script>
   <script src="js/browser-provider.js"></script>
