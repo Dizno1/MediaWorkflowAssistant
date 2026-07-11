@@ -10,6 +10,9 @@
   const assessmentSection = document.getElementById('assessment-section');
   const assessmentSummary = document.getElementById('assessment-summary');
   const assessmentOutput = document.getElementById('assessment-output');
+  const recommendationsSection = document.getElementById('recommendations-section');
+  const recommendationsSummary = document.getElementById('recommendations-summary');
+  const recommendationsOutput = document.getElementById('recommendations-output');
   const planSection = document.getElementById('plan-section');
   const planSummary = document.getElementById('plan-summary');
   const planOutput = document.getElementById('plan-output');
@@ -35,6 +38,7 @@
   let currentKnowledgeModel = null;
   let currentAssessment = null;
   let currentPlan = null;
+  let currentRecommendations = null;
 
   function setStatus(message) {
     statusRegion.textContent = message;
@@ -49,12 +53,14 @@
     currentKnowledgeModel = null;
     currentAssessment = null;
     currentPlan = null;
+    currentRecommendations = null;
     activeJob = null;
     urlInput.value = '';
     urlHelp.textContent = 'Paste a link to media or a page containing media.';
     resetViewer();
     resetKnowledge();
     resetAssessment();
+    resetRecommendations();
     resetPlan();
     resetProgress();
     resetResults();
@@ -72,7 +78,7 @@
       renderInspection(currentInspection);
       renderAssessment(currentInspection);
       renderPlan(currentInspection);
-      renderKnowledge();
+      renderRecommendations(currentInspection);
       renderKnowledge();
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
@@ -94,10 +100,12 @@
     currentKnowledgeModel = null;
     currentAssessment = null;
     currentPlan = null;
+    currentRecommendations = null;
     activeJob = null;
     resetViewer();
     resetKnowledge();
     resetAssessment();
+    resetRecommendations();
     resetPlan();
     resetProgress();
     resetResults();
@@ -123,6 +131,8 @@
       renderInspection(currentInspection);
       renderAssessment(currentInspection);
       renderPlan(currentInspection);
+      renderRecommendations(currentInspection);
+      renderKnowledge();
       await renderViewer(currentSource, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -222,6 +232,46 @@
       </ol>
       <p class="analysis-status">The future single action will be called "${escapeHtml(currentPlan.recommendedAction)}." It will run only the work that is needed and available.</p>
     `;
+  }
+
+
+  function renderRecommendations(inspection) {
+    const intents = window.IntentEngine.getIntents(inspection);
+    currentRecommendations = window.RecommendationEngine.build(
+      currentKnowledgeModel,
+      currentAssessment,
+      currentPlan,
+      intents
+    );
+
+    recommendationsSection.hidden = false;
+    recommendationsSummary.textContent = currentRecommendations.summary;
+
+    if (!currentRecommendations.recommendations.length) {
+      recommendationsOutput.innerHTML = '<p>No recommendations are available for this source yet.</p>';
+      return;
+    }
+
+    recommendationsOutput.innerHTML = `
+      <p class="muted">Recommendations are ranked from Shared Knowledge, missing accessibility features, workflow order, completed work, and provider availability.</p>
+      <ol class="smart-recommendation-list">
+        ${currentRecommendations.recommendations.map((item) => `
+          <li data-recommendation-level="${escapeHtml(item.recommendationLevel.toLowerCase().replace(/\s+/g, '-'))}">
+            <h3>${escapeHtml(item.title)}</h3>
+            <p><strong>${escapeHtml(item.recommendationLevel)}</strong></p>
+            <p>${escapeHtml(item.recommendationReason)}</p>
+            ${item.isTopRecommendation ? '<p class="analysis-status">Best next action for this source.</p>' : ''}
+          </li>
+        `).join('')}
+      </ol>
+    `;
+  }
+
+  function resetRecommendations() {
+    currentRecommendations = null;
+    recommendationsSection.hidden = true;
+    recommendationsSummary.textContent = 'Prioritized recommendations will appear after the source is checked.';
+    recommendationsOutput.innerHTML = '';
   }
 
   function resetPlan() {
@@ -446,7 +496,9 @@
   }
 
   function renderGoals(inspection) {
-    const intents = window.IntentEngine.getIntents(inspection);
+    const intents = currentRecommendations
+      ? currentRecommendations.recommendations
+      : window.IntentEngine.getIntents(inspection);
     goals.innerHTML = '';
     goalsSection.hidden = false;
 
@@ -455,8 +507,9 @@
       return;
     }
 
-    const availableCount = intents.filter((intent) => intent.capability.canRun).length;
-    goalsIntro.textContent = `${intents.length} choice${intents.length === 1 ? '' : 's'} found. ${availableCount} available now.`;
+    const remaining = intents.filter((intent) => !intent.completed);
+    const availableCount = remaining.filter((intent) => intent.capability.canRun).length;
+    goalsIntro.textContent = `${remaining.length} remaining choice${remaining.length === 1 ? '' : 's'}. ${availableCount} available now. Choices are ordered by recommendation priority.`;
 
     intents.forEach((intent) => {
       const card = document.createElement('article');
@@ -468,14 +521,25 @@
       title.textContent = intent.title;
       card.appendChild(title);
 
+      if (intent.recommendationLevel) {
+        const priority = document.createElement('p');
+        priority.className = 'recommendation-priority';
+        priority.innerHTML = `<strong>${escapeHtml(intent.recommendationLevel)}</strong>`;
+        card.appendChild(priority);
+      }
+
       const description = document.createElement('p');
-      description.textContent = intent.description;
+      description.textContent = intent.recommendationReason || intent.description;
       card.appendChild(description);
 
       const button = document.createElement('button');
       button.type = 'button';
 
-      if (intent.capability.canRun) {
+      if (intent.completed) {
+        button.textContent = 'Already complete';
+        button.disabled = true;
+        button.setAttribute('aria-label', `${intent.title}. Already complete.`);
+      } else if (intent.capability.canRun) {
         button.textContent = intent.actionLabel;
         button.addEventListener('click', () => runIntent(intent));
       } else {
@@ -551,7 +615,9 @@
     currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, window.IntentEngine.getIntents(currentInspection));
     renderAssessment(currentInspection);
     renderPlan(currentInspection);
+    renderRecommendations(currentInspection);
     renderKnowledge();
+    renderGoals(currentInspection);
 
     jobStatus.textContent = `${job.intent.title} finished. Your file is ready.`;
     progressBar.style.width = '100%';

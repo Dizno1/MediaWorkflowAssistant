@@ -4,7 +4,7 @@ An accessibility-first media workflow application that automatically analyzes me
 
 ## Current Milestone
 
-This repository now contains Phase 4 of the Accessibility Intelligence roadmap.
+This repository now contains Phase 5 of the Accessibility Intelligence roadmap.
 
 The application can:
 
@@ -26,6 +26,9 @@ The application can:
 - Save completed workflow history and created-result metadata in one shared knowledge record.
 - Restore previous work for the same source in the same browser.
 - Rebuild the assessment and accessibility plan after each completed action.
+- Rank available actions using missing accessibility features, completed work, workflow dependencies, and provider availability.
+- Explain why each action is recommended, delayed, optional, or already complete.
+- Identify the best next action and reorder the user choices accordingly.
 
 ## Design Principle
 
@@ -146,9 +149,12 @@ The application now turns the assessment into an ordered, dependency-aware plan.
 
 The application now persists completed analysis and created-result metadata in the shared knowledge model. When the same source is selected again, prior work is restored and later actions can reuse it instead of starting over.
 
+### Phase 5 - Recommendation Engine - Completed
+
+The application now turns Shared Knowledge, assessment results, workflow dependencies, completed work, and provider availability into prioritized recommendations. It identifies the best next action, explains every ranking, and prevents completed work from being presented as unfinished.
+
 ### Planned Phases
 
-5. Recommendation Engine
 6. Accessibility Package
 
 Future development should extend the shared model rather than create isolated workflows.
@@ -160,9 +166,14 @@ Every development cycle must begin by reading this README and must update it bef
 
 ## Next Development Step
 
-Phase 5 will turn the accumulated shared knowledge into smarter, prioritized recommendations based on what is missing, what is already complete, workflow dependencies, and currently available providers.
+Phase 6 will create an Accessibility Package from completed results and Shared Knowledge. The package will include a readable manifest of created files, completed accessibility work, remaining gaps, and recommended follow-up actions.
 
 
 ## Phase 4
 
 Phase 4 adds persistent Shared Knowledge. Completed workflows now update the media knowledge model, created results are restored for the same source, and the assessment and ordered plan refresh after every action.
+
+
+## Phase 5
+
+Phase 5 adds the Recommendation Engine. Recommendations now use Shared Knowledge, missing accessibility features, completed work, workflow dependencies, and provider availability to identify and explain the best next action.
