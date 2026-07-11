@@ -13,6 +13,9 @@
   const planSection = document.getElementById('plan-section');
   const planSummary = document.getElementById('plan-summary');
   const planOutput = document.getElementById('plan-output');
+  const knowledgeSection = document.getElementById('knowledge-section');
+  const knowledgeSummary = document.getElementById('knowledge-summary');
+  const knowledgeOutput = document.getElementById('knowledge-output');
   const viewerSection = document.getElementById('viewer-section');
   const viewerOutput = document.getElementById('viewer-output');
   const goalsSection = document.getElementById('goals-section');
@@ -50,6 +53,7 @@
     urlInput.value = '';
     urlHelp.textContent = 'Paste a link to media or a page containing media.';
     resetViewer();
+    resetKnowledge();
     resetAssessment();
     resetPlan();
     resetProgress();
@@ -68,6 +72,8 @@
       renderInspection(currentInspection);
       renderAssessment(currentInspection);
       renderPlan(currentInspection);
+      renderKnowledge();
+      renderKnowledge();
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -90,6 +96,7 @@
     currentPlan = null;
     activeJob = null;
     resetViewer();
+    resetKnowledge();
     resetAssessment();
     resetPlan();
     resetProgress();
@@ -238,6 +245,44 @@
     return definition ? definition.title : id;
   }
 
+
+
+  function renderKnowledge() {
+    if (!currentKnowledgeModel) {
+      resetKnowledge();
+      return;
+    }
+
+    const summary = window.SharedKnowledge.summarize(currentKnowledgeModel);
+    const results = Array.isArray(currentKnowledgeModel.results) ? currentKnowledgeModel.results : [];
+    knowledgeSection.hidden = false;
+    knowledgeSummary.textContent = summary.results
+      ? `${summary.results} created result${summary.results === 1 ? '' : 's'} are saved in the shared knowledge for this source.`
+      : 'The source inspection is saved in shared knowledge. Created results will be added here and reused by later actions.';
+
+    knowledgeOutput.innerHTML = `
+      <p><strong>Completed knowledge areas:</strong> ${summary.completed}</p>
+      ${summary.restored ? '<p class="analysis-status">Previous work for this source was restored from this browser.</p>' : ''}
+      ${results.length ? `
+        <h3>Results available to later actions</h3>
+        <ul class="results-list">
+          ${results.map((result) => `
+            <li>
+              <strong>${escapeHtml(result.name)}</strong>
+              <span>${escapeHtml(result.type || 'Created result')}</span>
+              <p>${escapeHtml(result.description || '')}</p>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="muted">No workflow results have been created for this source yet.</p>'}
+    `;
+  }
+
+  function resetKnowledge() {
+    knowledgeSection.hidden = true;
+    knowledgeSummary.textContent = 'Saved analysis and results will appear here.';
+    knowledgeOutput.innerHTML = '';
+  }
 
   async function renderViewer(source, inspection) {
     viewerSection.hidden = false;
@@ -500,6 +545,14 @@
   }
 
   function completeProgress(job) {
+    currentKnowledgeModel = window.SharedKnowledge.recordJob(currentKnowledgeModel, job);
+    job.knowledgeModel = currentKnowledgeModel;
+    currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
+    currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, window.IntentEngine.getIntents(currentInspection));
+    renderAssessment(currentInspection);
+    renderPlan(currentInspection);
+    renderKnowledge();
+
     jobStatus.textContent = `${job.intent.title} finished. Your file is ready.`;
     progressBar.style.width = '100%';
 

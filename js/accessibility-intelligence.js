@@ -7,8 +7,8 @@
     const isLocal = inspection.sourceType !== 'url';
     const mediaType = inspection.mediaType;
 
-    return {
-      version: 1,
+    const baseModel = {
+      version: 2,
       source: {
         type: inspection.sourceType || 'file',
         name: inspection.name,
@@ -53,8 +53,13 @@
         completed: ['source', 'technical-metadata'],
         pending: pendingAnalysis(inspection),
         createdAt: new Date().toISOString()
-      }
+      },
+      results: [],
+      history: []
     };
+
+    const storedModel = window.SharedKnowledge ? window.SharedKnowledge.load(baseModel.source) : null;
+    return window.SharedKnowledge ? window.SharedKnowledge.merge(baseModel, storedModel) : baseModel;
   }
 
   function pendingAnalysis(inspection) {

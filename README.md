@@ -4,7 +4,7 @@ An accessibility-first media workflow application that automatically analyzes me
 
 ## Current Milestone
 
-This repository now contains Phase 3 of the Accessibility Intelligence roadmap.
+This repository now contains Phase 4 of the Accessibility Intelligence roadmap.
 
 The application can:
 
@@ -23,6 +23,9 @@ The application can:
 - Pass shared knowledge, assessment data, and the ordered accessibility plan into later workflow jobs.
 - Build a dependency-aware accessibility plan from the assessment.
 - Show which plan steps are complete, available now, preparation-only, or waiting for deeper processing.
+- Save completed workflow history and created-result metadata in one shared knowledge record.
+- Restore previous work for the same source in the same browser.
+- Rebuild the assessment and accessibility plan after each completed action.
 
 ## Design Principle
 
@@ -139,9 +142,12 @@ The application now converts the shared knowledge model into plain-language reco
 
 The application now turns the assessment into an ordered, dependency-aware plan. The plan explains what should happen first, what later work reuses, and which steps are currently available or still waiting for deeper processing.
 
+### Phase 4 - Shared Knowledge - Completed
+
+The application now persists completed analysis and created-result metadata in the shared knowledge model. When the same source is selected again, prior work is restored and later actions can reuse it instead of starting over.
+
 ### Planned Phases
 
-4. Shared Knowledge
 5. Recommendation Engine
 6. Accessibility Package
 
@@ -154,4 +160,9 @@ Every development cycle must begin by reading this README and must update it bef
 
 ## Next Development Step
 
-Phase 4 will persist completed analysis and created results back into the shared knowledge model so later actions can reuse them without starting over.
+Phase 5 will turn the accumulated shared knowledge into smarter, prioritized recommendations based on what is missing, what is already complete, workflow dependencies, and currently available providers.
+
+
+## Phase 4
+
+Phase 4 adds persistent Shared Knowledge. Completed workflows now update the media knowledge model, created results are restored for the same source, and the assessment and ordered plan refresh after every action.
