@@ -57,9 +57,13 @@
   const audioDescriptionReviewStatus = document.getElementById('audio-description-review-status');
   const aiProviderOptions = document.getElementById('ai-provider-options');
   const aiProviderStatus = document.getElementById('ai-provider-status');
+  const automaticProviderStatus = document.getElementById('automatic-provider-status');
+  const connectedProviderName = document.getElementById('connected-provider-name');
   const connectedProviderEndpoint = document.getElementById('connected-provider-endpoint');
   const connectedProviderModel = document.getElementById('connected-provider-model');
   const connectedProviderKey = document.getElementById('connected-provider-key');
+  const connectedProviderCost = document.getElementById('connected-provider-cost');
+  const testConnectedProviderButton = document.getElementById('test-connected-provider');
   const draftTranscriptButton = document.getElementById('draft-transcript');
   const draftCaptionsButton = document.getElementById('draft-captions');
   const draftAudioDescriptionButton = document.getElementById('draft-audio-description');
@@ -199,20 +203,48 @@
 
   function renderAIProviders() {
     const providers = window.AIProviderLayer.list();
-    aiProviderOptions.innerHTML = providers.map((provider) => `
+    const mode = window.AIProviderLayer.getSelectionMode();
+    aiProviderOptions.innerHTML = `
+      <div class="provider-choice">
+        <label><input type="radio" name="aiProvider" value="automatic" ${mode === 'automatic' ? 'checked' : ''}> <strong>Automatic, recommended</strong></label>
+        <p>The application chooses the best available method for each task and warns you before external processing or possible charges.</p>
+      </div>` + providers.map((provider) => `
       <div class="provider-choice">
         <label><input type="radio" name="aiProvider" value="${escapeHtml(provider.id)}" ${provider.selected ? 'checked' : ''} ${provider.available ? '' : 'aria-describedby="provider-state-' + escapeHtml(provider.id) + '"'}> <strong>${escapeHtml(provider.name)}</strong></label>
         <p>${escapeHtml(provider.description)}</p>
-        <p id="provider-state-${escapeHtml(provider.id)}" class="help-text">${provider.available ? 'Available' : 'Needs configuration'}. ${escapeHtml(provider.privacy)} Capabilities: ${escapeHtml(provider.capabilities.join(', '))}.</p>
+        <p id="provider-state-${escapeHtml(provider.id)}" class="help-text">${provider.available ? 'Available' : 'Needs configuration'}. ${escapeHtml(provider.costMessage)}. ${escapeHtml(provider.privacy)}</p>
       </div>`).join('');
     aiProviderOptions.querySelectorAll('input[name="aiProvider"]').forEach((input) => input.addEventListener('change', () => {
       window.AIProviderLayer.select(input.value);
-      aiProviderStatus.textContent = `${input.closest('.provider-choice').querySelector('strong').textContent} selected.`;
+      aiProviderStatus.textContent = input.value === 'automatic' ? 'Automatic assistance selection enabled.' : `${input.closest('.provider-choice').querySelector('strong').textContent} selected as an advanced override.`;
       renderAIProviders();
     }));
     const config = window.ConnectedAIProvider.getConfiguration();
+    connectedProviderName.value = config.serviceName;
     connectedProviderEndpoint.value = config.endpoint;
     connectedProviderModel.value = config.model;
+    connectedProviderCost.value = config.costCategory;
+    const summaries = ['transcription-draft', 'caption-draft', 'audio-description-draft'].map((capability) => window.AIProviderLayer.getCapability(capability));
+    const available = summaries.filter((item) => item.canRun).length;
+    automaticProviderStatus.textContent = mode === 'automatic'
+      ? `Automatic selection is active. ${available} of ${summaries.length} drafting tasks currently have an available method. Privacy and cost notices appear before any connected service runs.`
+      : 'An advanced provider override is active. Return to Automatic, recommended to let the application choose for each task.';
+  }
+
+  function confirmAssistanceUse(capability, statusElement) {
+    const notice = window.AIProviderLayer.getExecutionNotice(capability);
+    if (!notice.canRun) {
+      statusElement.textContent = notice.message;
+      return null;
+    }
+    if (!notice.confirmationRequired) return { confirmed: true, notice };
+    statusElement.textContent = notice.notice;
+    const confirmed = window.confirm(notice.confirmationText);
+    if (!confirmed) {
+      statusElement.textContent = 'Assistance request cancelled. No information was sent and no service charge was requested.';
+      return null;
+    }
+    return { confirmed: true, notice };
   }
 
   function aiContext() {
@@ -229,12 +261,12 @@
   }
 
   async function requestTranscriptDraft() {
-    const capability = window.AIProviderLayer.getCapability('transcription-draft');
-    if (!capability.canRun) { transcriptReviewStatus.textContent = capability.message; return; }
+    const approval = confirmAssistanceUse('transcription-draft', transcriptReviewStatus);
+    if (!approval) return;
     draftTranscriptButton.disabled = true;
-    transcriptReviewStatus.textContent = `Requesting a draft from ${capability.provider.name}. Source-derived information may be sent according to that provider's privacy notice.`;
+    transcriptReviewStatus.textContent = 'Creating an editable transcript draft using the best available method.';
     try {
-      const result = await window.AIProviderLayer.run('transcription-draft', aiContext());
+      const result = await window.AIProviderLayer.run('transcription-draft', aiContext(), { confirmed: approval.confirmed });
       transcriptTextInput.value = String(result.text || '').trim();
       transcriptReviewStatus.textContent = `${result.providerName} returned a draft. Review every word before confirming completion.`;
       transcriptTextInput.focus();
@@ -246,7 +278,9 @@
     draftCaptionsButton.disabled = true;
     captionReviewStatus.textContent = 'Requesting editable caption cues.';
     try {
-      const result = await window.AIProviderLayer.run('caption-draft', aiContext());
+      const approval = confirmAssistanceUse('caption-draft', captionReviewStatus);
+      if (!approval) return;
+      const result = await window.AIProviderLayer.run('caption-draft', aiContext(), { confirmed: approval.confirmed });
       captionCueCounter = 0; captionCues.innerHTML = '';
       result.cues.forEach((cue) => addCaptionCue(cue));
       captionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter cues created.'} Human timing and text review is required.`;
@@ -259,7 +293,9 @@
     draftAudioDescriptionButton.disabled = true;
     audioDescriptionReviewStatus.textContent = 'Requesting editable audio description checkpoints.';
     try {
-      const result = await window.AIProviderLayer.run('audio-description-draft', aiContext());
+      const approval = confirmAssistanceUse('audio-description-draft', audioDescriptionReviewStatus);
+      if (!approval) return;
+      const result = await window.AIProviderLayer.run('audio-description-draft', aiContext(), { confirmed: approval.confirmed });
       audioDescriptionCueCounter = 0; audioDescriptionCues.innerHTML = '';
       result.cues.forEach((cue) => addAudioDescriptionCue(cue));
       audioDescriptionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter checkpoints created.'} Review the video and replace prompts with accurate narration.`;
@@ -1546,16 +1582,25 @@
   cancelWorkflowChainButton.addEventListener('click', () => cancelWorkflowChain());
   document.getElementById('save-connected-provider').addEventListener('click', () => {
     try {
-      window.ConnectedAIProvider.configure({ endpoint: connectedProviderEndpoint.value, model: connectedProviderModel.value, apiKey: connectedProviderKey.value });
+      window.ConnectedAIProvider.configure({ serviceName: connectedProviderName.value, endpoint: connectedProviderEndpoint.value, model: connectedProviderModel.value, apiKey: connectedProviderKey.value, costCategory: connectedProviderCost.value });
       connectedProviderKey.value = '';
-      window.AIProviderLayer.select('connected-json');
-      aiProviderStatus.textContent = 'Connected provider configuration saved for this browser tab and selected.';
+      aiProviderStatus.textContent = 'Connected service settings saved for this browser tab. Automatic selection remains in control unless you choose an advanced override.';
       renderAIProviders();
     } catch (error) { aiProviderStatus.textContent = error.message; connectedProviderEndpoint.focus(); }
   });
+  testConnectedProviderButton.addEventListener('click', async () => {
+    testConnectedProviderButton.disabled = true;
+    aiProviderStatus.textContent = 'Testing the connected service.';
+    try {
+      const result = await window.ConnectedAIProvider.testConnection();
+      aiProviderStatus.textContent = `${result.message} No workflow was started.`;
+    } catch (error) { aiProviderStatus.textContent = error.message; }
+    finally { testConnectedProviderButton.disabled = false; }
+  });
   document.getElementById('clear-connected-provider').addEventListener('click', () => {
-    window.ConnectedAIProvider.clear(); connectedProviderEndpoint.value = ''; connectedProviderModel.value = ''; connectedProviderKey.value = '';
-    window.AIProviderLayer.select('local-assist'); aiProviderStatus.textContent = 'Connected provider configuration cleared.'; renderAIProviders();
+    window.ConnectedAIProvider.clear(); connectedProviderName.value = ''; connectedProviderEndpoint.value = ''; connectedProviderModel.value = ''; connectedProviderKey.value = ''; connectedProviderCost.value = 'may-charge';
+    if (window.AIProviderLayer.getSelectionMode() === 'connected-json') window.AIProviderLayer.select('automatic');
+    aiProviderStatus.textContent = 'Connected service configuration cleared. Automatic selection is active.'; renderAIProviders();
   });
   draftTranscriptButton.addEventListener('click', requestTranscriptDraft);
   draftCaptionsButton.addEventListener('click', requestCaptionDraft);

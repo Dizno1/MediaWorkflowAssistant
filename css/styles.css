@@ -816,3 +816,13 @@ button:disabled:hover {
   margin: 0 0 0.35rem;
 }
 .intelligence-action-list li:first-child { border-width: 3px; }
+
+.provider-summary {
+  border-left: 0.35rem solid var(--accent, #315c76);
+  padding: 0.75rem 1rem;
+  margin-block: 1rem;
+  background: var(--surface-muted, #f4f7f9);
+}
+.provider-summary h3, .provider-summary p { margin-block: 0 0.4rem; }
+#advanced-provider-settings > summary { font-weight: 700; cursor: pointer; padding-block: 0.5rem; }
+#advanced-provider-settings fieldset { margin-block: 1rem; }

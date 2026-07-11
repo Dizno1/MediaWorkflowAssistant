@@ -7,6 +7,12 @@
     kind: 'on-device drafting',
     description: 'Creates editable starter material from information already in Shared Knowledge. It does not send media or text over the network.',
     privacy: 'All drafting stays in this browser.',
+    external: false,
+    costCategory: 'no-additional-cost',
+    costMessage: 'No additional usage charge',
+    requiresConfirmation: false,
+    quality: { 'caption-draft': 55, 'audio-description-draft': 40, 'visual-analysis': 25 },
+    preferredCapabilities: ['caption-draft', 'audio-description-draft'],
     isAvailable: () => true,
     getCapabilities: () => capabilities.slice(),
     async run(capability, context) {

@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 15 of the Accessibility Intelligence roadmap is complete.
+Phase 16 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -26,6 +26,7 @@ The application now includes:
 - An AI Provider Layer with capability discovery, preferred-provider selection, a private on-device assistance provider, and an optional connected JSON provider for transcription, caption, visual-analysis, and audio-description drafting.
 - An accessible Project Workspace that organizes multiple related sources, source-level Shared Knowledge summaries, generated artifact counts, workflow history, and project readiness status under one persistent project.
 - Project-aware Accessibility Intelligence that evaluates every source, calculates completion, detects missing or blocked work, identifies stale accessibility packages, and prioritizes the best next actions across the active project.
+- Automatic provider guidance that keeps provider selection under the hood, favors private and no-additional-cost methods, warns before external processing or possible charges, securely stores connected-service credentials for the browser session only, and preserves provider overrides inside Advanced assistance settings.
 
 ## Design Principle
 
@@ -185,7 +186,7 @@ Users can now choose the complete "Prepare media for accessibility" outcome inst
 
 ### Phase 13 - AI Provider Layer - Completed
 
-Interchangeable assistance providers now register standard capabilities without changing workflow definitions. Users can choose a preferred provider, review privacy information, configure an optional HTTPS JSON endpoint, and request editable transcript, caption, visual-analysis, or audio-description drafts. A local on-device provider creates caption drafts and audio-description review checkpoints from existing Shared Knowledge. Connected credentials remain in session storage only. All generated material remains a draft and must pass the existing accessible human-review controls before the Workflow Execution Engine records completion.
+Interchangeable assistance providers now register standard capabilities without changing workflow definitions. The application selects an appropriate provider automatically, while advanced users can review provider details, configure an optional HTTPS JSON endpoint, or deliberately override the automatic choice. A local on-device provider creates caption drafts and audio-description review checkpoints from existing Shared Knowledge. Connected credentials remain in session storage only. All generated material remains a draft and must pass the existing accessible human-review controls before the Workflow Execution Engine records completion.
 
 
 ### Phase 14 - Intelligent Project Workspace - Completed
@@ -198,4 +199,13 @@ The active workspace now receives project-wide accessibility guidance. Every sou
 
 ## Next Development Step
 
-Phase 16 will add Human Review and Collaboration. It will record review assignments, approval states, comments, and project-wide review readiness without replacing the existing workflow execution or Shared Knowledge architecture.
+Phase 17 will add Human Review and Approval. It will record review assignments, approval and rejection states, reviewer comments, revision history, and project-wide review readiness without replacing the existing workflow execution or Shared Knowledge architecture.
+
+### Phase 16 - Provider Guidance, Cost Awareness, and Secure Configuration - Completed
+
+Assistance selection is now automatic by default. The provider layer ranks compatible methods by task fit, privacy, and configured cost category while keeping technical provider names out of the normal workflow. Before any external or potentially metered service runs, the application presents a plain-language privacy and cost confirmation. Connected-service configuration now includes a service name, cost category, session-only API key handling, and an accessible connection test. Advanced users may override automatic selection, but the normal experience remains outcome based.
+
+### Phase 17 - Human Review and Approval - Planned
+
+Add project-aware review assignments, approval and rejection states, reviewer comments, revision history, and recommendation updates so generated drafts move through clear human checkpoints before publishing.
+

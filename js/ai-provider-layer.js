@@ -1,22 +1,21 @@
 (function () {
-  const STORAGE_KEY = 'media-workflow-assistant-ai-provider';
+  const STORAGE_KEY = 'media-workflow-assistant-ai-provider-mode';
   const providers = new Map();
   const listeners = new Set();
-  let selectedProviderId = loadSelection();
+  let selectionMode = loadSelection() || 'automatic';
 
   function register(provider) {
     if (!provider || !provider.id || typeof provider.getCapabilities !== 'function' || typeof provider.run !== 'function') {
       throw new Error('AI providers must include an id, capabilities, and a run function.');
     }
     providers.set(provider.id, provider);
-    if (!selectedProviderId) selectedProviderId = provider.id;
     notify();
     return provider;
   }
 
   function unregister(providerId) {
     providers.delete(providerId);
-    if (selectedProviderId === providerId) selectedProviderId = providers.keys().next().value || '';
+    if (selectionMode === providerId) selectionMode = 'automatic';
     notify();
   }
 
@@ -29,58 +28,112 @@
     return {
       id: provider.id,
       name: provider.name || provider.id,
-      kind: provider.kind || 'AI provider',
+      kind: provider.kind || 'assistance provider',
       description: provider.description || '',
       privacy: provider.privacy || '',
+      costCategory: provider.costCategory || 'unknown',
+      costMessage: provider.costMessage || costMessage(provider.costCategory),
+      external: Boolean(provider.external),
+      requiresConfirmation: Boolean(provider.requiresConfirmation || provider.external || provider.costCategory === 'may-charge' || provider.costCategory === 'unknown'),
       available: provider.isAvailable ? Boolean(provider.isAvailable()) : true,
       capabilities: Array.isArray(capabilities) ? capabilities.slice() : [],
-      selected: provider.id === selectedProviderId
+      selected: provider.id === selectionMode
     };
   }
 
-  function select(providerId) {
-    if (!providers.has(providerId)) throw new Error('That AI provider is not registered.');
-    selectedProviderId = providerId;
-    try { localStorage.setItem(STORAGE_KEY, providerId); } catch (error) {}
+  function select(mode) {
+    if (mode !== 'automatic' && !providers.has(mode)) throw new Error('That assistance provider is not registered.');
+    selectionMode = mode;
+    try { localStorage.setItem(STORAGE_KEY, mode); } catch (error) {}
     notify();
-    return getSelected();
+    return getSelectionMode();
   }
 
-  function getSelected() {
-    return providers.get(selectedProviderId) || providers.values().next().value || null;
+  function getSelectionMode() {
+    return selectionMode;
   }
 
   function getProviderFor(capability) {
-    const selected = getSelected();
-    if (supports(selected, capability)) return selected;
-    return Array.from(providers.values()).find((provider) => supports(provider, capability)) || null;
+    if (selectionMode !== 'automatic') {
+      const selected = providers.get(selectionMode);
+      if (supports(selected, capability)) return selected;
+    }
+    return Array.from(providers.values())
+      .filter((provider) => supports(provider, capability))
+      .sort((a, b) => score(b, capability) - score(a, capability))[0] || null;
   }
 
   function getCapability(capability) {
     const provider = getProviderFor(capability);
-    if (!provider) return { capability, canRun: false, provider: null, message: 'No AI provider supports this assistance yet.' };
+    if (!provider) return { capability, canRun: false, provider: null, message: 'No available assistance method can complete this task yet.' };
     const available = provider.isAvailable ? Boolean(provider.isAvailable()) : true;
+    const description = describe(provider);
     return {
       capability,
       canRun: available,
-      provider: describe(provider),
-      message: available ? `${provider.name} is ready.` : `${provider.name} needs configuration.`
+      provider: description,
+      selectionMode,
+      message: available ? plainLanguageReady(description) : 'The available method needs configuration before this task can begin.'
+    };
+  }
+
+  function getExecutionNotice(capability) {
+    const item = getCapability(capability);
+    if (!item.canRun || !item.provider) return { ...item, confirmationRequired: false };
+    const provider = item.provider;
+    const parts = [];
+    if (provider.external) parts.push('Information needed for this task will be sent to an outside service.');
+    if (provider.costCategory === 'may-charge') parts.push('This service may charge your account for usage.');
+    if (provider.costCategory === 'unknown') parts.push('The cost of this service is not known. Check the service account before continuing.');
+    if (provider.costCategory === 'included') parts.push('Usage is marked as included in an account you already have. Provider limits may still apply.');
+    if (provider.costCategory === 'no-additional-cost') parts.push('This method is marked as having no additional usage charge.');
+    if (!provider.external) parts.push('The work stays in this browser.');
+    return {
+      ...item,
+      confirmationRequired: provider.requiresConfirmation,
+      notice: parts.join(' '),
+      confirmationText: `${parts.join(' ')}\n\nContinue with ${provider.name}?`
     };
   }
 
   async function run(capability, context, options = {}) {
     const provider = options.providerId ? providers.get(options.providerId) : getProviderFor(capability);
-    if (!provider || !supports(provider, capability)) throw new Error('No compatible AI provider is available for this assistance.');
-    if (provider.isAvailable && !provider.isAvailable()) throw new Error(`${provider.name} is not configured.`);
+    if (!provider || !supports(provider, capability)) throw new Error('No compatible assistance method is available for this task.');
+    if (provider.isAvailable && !provider.isAvailable()) throw new Error('The selected assistance method is not configured.');
+    const description = describe(provider);
+    if (description.requiresConfirmation && !options.confirmed) {
+      throw new Error('Review and confirm the privacy and cost notice before using this service.');
+    }
     const result = await provider.run(capability, sanitizeContext(context), options);
-    if (!result || typeof result !== 'object') throw new Error('The AI provider returned an invalid result.');
-    return { ...result, providerId: provider.id, providerName: provider.name, capability };
+    if (!result || typeof result !== 'object') throw new Error('The assistance service returned an invalid result.');
+    return { ...result, providerId: provider.id, providerName: provider.name, capability, costCategory: description.costCategory, external: description.external };
+  }
+
+  function score(provider, capability) {
+    const quality = provider.quality && Number(provider.quality[capability]) || 50;
+    const privacy = provider.external ? 0 : 35;
+    const cost = provider.costCategory === 'no-additional-cost' ? 30 : provider.costCategory === 'included' ? 20 : provider.costCategory === 'may-charge' ? -20 : -10;
+    const preferred = provider.preferredCapabilities && provider.preferredCapabilities.includes(capability) ? 15 : 0;
+    return quality + privacy + cost + preferred;
   }
 
   function supports(provider, capability) {
     if (!provider) return false;
     if (provider.isAvailable && !provider.isAvailable()) return false;
     return provider.getCapabilities().includes(capability);
+  }
+
+  function plainLanguageReady(provider) {
+    if (!provider.external && provider.costCategory === 'no-additional-cost') return 'A private, no-additional-cost method is ready.';
+    if (provider.costCategory === 'may-charge') return 'A connected method is available. You will be warned about possible charges before it runs.';
+    return 'An assistance method is ready. You will review its privacy and cost information before it runs.';
+  }
+
+  function costMessage(category) {
+    if (category === 'no-additional-cost') return 'No additional usage charge';
+    if (category === 'included') return 'Included in an existing account';
+    if (category === 'may-charge') return 'May charge for usage';
+    return 'Cost is unknown';
   }
 
   function sanitizeContext(context) {
@@ -101,13 +154,18 @@
   }
 
   function notify() {
-    const snapshot = list();
+    const snapshot = { mode: selectionMode, providers: list() };
     listeners.forEach((listener) => listener(snapshot));
   }
 
   function loadSelection() {
-    try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (error) { return ''; }
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return saved;
+      const legacy = localStorage.getItem('media-workflow-assistant-ai-provider');
+      return legacy && legacy !== 'local-assist' ? legacy : 'automatic';
+    } catch (error) { return 'automatic'; }
   }
 
-  window.AIProviderLayer = { register, unregister, list, select, getSelected, getCapability, run, subscribe };
+  window.AIProviderLayer = { register, unregister, list, select, getSelectionMode, getProviderFor, getCapability, getExecutionNotice, run, subscribe };
 })();
