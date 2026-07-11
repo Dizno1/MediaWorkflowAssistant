@@ -85,6 +85,8 @@
       title: job.intent.title,
       status: job.status,
       jobId: job.id,
+      chainId: job.chainId || '',
+      chainWorkflowId: job.chainWorkflowId || '',
       sourceKey: sourceKey(updated.source),
       startedAt: job.startedAt ? job.startedAt.toISOString() : '',
       completedAt: job.completedAt ? job.completedAt.toISOString() : createdAt,

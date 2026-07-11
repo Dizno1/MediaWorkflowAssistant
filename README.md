@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 11 of the Accessibility Intelligence roadmap is complete.
+Phase 12 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -22,6 +22,7 @@ The application now includes:
 - A complete Create Transcript workflow with an accessible editing and review workspace, validation, plain-text export, Output Manager registration, and Shared Knowledge updates.
 - A complete Create Captions workflow with transcript reuse, an accessible timed-cue editor, timing validation, reviewed WebVTT export, a caption review record, Output Manager registration, and Shared Knowledge updates.
 - A complete Audio Description workflow with an accessible timed narration editor, placement and timing validation, reviewed script and review-record exports, Output Manager registration, Shared Knowledge updates, and recommendation completion tracking.
+- An outcome-based Workflow Chain coordinator that orders dependent accessibility work, skips completed actions, preserves human review checkpoints, continues automatically after successful steps, and pauses safely on failure or cancellation.
 
 ## Design Principle
 
@@ -161,6 +162,10 @@ Create Captions is now a complete production workflow. It reuses a completed tra
 
 Audio Description is now a complete production workflow. It provides a keyboard-accessible timed narration editor with labeled start and end times, narration placement choices, production notes, add and remove controls, review confirmation, and live validation feedback. The workflow validates timestamp format, chronology, source duration, narration content, and review confirmation. The Workflow Execution Engine exports a reviewed Markdown audio description script and a separate review record, registers both artifacts with the Output Manager, records cue count and review time in Shared Knowledge, and automatically marks the recommendation complete.
 
+### Phase 12 - Workflow Chaining - Completed
+
+Users can now choose the complete "Prepare media for accessibility" outcome instead of starting every workflow separately. The application builds an ordered chain from current recommendations, skips work already recorded in Shared Knowledge, and coordinates Extract Audio, Create Transcript, Create Captions, Audio Description, and Accessibility Package. Transcript, caption, audio description, and package creation remain human review checkpoints. The chain continues automatically after successful execution, announces each transition, and pauses safely when a step fails or the user cancels.
+
 ## Next Development Step
 
-Phase 12 will add workflow chaining. Users will be able to approve an accessibility outcome and let the application queue dependent workflows such as Extract Audio, Create Transcript, Create Captions, Create Audio Description, and Create Accessibility Package in the correct order while preserving review checkpoints for human-authored content.
+Phase 13 will add an AI Provider Layer. Interchangeable local and connected providers will be able to supply transcription, caption assistance, visual analysis, and audio description drafting through the existing Provider Manager without changing workflow definitions or accessibility review controls.

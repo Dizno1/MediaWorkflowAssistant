@@ -87,6 +87,23 @@
     </section>
 
 
+    <section id="workflow-chain-section" class="panel" aria-labelledby="workflow-chain-heading" tabindex="-1" hidden>
+      <h2 id="workflow-chain-heading">Prepare media for accessibility</h2>
+      <p id="workflow-chain-summary">Review the workflows that will run and approve the accessibility outcome.</p>
+      <form id="workflow-chain-form">
+        <fieldset>
+          <legend>Workflows in this accessibility plan</legend>
+          <p class="help-text">Completed work is skipped. Work that requires your judgment will pause at an accessible review checkpoint.</p>
+          <div id="workflow-chain-steps"></div>
+        </fieldset>
+        <div id="workflow-chain-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Start accessibility plan</button>
+          <button type="button" id="cancel-workflow-chain">Cancel plan</button>
+        </div>
+      </form>
+    </section>
+
     <section id="transcript-review-section" class="panel" aria-labelledby="transcript-review-heading" tabindex="-1" hidden>
       <h2 id="transcript-review-heading">Create transcript</h2>
       <p id="transcript-review-summary">Play the source in the viewer, then enter and review the spoken content.</p>
@@ -239,6 +256,7 @@
   <script src="js/caption-review.js"></script>
   <script src="js/audio-description-review.js"></script>
   <script src="js/package-review.js"></script>
+  <script src="js/workflow-chain.js"></script>
   <script src="js/workflow-runner.js"></script>
   <script src="js/execution-engine.js"></script>
   <script src="js/app.js"></script>

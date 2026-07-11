@@ -66,6 +66,12 @@
   const packagePrivacyConfirm = document.getElementById('package-privacy-confirm');
   const packageReviewStatus = document.getElementById('package-review-status');
   const cancelPackageReviewButton = document.getElementById('cancel-package-review');
+  const workflowChainSection = document.getElementById('workflow-chain-section');
+  const workflowChainForm = document.getElementById('workflow-chain-form');
+  const workflowChainSummary = document.getElementById('workflow-chain-summary');
+  const workflowChainSteps = document.getElementById('workflow-chain-steps');
+  const workflowChainStatus = document.getElementById('workflow-chain-status');
+  const cancelWorkflowChainButton = document.getElementById('cancel-workflow-chain');
   const resultsSection = document.getElementById('results-section');
   const resultsOutput = document.getElementById('results-output');
 
@@ -84,6 +90,7 @@
   let currentAssessment = null;
   let currentPlan = null;
   let currentRecommendations = null;
+  let activeWorkflowChain = null;
   const executionEngine = new window.WorkflowExecutionEngine({
     onQueued: queuedProgress,
     onUpdate: updateProgress,
@@ -120,6 +127,7 @@
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
+    resetWorkflowChain();
 
     fileHelp.textContent = `${file.name} selected. The file stays on this device.`;
     dropZone.querySelector('strong').textContent = file.name;
@@ -169,6 +177,7 @@
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
+    resetWorkflowChain();
 
     inspectionOutput.hidden = false;
     inspectionOutput.innerHTML = '<p class="muted">Checking the web address...</p>';
@@ -571,6 +580,24 @@
     const availableCount = remaining.filter((intent) => intent.capability.canRun).length;
     goalsIntro.textContent = `${remaining.length} remaining choice${remaining.length === 1 ? '' : 's'}. ${availableCount} available now. Choices are ordered by recommendation priority.`;
 
+    const chainPlan = window.WorkflowChain.build(intents, inspection.mediaType);
+    if (window.WorkflowChain.selectedSteps(chainPlan).length > 1) {
+      const chainCard = document.createElement('article');
+      chainCard.className = 'recommendation-card chain-outcome-card';
+      chainCard.setAttribute('aria-labelledby', 'goal-title-accessibility-chain');
+      chainCard.innerHTML = `
+        <h3 id="goal-title-accessibility-chain">${escapeHtml(chainPlan.title)}</h3>
+        <p class="recommendation-priority"><strong>Complete outcome</strong></p>
+        <p>Review and run the available accessibility workflows in the correct order. The plan pauses whenever your review or authorship is required.</p>
+      `;
+      const chainButton = document.createElement('button');
+      chainButton.type = 'button';
+      chainButton.textContent = 'Review accessibility plan';
+      chainButton.addEventListener('click', () => openWorkflowChainReview(chainPlan));
+      chainCard.appendChild(chainButton);
+      goals.appendChild(chainCard);
+    }
+
     intents.forEach((intent) => {
       const card = document.createElement('article');
       card.className = 'recommendation-card';
@@ -617,6 +644,89 @@
     });
   }
 
+  function openWorkflowChainReview(chain) {
+    activeWorkflowChain = chain;
+    workflowChainSteps.innerHTML = '';
+    chain.steps.forEach((step, index) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'workflow-chain-option';
+      const id = `workflow-chain-step-${index + 1}`;
+      const stateLabel = step.completed ? 'Completed and skipped' : step.blocked ? 'Blocked' : step.requiresReview ? 'Ready, review checkpoint required' : 'Ready to execute';
+      wrapper.innerHTML = `
+        <label for="${id}">
+          <input id="${id}" type="checkbox" name="workflowChainStep" value="${escapeHtml(step.workflowId)}" ${step.selected ? 'checked' : ''} ${step.completed || step.blocked ? 'disabled' : ''}>
+          <span>${escapeHtml(step.title)}</span>
+        </label>
+        <p>${escapeHtml(step.description)}</p>
+        <p class="workflow-chain-state">Status: ${escapeHtml(stateLabel)}</p>
+      `;
+      workflowChainSteps.appendChild(wrapper);
+    });
+    workflowChainSummary.textContent = `${chain.steps.length} workflow steps were evaluated. Select the available work you want the application to coordinate.`;
+    workflowChainStatus.textContent = '';
+    workflowChainSection.hidden = false;
+    workflowChainSection.focus();
+  }
+
+  function submitWorkflowChain(event) {
+    event.preventDefault();
+    if (!activeWorkflowChain) return;
+    const selected = new Set(Array.from(workflowChainSteps.querySelectorAll('input[name="workflowChainStep"]:checked')).map((input) => input.value));
+    activeWorkflowChain.steps.forEach((step) => {
+      if (!step.completed && !step.blocked) step.selected = selected.has(step.workflowId);
+    });
+    if (!window.WorkflowChain.selectedSteps(activeWorkflowChain).length) {
+      workflowChainStatus.textContent = 'Select at least one available workflow before starting the plan.';
+      const first = workflowChainSteps.querySelector('input:not(:disabled)');
+      if (first) first.focus();
+      return;
+    }
+    activeWorkflowChain.status = 'running';
+    activeWorkflowChain.startedAt = new Date().toISOString();
+    workflowChainSection.hidden = true;
+    setStatus('The accessibility plan started. The first workflow is being prepared.');
+    continueWorkflowChain();
+  }
+
+  function continueWorkflowChain() {
+    if (!activeWorkflowChain || activeWorkflowChain.status !== 'running') return;
+    const step = window.WorkflowChain.next(activeWorkflowChain);
+    if (!step) {
+      const completedCount = activeWorkflowChain.steps.filter((item) => item.selected && item.completed).length;
+      jobStatus.textContent = `Accessibility plan complete. ${completedCount} selected workflow${completedCount === 1 ? '' : 's'} completed.`;
+      setStatus('The accessibility plan is complete. All selected work was saved.');
+      activeWorkflowChain = null;
+      renderGoals(currentInspection);
+      goalsSection.focus();
+      return;
+    }
+    setStatus(`${step.title} is the next step in the accessibility plan.`);
+    runIntent(step.intent);
+  }
+
+  function renderWorkflowChainState() {
+    if (!activeWorkflowChain) return;
+    const step = activeWorkflowChain.steps[activeWorkflowChain.currentIndex];
+    if (step) jobStatus.textContent = `Accessibility plan: ${step.title}. Status: ${step.state}.`;
+  }
+
+  function cancelWorkflowChain(message) {
+    if (!activeWorkflowChain) return;
+    activeWorkflowChain.status = 'cancelled';
+    activeWorkflowChain = null;
+    workflowChainSection.hidden = true;
+    workflowChainStatus.textContent = '';
+    setStatus(message || 'The remaining accessibility plan was cancelled. Completed work was kept.');
+    goalsSection.focus();
+  }
+
+  function resetWorkflowChain() {
+    activeWorkflowChain = null;
+    workflowChainSection.hidden = true;
+    workflowChainSteps.innerHTML = '';
+    workflowChainStatus.textContent = '';
+  }
+
   function runIntent(intent) {
     if (!currentSource || !currentInspection || !intent.capability.canRun) return;
 
@@ -648,6 +758,12 @@
     resetPackageReview();
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
     activeJob.exportOptions = exportOptions || null;
+    if (activeWorkflowChain) {
+      activeJob.chainId = activeWorkflowChain.id;
+      activeJob.chainWorkflowId = intent.workflowId;
+      window.WorkflowChain.markRunning(activeWorkflowChain, intent.workflowId);
+      renderWorkflowChainState();
+    }
     activeJob.transcriptOptions = intent.workflowId === 'create-transcript' ? (exportOptions || null) : null;
     activeJob.captionOptions = intent.workflowId === 'create-captions' ? (exportOptions || null) : null;
     activeJob.audioDescriptionOptions = intent.workflowId === 'audio-description' ? (exportOptions || null) : null;
@@ -1058,7 +1174,13 @@
     });
 
     cancelJobButton.disabled = true;
-    renderResults(job);
+    if (activeWorkflowChain && job.chainId === activeWorkflowChain.id) {
+      window.WorkflowChain.markCompleted(activeWorkflowChain, job.chainWorkflowId);
+      setStatus(`${job.intent.title} completed. The accessibility plan is continuing.`);
+      continueWorkflowChain();
+    } else {
+      renderResults(job);
+    }
   }
 
   function failProgress(job, error) {
@@ -1066,6 +1188,10 @@
     refreshAfterJobStateChange();
     cancelJobButton.disabled = true;
     jobStatus.textContent = `This action could not be completed. ${error.message}`;
+    if (activeWorkflowChain && job.chainId === activeWorkflowChain.id) {
+      window.WorkflowChain.markFailed(activeWorkflowChain, job.chainWorkflowId, error.message);
+      setStatus(`The accessibility plan paused because ${job.intent.title} could not be completed. Completed work was kept.`);
+    }
   }
 
   function cancelProgress(job) {
@@ -1073,6 +1199,7 @@
     refreshAfterJobStateChange();
     cancelJobButton.disabled = true;
     jobStatus.textContent = 'The workflow was cancelled. No output was saved.';
+    if (activeWorkflowChain && job.chainId === activeWorkflowChain.id) cancelWorkflowChain('The current workflow and remaining accessibility plan were cancelled. Completed work was kept.');
   }
 
   function updateActiveJobStatus(job, status) {
@@ -1242,17 +1369,19 @@
     handleFile(event.target.files[0]);
   });
 
+  workflowChainForm.addEventListener('submit', submitWorkflowChain);
+  cancelWorkflowChainButton.addEventListener('click', () => cancelWorkflowChain());
   transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
   captionReviewForm.addEventListener('submit', submitCaptionReview);
   audioDescriptionReviewForm.addEventListener('submit', submitAudioDescriptionReview);
   addAudioDescriptionCueButton.addEventListener('click', () => { addAudioDescriptionCue(); audioDescriptionReviewStatus.textContent = 'Description cue added.'; });
-  cancelAudioDescriptionReviewButton.addEventListener('click', () => { resetAudioDescriptionReview(); goalsSection.focus(); });
+  cancelAudioDescriptionReviewButton.addEventListener('click', () => { resetAudioDescriptionReview(); if (activeWorkflowChain) cancelWorkflowChain('The audio description checkpoint and remaining accessibility plan were cancelled.'); else goalsSection.focus(); });
   addCaptionCueButton.addEventListener('click', () => { addCaptionCue(); captionCues.lastElementChild.querySelector('.caption-start').focus(); });
-  cancelCaptionReviewButton.addEventListener('click', () => { resetCaptionReview(); goalsSection.focus(); });
+  cancelCaptionReviewButton.addEventListener('click', () => { resetCaptionReview(); if (activeWorkflowChain) cancelWorkflowChain('The caption checkpoint and remaining accessibility plan were cancelled.'); else goalsSection.focus(); });
   cancelTranscriptReviewButton.addEventListener('click', () => {
     resetTranscriptReview();
-    goalsSection.focus();
-    setStatus('Transcript creation cancelled.');
+    if (activeWorkflowChain) cancelWorkflowChain('The transcript checkpoint and remaining accessibility plan were cancelled.');
+    else { goalsSection.focus(); setStatus('Transcript creation cancelled.'); }
   });
   packageReviewForm.addEventListener('submit', submitPackageReview);
 
@@ -1261,8 +1390,8 @@
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
-    goalsSection.focus();
-    setStatus('Package review cancelled.');
+    if (activeWorkflowChain) cancelWorkflowChain('The package checkpoint and remaining accessibility plan were cancelled.');
+    else { goalsSection.focus(); setStatus('Package review cancelled.'); }
   });
 
   cancelJobButton.addEventListener('click', () => {

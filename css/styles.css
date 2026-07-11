@@ -692,3 +692,32 @@ button:disabled:hover {
   margin: 1rem 0;
   padding: 0.75rem;
 }
+
+
+.workflow-chain-option {
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+.workflow-chain-option label {
+  align-items: flex-start;
+  display: flex;
+  font-weight: 800;
+  gap: 0.65rem;
+}
+.workflow-chain-option input {
+  flex: 0 0 auto;
+  height: 1.3rem;
+  margin-top: 0.15rem;
+  width: 1.3rem;
+}
+.workflow-chain-option p { margin: 0.45rem 0 0 1.95rem; }
+.workflow-chain-state { font-weight: 800; }
+#workflow-chain-status:not(:empty) {
+  border-left: 0.35rem solid currentColor;
+  font-weight: 700;
+  margin: 1rem 0;
+  padding: 0.75rem;
+}
+.chain-outcome-card { border-width: 3px; }
