@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 19 of the executable accessibility workflow roadmap is complete.
+Phase 20 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -31,6 +31,9 @@ The application now includes:
 - Publication Readiness validation that combines workflow completion, accessibility intelligence, human approvals, and package freshness into a single project readiness score with clear blocking reasons and plain-language next steps.
 - Executable connected transcription that sends the selected local audio or video content only after privacy and cost confirmation, then places the returned text into the existing accessible review workspace.
 - A complete Describe This Picture workflow that sends the selected image only after confirmation, receives an editable description, requires human review, and exports a registered plain-text artifact.
+- A built-in OpenAI service adapter, configured only in Advanced assistance settings, that performs direct audio and video transcription and image analysis without requiring a custom intermediary endpoint.
+- Plain-language direct goal execution after source inspection, including Transcribe This, Describe This Picture, Create Captions, Create Audio Description, Extract Audio, Create an Accessibility Package, and Make This Accessible.
+- Automatic provider selection that can choose the built-in adapter while preserving privacy and possible-cost confirmation before any source leaves the browser.
 
 
 ## Design Principle
@@ -226,6 +229,16 @@ Connected transcription now receives the actual selected audio or video source, 
 - Generate or record narration and combine it with the source media.
 - Render and export a final accessible video package.
 
+### Phase 20 - Built-in Provider Adapters and Direct Goal Execution - Completed
+
+The application now includes a built-in OpenAI adapter for direct transcription and image description. Credentials remain in session storage, provider choice remains inside Advanced assistance settings, and every external request requires a privacy and possible-cost confirmation. After a source is inspected, users can type a plain-language goal and begin the matched workflow without selecting providers or understanding workflow order. Existing accessible transcript and image-description review checkpoints remain mandatory before final artifacts are saved.
+
+New files and subsystems:
+
+- `js/openai-provider.js` provides direct OpenAI transcription and visual-analysis capabilities.
+- The direct goal form in `index.html` maps plain-language outcomes to existing intents and workflow chains.
+- `js/app.js` coordinates goal matching, provider configuration, disclosure, and accessible focus/status behavior.
+
 ## Next Development Phase
 
-Phase 20 - Built-in Provider Adapters and Direct Goal Execution. Add supported service adapters behind Advanced Settings and let users choose plain-language goals such as Transcribe This or Describe This Picture immediately after selecting a file. The application will select the configured method automatically, disclose privacy and possible cost before execution, and retain the existing human-review checkpoints.
+Phase 21 - Automatic Caption and Audio Description Drafting. Extend built-in service adapters so a completed transcript can become accurately timed caption cues and video visual analysis can create useful timed audio-description drafts. Preserve mandatory human review, provider privacy and cost disclosure, and the single Make This Accessible outcome.

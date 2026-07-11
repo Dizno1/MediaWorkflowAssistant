@@ -21,6 +21,10 @@
   const knowledgeOutput = document.getElementById('knowledge-output');
   const viewerSection = document.getElementById('viewer-section');
   const viewerOutput = document.getElementById('viewer-output');
+  const directGoalSection = document.getElementById('direct-goal-section');
+  const directGoalForm = document.getElementById('direct-goal-form');
+  const directGoalInput = document.getElementById('direct-goal-input');
+  const directGoalStatus = document.getElementById('direct-goal-status');
   const goalsSection = document.getElementById('goals-section');
   const goalsIntro = document.getElementById('goals-intro');
   const goals = document.getElementById('goals');
@@ -67,6 +71,9 @@
   const aiProviderOptions = document.getElementById('ai-provider-options');
   const aiProviderStatus = document.getElementById('ai-provider-status');
   const automaticProviderStatus = document.getElementById('automatic-provider-status');
+  const openaiApiKey = document.getElementById('openai-api-key');
+  const openaiTranscriptionModel = document.getElementById('openai-transcription-model');
+  const openaiVisionModel = document.getElementById('openai-vision-model');
   const connectedProviderName = document.getElementById('connected-provider-name');
   const connectedProviderEndpoint = document.getElementById('connected-provider-endpoint');
   const connectedProviderModel = document.getElementById('connected-provider-model');
@@ -272,6 +279,9 @@
       aiProviderStatus.textContent = input.value === 'automatic' ? 'Automatic assistance selection enabled.' : `${input.closest('.provider-choice').querySelector('strong').textContent} selected as an advanced override.`;
       renderAIProviders();
     }));
+    const openaiConfig = window.OpenAIProvider.getConfiguration();
+    openaiTranscriptionModel.value = openaiConfig.transcriptionModel;
+    openaiVisionModel.value = openaiConfig.visionModel;
     const config = window.ConnectedAIProvider.getConfiguration();
     connectedProviderName.value = config.serviceName;
     connectedProviderEndpoint.value = config.endpoint;
@@ -430,7 +440,10 @@
       syncCurrentSourceToProject();
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
-      setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
+      directGoalSection.hidden = false;
+      directGoalInput.value = suggestedGoal(currentInspection.mediaType);
+      directGoalStatus.textContent = 'A suggested goal is ready. You can change it using plain language.';
+      setStatus(`${currentInspection.recommendedSummary} Tell the assistant what you want to accomplish or choose an available action.`);
     } catch (error) {
       console.error(error);
       setStatus('This file could not be checked. Try another file.');
@@ -490,7 +503,10 @@
       syncCurrentSourceToProject();
       await renderViewer(currentSource, currentInspection);
       renderGoals(currentInspection);
-      setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
+      directGoalSection.hidden = false;
+      directGoalInput.value = suggestedGoal(currentInspection.mediaType);
+      directGoalStatus.textContent = 'A suggested goal is ready. You can change it using plain language.';
+      setStatus(`${currentInspection.recommendedSummary} Tell the assistant what you want to accomplish or choose an available action.`);
     } catch (error) {
       console.error(error);
       currentSource = null;
@@ -848,6 +864,43 @@
   function resetViewer() {
     viewerSection.hidden = true;
     viewerOutput.innerHTML = '';
+  }
+
+  function suggestedGoal(mediaType) {
+    if (mediaType === 'audio') return 'Transcribe this';
+    if (mediaType === 'image') return 'Describe this picture';
+    if (mediaType === 'video') return 'Make this video accessible';
+    return 'Review accessibility';
+  }
+
+  function matchDirectGoal(value) {
+    const text = String(value || '').trim().toLowerCase();
+    const intents = currentRecommendations ? currentRecommendations.recommendations : window.IntentEngine.getIntents(currentInspection);
+    if (/make .*accessible|accessib.*video|prepare .*publication|complete accessibility/.test(text)) {
+      const plan = window.WorkflowChain.build(intents, currentInspection.mediaType);
+      if (window.WorkflowChain.selectedSteps(plan).length) return { chain: plan };
+    }
+    const workflowId = /transcrib|speech.*text|audio.*text/.test(text) ? 'create-transcript'
+      : /describe|alt text|image description|picture/.test(text) ? 'generate-alt-text'
+      : /caption|subtitle/.test(text) ? 'create-captions'
+      : /audio description|describe.*video|narration/.test(text) ? 'audio-description'
+      : /extract.*audio|save.*audio/.test(text) ? 'extract-audio'
+      : /package|publish/.test(text) ? 'accessibility-package' : '';
+    return workflowId ? { intent: intents.find((item) => item.workflowId === workflowId && !item.completed) } : null;
+  }
+
+  function submitDirectGoal(event) {
+    event.preventDefault();
+    if (!currentInspection) { directGoalStatus.textContent = 'Choose a file before starting a goal.'; return; }
+    const match = matchDirectGoal(directGoalInput.value);
+    if (!match || (!match.intent && !match.chain)) {
+      directGoalStatus.textContent = 'That goal was not recognized for this source. Try Transcribe this, Describe this picture, Create captions, Create audio description, or Make this accessible.';
+      directGoalInput.focus(); return;
+    }
+    if (match.chain) { directGoalStatus.textContent = 'The accessibility workflow is ready for review.'; openWorkflowChainReview(match.chain); return; }
+    if (!match.intent.capability.canRun) { directGoalStatus.textContent = match.intent.capability.message || 'That task needs an assistance service configured in Advanced assistance settings.'; return; }
+    directGoalStatus.textContent = `${match.intent.title} selected.`;
+    runIntent(match.intent);
   }
 
   function renderGoals(inspection) {
@@ -1703,6 +1756,22 @@
 
   workflowChainForm.addEventListener('submit', submitWorkflowChain);
   cancelWorkflowChainButton.addEventListener('click', () => cancelWorkflowChain());
+  directGoalForm.addEventListener('submit', submitDirectGoal);
+  document.getElementById('save-openai-provider').addEventListener('click', () => {
+    try {
+      window.OpenAIProvider.configure({ apiKey: openaiApiKey.value, transcriptionModel: openaiTranscriptionModel.value, visionModel: openaiVisionModel.value });
+      openaiApiKey.value = '';
+      aiProviderStatus.textContent = 'OpenAI service saved for this browser tab. Automatic selection can now use it for transcription and image description.';
+      renderAIProviders();
+      if (currentInspection) renderGoals(currentInspection);
+    } catch (error) { aiProviderStatus.textContent = error.message; }
+  });
+  document.getElementById('clear-openai-provider').addEventListener('click', () => {
+    window.OpenAIProvider.clear(); openaiApiKey.value = '';
+    if (window.AIProviderLayer.getSelectionMode() === 'openai-direct') window.AIProviderLayer.select('automatic');
+    aiProviderStatus.textContent = 'OpenAI service configuration cleared.'; renderAIProviders();
+    if (currentInspection) renderGoals(currentInspection);
+  });
   document.getElementById('save-connected-provider').addEventListener('click', () => {
     try {
       window.ConnectedAIProvider.configure({ serviceName: connectedProviderName.value, endpoint: connectedProviderEndpoint.value, model: connectedProviderModel.value, apiKey: connectedProviderKey.value, costCategory: connectedProviderCost.value });

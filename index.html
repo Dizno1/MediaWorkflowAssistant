@@ -108,7 +108,17 @@
             <div id="ai-provider-options"></div>
           </fieldset>
           <fieldset>
-            <legend>Connected service</legend>
+            <legend>Built-in OpenAI service</legend>
+            <p class="help-text">Optional. The key is kept only in this browser tab. OpenAI usage may incur charges. The application asks for confirmation before sending a source.</p>
+            <div class="form-field"><label for="openai-api-key">OpenAI API key</label><input id="openai-api-key" type="password" autocomplete="off" aria-describedby="openai-key-help"></div>
+            <p id="openai-key-help" class="help-text">The key is never written into project files. Leave this field blank after saving unless you are replacing the key.</p>
+            <div class="form-field"><label for="openai-transcription-model">Transcription model</label><input id="openai-transcription-model" type="text" value="gpt-4o-mini-transcribe"></div>
+            <div class="form-field"><label for="openai-vision-model">Image description model</label><input id="openai-vision-model" type="text" value="gpt-4.1-mini"></div>
+            <button type="button" id="save-openai-provider">Save OpenAI service</button>
+            <button type="button" id="clear-openai-provider">Clear OpenAI service</button>
+          </fieldset>
+          <fieldset>
+            <legend>Custom connected service</legend>
             <p class="help-text">A connected service may receive source-derived text and metadata. The API key is kept only in this browser tab and is never written into the project files.</p>
             <div class="form-field"><label for="connected-provider-name">Service name</label><input id="connected-provider-name" type="text" placeholder="Connected service"></div>
             <div class="form-field"><label for="connected-provider-endpoint">HTTPS endpoint</label><input id="connected-provider-endpoint" type="url" placeholder="https://example.com/accessibility-assist"></div>
@@ -166,6 +176,19 @@
     <section id="viewer-section" class="panel" aria-labelledby="viewer-heading" hidden>
       <h2 id="viewer-heading">Viewer</h2>
       <div id="viewer-output"></div>
+    </section>
+
+    <section id="direct-goal-section" class="panel" aria-labelledby="direct-goal-heading" tabindex="-1" hidden>
+      <h2 id="direct-goal-heading">Tell the assistant what to do</h2>
+      <form id="direct-goal-form">
+        <label for="direct-goal-input">Your goal</label>
+        <div class="url-controls">
+          <input id="direct-goal-input" type="text" autocomplete="off" placeholder="Transcribe this, describe this picture, or make this accessible" required aria-describedby="direct-goal-help">
+          <button type="submit">Start</button>
+        </div>
+        <p id="direct-goal-help" class="help-text">Use plain language. The assistant selects the workflow and available service automatically.</p>
+        <div id="direct-goal-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      </form>
     </section>
 
     <section id="goals-section" class="panel" aria-labelledby="goals-heading" tabindex="-1" hidden>
@@ -368,6 +391,7 @@
   <script src="js/ai-provider-layer.js"></script>
   <script src="js/local-assist-provider.js"></script>
   <script src="js/connected-ai-provider.js"></script>
+  <script src="js/openai-provider.js"></script>
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
   <script src="js/intent-engine.js"></script>
