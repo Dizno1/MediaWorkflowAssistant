@@ -127,11 +127,13 @@
 
     if (workflowId === 'audio-description') {
       model.accessibility.audioDescription.present = true;
-      model.accessibility.audioDescription.status = 'workspace-created';
+      model.accessibility.audioDescription.status = 'complete';
       model.accessibility.audioDescription.artifacts = artifacts;
+      model.accessibility.audioDescription.cueCount = job.audioDescriptionOptions ? job.audioDescriptionOptions.cueCount : null;
+      model.accessibility.audioDescription.reviewedAt = job.audioDescriptionOptions ? job.audioDescriptionOptions.reviewedAt : null;
       model.accessibility.audioDescription.confidence = {
         level: 'high',
-        reason: 'An audio description worksheet was created in this browser.'
+        reason: 'A reviewed, timestamped audio description script was created and saved in this browser.'
       };
     }
 
@@ -163,7 +165,7 @@
 
     if (model.accessibility.transcript.present) completed.add('completed-transcript');
     if (model.accessibility.captions.present) completed.add('completed-captions');
-    if (model.accessibility.audioDescription.present) completed.add('audio-description-workspace');
+    if (model.accessibility.audioDescription.present) completed.add('completed-audio-description-script');
     if (model.audio.extractedCopy && model.audio.extractedCopy.status === 'complete') completed.add('extracted-audio');
     if (model.source.smallerCopy && model.source.smallerCopy.status === 'complete') completed.add('smaller-video-copy');
     if (model.analysis.accessibilityPackage && model.analysis.accessibilityPackage.status === 'complete') completed.add('accessibility-package');

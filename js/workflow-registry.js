@@ -27,11 +27,11 @@
       name: 'Add audio description',
       category: 'Accessibility',
       priority: 8,
-      description: 'Prepare a guided workflow for describing important visual content in a video.',
+      description: 'Create and review a timed narration script for important visual content in a video.',
       mediaTypes: ['video'],
       requirements: ['hasVideo'],
-      outputs: ['description script workspace'],
-      steps: ['Inspect video structure', 'Identify likely description points', 'Create description script workspace', 'Prepare export options']
+      outputs: ['reviewed audio description script', 'audio description review record'],
+      steps: ['Review video and existing audio', 'Edit timed description cues', 'Validate narration placement', 'Export reviewed audio description script']
     },
     {
       id: 'compress-video',

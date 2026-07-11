@@ -82,6 +82,15 @@
       const errors = window.CaptionReview.validate(job.captionOptions.cues, job.inspection.durationSeconds);
       if (errors.length) throw new Error(errors[0]);
     }
+    if (job.workflow.id === 'audio-description') {
+      if (!(job.sourceFile instanceof File)) throw new Error('Create Audio Description requires a local video file.');
+      if (!job.inspection || job.inspection.mediaType !== 'video' || !job.inspection.hasVideo) throw new Error('Choose a supported video file.');
+      if (!job.audioDescriptionOptions || !Array.isArray(job.audioDescriptionOptions.cues) || !job.audioDescriptionOptions.cues.length) throw new Error('Enter at least one timed audio description cue.');
+      if (!job.audioDescriptionOptions.reviewed) throw new Error('Review and confirm the audio description script before saving it as complete.');
+      const errors = window.AudioDescriptionReview.validate(job.audioDescriptionOptions.cues, job.inspection.durationSeconds);
+      if (errors.length) throw new Error(errors[0]);
+    }
+
 
   }
 

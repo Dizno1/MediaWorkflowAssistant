@@ -1,13 +1,17 @@
 {
   "id": "audio-description",
-  "name": "Add audio description",
+  "name": "Create audio description",
   "supportedMedia": ["video"],
-  "goal": "Prepare a workflow for describing important visual content.",
+  "goal": "Create a reviewed, timestamped narration script for essential visual content not conveyed by the existing audio.",
   "steps": [
-    "Inspect video structure",
-    "Identify likely description points",
-    "Create description script workspace",
-    "Prepare export options"
+    "Review video and existing audio",
+    "Edit timed description cues",
+    "Validate narration placement",
+    "Export reviewed audio description script"
   ],
-  "status": "placeholder"
+  "outputs": [
+    "reviewed audio description script",
+    "audio description review record"
+  ],
+  "status": "production"
 }

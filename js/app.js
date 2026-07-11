@@ -46,6 +46,17 @@
   const captionsReviewedInput = document.getElementById('captions-reviewed');
   const captionReviewStatus = document.getElementById('caption-review-status');
   const cancelCaptionReviewButton = document.getElementById('cancel-caption-review');
+  const audioDescriptionReviewSection = document.getElementById('audio-description-review-section');
+  const audioDescriptionReviewForm = document.getElementById('audio-description-review-form');
+  const audioDescriptionReviewSummary = document.getElementById('audio-description-review-summary');
+  const audioDescriptionTitleInput = document.getElementById('audio-description-title');
+  const audioDescriptionNotesInput = document.getElementById('audio-description-notes');
+  const audioDescriptionCues = document.getElementById('audio-description-cues');
+  const addAudioDescriptionCueButton = document.getElementById('add-audio-description-cue');
+  const audioDescriptionReviewedInput = document.getElementById('audio-description-reviewed');
+  const audioDescriptionReviewStatus = document.getElementById('audio-description-review-status');
+  const cancelAudioDescriptionReviewButton = document.getElementById('cancel-audio-description-review');
+
   const packageReviewSection = document.getElementById('package-review-section');
   const packageReviewForm = document.getElementById('package-review-form');
   const packageReviewSummary = document.getElementById('package-review-summary');
@@ -65,6 +76,8 @@
   let pendingTranscriptIntent = null;
   let pendingCaptionIntent = null;
   let captionCueCounter = 0;
+  let pendingAudioDescriptionIntent = null;
+  let audioDescriptionCueCounter = 0;
   let pendingPackageIntent = null;
   let currentPackageReview = null;
   let currentKnowledgeModel = null;
@@ -105,6 +118,7 @@
     resetResults();
     resetTranscriptReview();
     resetCaptionReview();
+    resetAudioDescriptionReview();
     resetPackageReview();
 
     fileHelp.textContent = `${file.name} selected. The file stays on this device.`;
@@ -153,6 +167,7 @@
     resetResults();
     resetTranscriptReview();
     resetCaptionReview();
+    resetAudioDescriptionReview();
     resetPackageReview();
 
     inspectionOutput.hidden = false;
@@ -613,6 +628,10 @@
       openCaptionReview(intent);
       return;
     }
+    if (intent.workflowId === 'audio-description') {
+      openAudioDescriptionReview(intent);
+      return;
+    }
     if (intent.workflowId === 'accessibility-package') {
       openPackageReview(intent);
       return;
@@ -625,11 +644,13 @@
     resetResults();
     resetTranscriptReview();
     resetCaptionReview();
+    resetAudioDescriptionReview();
     resetPackageReview();
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
     activeJob.exportOptions = exportOptions || null;
     activeJob.transcriptOptions = intent.workflowId === 'create-transcript' ? (exportOptions || null) : null;
     activeJob.captionOptions = intent.workflowId === 'create-captions' ? (exportOptions || null) : null;
+    activeJob.audioDescriptionOptions = intent.workflowId === 'audio-description' ? (exportOptions || null) : null;
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
     activeJob.accessibilityPlan = currentPlan;
@@ -798,6 +819,105 @@
     captionCues.innerHTML = '';
     captionsReviewedInput.checked = false;
     captionReviewStatus.textContent = '';
+  }
+
+  function openAudioDescriptionReview(intent) {
+    pendingAudioDescriptionIntent = intent;
+    const review = window.AudioDescriptionReview.build(currentFile ? currentFile.name : currentInspection.name);
+    audioDescriptionTitleInput.value = review.suggestedTitle;
+    audioDescriptionNotesInput.value = '';
+    audioDescriptionCueCounter = 0;
+    audioDescriptionCues.innerHTML = '';
+    review.cues.forEach((cue) => addAudioDescriptionCue(cue));
+    audioDescriptionReviewedInput.checked = false;
+    audioDescriptionReviewStatus.textContent = '';
+    audioDescriptionReviewSummary.textContent = 'Use the Viewer to identify essential visual information that is not already communicated by dialogue, narration, or sound. Add concise narration and verify each proposed placement.';
+    audioDescriptionReviewSection.hidden = false;
+    audioDescriptionReviewSection.focus();
+  }
+
+  function addAudioDescriptionCue(cue = {}) {
+    audioDescriptionCueCounter += 1;
+    const cueId = audioDescriptionCueCounter;
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'audio-description-cue';
+    fieldset.innerHTML = `
+      <legend>Description cue ${cueId}</legend>
+      <div class="caption-time-fields">
+        <div class="form-field"><label for="ad-start-${cueId}">Start time</label><input id="ad-start-${cueId}" class="ad-start" type="text" inputmode="decimal" value="${escapeHtml(cue.start || '00:00:00.000')}" required></div>
+        <div class="form-field"><label for="ad-end-${cueId}">End time</label><input id="ad-end-${cueId}" class="ad-end" type="text" inputmode="decimal" value="${escapeHtml(cue.end || '00:00:04.000')}" required></div>
+      </div>
+      <div class="form-field"><label for="ad-placement-${cueId}">Narration placement</label><select id="ad-placement-${cueId}" class="ad-placement"><option>During a pause</option><option>Before the scene</option><option>After the scene</option><option>Extended description</option></select></div>
+      <div class="form-field"><label for="ad-text-${cueId}">Description narration</label><textarea id="ad-text-${cueId}" class="ad-text" rows="4" required>${escapeHtml(cue.text || '')}</textarea></div>
+      <button type="button" class="remove-audio-description-cue">Remove description cue ${cueId}</button>`;
+    fieldset.querySelector('.ad-placement').value = cue.placement || 'During a pause';
+    fieldset.querySelector('.remove-audio-description-cue').addEventListener('click', () => {
+      if (audioDescriptionCues.children.length === 1) {
+        audioDescriptionReviewStatus.textContent = 'At least one description cue is required.';
+        return;
+      }
+      const nextFocus = fieldset.previousElementSibling || fieldset.nextElementSibling || addAudioDescriptionCueButton;
+      fieldset.remove();
+      renumberAudioDescriptionCues();
+      audioDescriptionReviewStatus.textContent = 'Description cue removed.';
+      nextFocus.focus();
+    });
+    audioDescriptionCues.appendChild(fieldset);
+  }
+
+  function renumberAudioDescriptionCues() {
+    Array.from(audioDescriptionCues.children).forEach((fieldset, index) => {
+      fieldset.querySelector('legend').textContent = `Description cue ${index + 1}`;
+    });
+  }
+
+  function collectAudioDescriptionCues() {
+    return Array.from(audioDescriptionCues.querySelectorAll('.audio-description-cue')).map((fieldset) => ({
+      start: fieldset.querySelector('.ad-start').value.trim(),
+      end: fieldset.querySelector('.ad-end').value.trim(),
+      placement: fieldset.querySelector('.ad-placement').value,
+      text: fieldset.querySelector('.ad-text').value.trim()
+    }));
+  }
+
+  function submitAudioDescriptionReview(event) {
+    event.preventDefault();
+    if (!pendingAudioDescriptionIntent) return;
+    const cues = collectAudioDescriptionCues();
+    const errors = window.AudioDescriptionReview.validate(cues, currentInspection.durationSeconds);
+    if (errors.length) {
+      audioDescriptionReviewStatus.textContent = errors.join(' ');
+      const firstInvalid = audioDescriptionCues.querySelector(':invalid');
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+    if (!audioDescriptionReviewedInput.checked) {
+      audioDescriptionReviewStatus.textContent = 'Confirm that you reviewed the script and narration placement before saving it as complete.';
+      audioDescriptionReviewedInput.focus();
+      return;
+    }
+    const sourceName = currentFile ? currentFile.name : currentInspection.name;
+    const options = {
+      title: audioDescriptionTitleInput.value.trim() || `Audio description script for ${sourceName}`,
+      notes: audioDescriptionNotesInput.value.trim(),
+      cues,
+      cueCount: cues.length,
+      reviewed: true,
+      reviewedAt: new Date().toISOString(),
+      scriptMarkdown: window.AudioDescriptionReview.toMarkdown(audioDescriptionTitleInput.value, sourceName, cues, audioDescriptionNotesInput.value)
+    };
+    const intent = pendingAudioDescriptionIntent;
+    startIntentJob(intent, options);
+  }
+
+  function resetAudioDescriptionReview() {
+    pendingAudioDescriptionIntent = null;
+    audioDescriptionReviewSection.hidden = true;
+    audioDescriptionTitleInput.value = '';
+    audioDescriptionNotesInput.value = '';
+    audioDescriptionCues.innerHTML = '';
+    audioDescriptionReviewedInput.checked = false;
+    audioDescriptionReviewStatus.textContent = '';
   }
 
   function openPackageReview(intent) {
@@ -1124,6 +1244,9 @@
 
   transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
   captionReviewForm.addEventListener('submit', submitCaptionReview);
+  audioDescriptionReviewForm.addEventListener('submit', submitAudioDescriptionReview);
+  addAudioDescriptionCueButton.addEventListener('click', () => { addAudioDescriptionCue(); audioDescriptionReviewStatus.textContent = 'Description cue added.'; });
+  cancelAudioDescriptionReviewButton.addEventListener('click', () => { resetAudioDescriptionReview(); goalsSection.focus(); });
   addCaptionCueButton.addEventListener('click', () => { addCaptionCue(); captionCues.lastElementChild.querySelector('.caption-start').focus(); });
   cancelCaptionReviewButton.addEventListener('click', () => { resetCaptionReview(); goalsSection.focus(); });
   cancelTranscriptReviewButton.addEventListener('click', () => {
@@ -1136,6 +1259,7 @@
   cancelPackageReviewButton.addEventListener('click', () => {
     resetTranscriptReview();
     resetCaptionReview();
+    resetAudioDescriptionReview();
     resetPackageReview();
     goalsSection.focus();
     setStatus('Package review cancelled.');

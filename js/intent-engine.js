@@ -17,9 +17,9 @@
     {
       id: 'audio-description',
       workflowId: 'audio-description',
-      title: 'Create an audio description worksheet',
-      description: 'Create a timestamped workspace for writing important visual details.',
-      actionLabel: 'Create an audio description worksheet'
+      title: 'Create audio description',
+      description: 'Create, time, review, and save narration for important visual information.',
+      actionLabel: 'Create audio description'
     },
     {
       id: 'compress-video',
@@ -118,7 +118,7 @@
   const plainSteps = {
     'create-captions': ['Listen to the speech', 'Create timed text', 'Prepare the caption file'],
     'create-transcript': ['Listen to the speech', 'Turn the speech into text', 'Prepare the transcript'],
-    'audio-description': ['Review the visual content', 'Find places that need description', 'Prepare the description'],
+    'audio-description': ['Review the video and existing audio', 'Write timed description cues', 'Validate narration placement', 'Export the reviewed script'],
     'compress-video': ['Check the video', 'Reduce the file size', 'Prepare the smaller copy'],
     'compress-audio': ['Check the audio', 'Reduce the file size', 'Prepare the smaller copy'],
     'normalize-audio': ['Check the volume', 'Even out the sound', 'Prepare the improved copy'],

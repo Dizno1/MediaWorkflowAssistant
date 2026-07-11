@@ -171,14 +171,24 @@
     }
 
     createDescriptionWorkspace(job) {
-      const inspection = job.inspection || {};
+      const options = job.audioDescriptionOptions || {};
+      const cues = Array.isArray(options.cues) ? options.cues : [];
+      if (!cues.length || !String(options.scriptMarkdown || '').trim()) throw new Error('Enter and review at least one audio description cue before running this workflow.');
       const baseName = stripExtension(job.sourceFileName);
-      const worksheet = buildTimedWorksheet(job.sourceFileName, inspection.durationSeconds, 'Description note', [
-        'Review the video and note important visual information that is not already explained by the audio.',
-        'Write descriptions in natural language and place them during pauses whenever possible.',
-        'Do not describe decorative details that do not help someone understand the content.'
-      ]);
-      return [createTextArtifact(`${baseName}-audio-description-workspace.md`, 'Audio description worksheet', 'A timestamped worksheet for planning and reviewing audio description.', worksheet, 'text/markdown')];
+      const reviewRecord = [
+        `# Audio Description Review Record for ${job.sourceFileName}`,
+        '',
+        `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`,
+        `Reviewed at: ${options.reviewedAt || new Date().toISOString()}`,
+        `Description cues: ${cues.length}`,
+        '',
+        'The script was reviewed for visual relevance, objective language, timing, dialogue conflicts, and preservation of essential sound.',
+        ''
+      ].join('\n');
+      return [
+        createTextArtifact(`${baseName}-audio-description-script.md`, 'Completed audio description script', `A reviewed, timestamped audio description script containing ${cues.length} narration cue${cues.length === 1 ? '' : 's'}.`, options.scriptMarkdown, 'text/markdown'),
+        createTextArtifact(`${baseName}-audio-description-review.md`, 'Audio description review record', 'A readable record of the completed script review.', reviewRecord, 'text/markdown')
+      ];
     }
 
     async createAccessibilityPackage(job, onProgress) {

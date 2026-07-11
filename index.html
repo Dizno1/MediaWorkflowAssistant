@@ -141,6 +141,38 @@
       </form>
     </section>
 
+
+    <section id="audio-description-review-section" class="panel" aria-labelledby="audio-description-review-heading" tabindex="-1" hidden>
+      <h2 id="audio-description-review-heading">Create audio description</h2>
+      <p id="audio-description-review-summary">Review the video and write timed narration for important visual information not conveyed by the existing audio.</p>
+      <form id="audio-description-review-form">
+        <div class="form-field">
+          <label for="audio-description-title">Script title</label>
+          <input id="audio-description-title" name="audioDescriptionTitle" type="text" required>
+        </div>
+        <div class="form-field">
+          <label for="audio-description-notes">Production notes</label>
+          <textarea id="audio-description-notes" rows="4" aria-describedby="audio-description-notes-help"></textarea>
+          <p id="audio-description-notes-help" class="help-text">Record voice, pronunciation, pacing, or extended-description notes that apply to the full script.</p>
+        </div>
+        <fieldset>
+          <legend>Timed description cues</legend>
+          <p id="audio-description-cues-help" class="help-text">Use 00:00:00.000 timestamps. Place narration in natural pauses whenever possible and avoid covering dialogue or essential sound.</p>
+          <div id="audio-description-cues" aria-describedby="audio-description-cues-help"></div>
+          <button type="button" id="add-audio-description-cue">Add description cue</button>
+        </fieldset>
+        <label class="confirmation-option">
+          <input id="audio-description-reviewed" type="checkbox">
+          I reviewed this script against the video for accuracy, timing, essential sound, dialogue conflicts, and objective language.
+        </label>
+        <div id="audio-description-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save audio description script</button>
+          <button type="button" id="cancel-audio-description-review">Cancel audio description</button>
+        </div>
+      </form>
+    </section>
+
     <section id="package-review-section" class="panel" aria-labelledby="package-review-heading" tabindex="-1" hidden>
       <h2 id="package-review-heading">Review accessibility package</h2>
       <p id="package-review-summary">Review the package before it is created.</p>
@@ -205,6 +237,7 @@
   <script src="js/output-manager.js"></script>
   <script src="js/transcript-review.js"></script>
   <script src="js/caption-review.js"></script>
+  <script src="js/audio-description-review.js"></script>
   <script src="js/package-review.js"></script>
   <script src="js/workflow-runner.js"></script>
   <script src="js/execution-engine.js"></script>
