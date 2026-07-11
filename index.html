@@ -65,6 +65,36 @@
       </div>
     </section>
 
+    <section id="publication-pipeline-section" class="panel" aria-labelledby="publication-pipeline-heading">
+      <h2 id="publication-pipeline-heading">Publication pipeline</h2>
+      <p>Validate the active project, choose an export profile and delivery target, then create a publication package.</p>
+      <form id="publication-pipeline-form">
+        <div class="publication-controls">
+          <div class="form-field">
+            <label for="publication-profile">Export profile</label>
+            <select id="publication-profile"></select>
+            <p id="publication-profile-help" class="help-text"></p>
+          </div>
+          <div class="form-field">
+            <label for="publication-target">Delivery target</label>
+            <select id="publication-target"></select>
+            <p id="publication-target-help" class="help-text"></p>
+          </div>
+          <div class="form-field">
+            <label for="publication-title">Publication title</label>
+            <input id="publication-title" type="text" maxlength="160" required>
+          </div>
+        </div>
+        <div class="next-actions">
+          <button type="button" id="validate-publication">Validate publication readiness</button>
+          <button type="submit" id="create-publication-package">Create publication package</button>
+        </div>
+      </form>
+      <div id="publication-pipeline-status" role="status" aria-live="polite" aria-atomic="true">Select an active project to begin.</div>
+      <div id="publication-validation-results" tabindex="-1"></div>
+      <div id="publication-deliverables"></div>
+    </section>
+
     <section class="panel" aria-labelledby="start-heading">
       <h2 id="start-heading">Start with a file</h2>
       <p>Add an audio, video, image, document, or archive file.</p>
@@ -447,5 +477,7 @@
   <script src="js/workflow-runner.js"></script>
   <script src="js/execution-engine.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/publication-pipeline.js"></script>
+
 </body>
 </html>

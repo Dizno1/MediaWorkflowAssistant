@@ -30,6 +30,10 @@
     return runtimeArtifacts.get(id) || null;
   }
 
+  function listAll() {
+    return Array.from(runtimeArtifacts.values());
+  }
+
   function listForSource(source) {
     const key = window.SharedKnowledge.sourceKey(source);
     return Array.from(runtimeArtifacts.values()).filter((artifact) => artifact.sourceKey === key);
@@ -42,5 +46,5 @@
     });
   }
 
-  window.OutputManager = { register, get, listForSource, revokeForSource };
+  window.OutputManager = { register, get, listAll, listForSource, revokeForSource };
 })();

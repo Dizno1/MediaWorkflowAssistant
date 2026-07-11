@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 25 of the executable accessibility workflow roadmap is complete.
+Phase 26 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -41,6 +41,7 @@ The application now includes:
 - Local accessible-video rendering that combines the original picture with the approved described-audio soundtrack, then creates a publication ZIP containing the rendered WebM, selectable WebVTT captions, an accessible HTML player, a manifest, and a final validation checklist.
 - A complete Make This Accessible orchestrator that builds a media-specific plan, skips completed work, runs automatic steps, pauses only for required human review, resumes after approval, refreshes dependencies after every result, renders the accessible video when possible, and creates the final accessibility package.
 - Advanced accessibility analysis that scores scene understanding, speaker recognition, caption quality, audio-description quality, visual accessibility, and narration optimization; reports measurable reading-speed and cue-density indicators; refreshes after completed work; and optionally performs deeper provider analysis after privacy and cost confirmation.
+- A complete Publication Pipeline with selectable export profiles, project-wide readiness validation, delivery targets, accessible blocking reports, portable ZIP packaging, source and workflow inventories, review records, deployment instructions, available runtime artifacts, and SHA-256 checksums.
 
 
 ## Design Principle
@@ -325,15 +326,23 @@ New files and subsystems:
 
 See `docs/Phase 25 Advanced AI Analysis.md`.
 
+## Phase 26 - Publication Pipeline - Completed
+
+Phase 26 adds a project-level Publication Pipeline that turns approved accessibility work into a delivery-ready package. The active project can be validated against one of three export profiles: Accessible Web Publication, Learning Platform Delivery, or Accessible Archive Master. Validation checks every source for media-appropriate required work, rejected or pending reviews, workflow history, and package completion. Blocking issues prevent final export and are presented in an accessible, focusable report with a readiness score, warnings, and passed checks.
+
+The completed pipeline supports four delivery targets: local download, web-hosting handoff, learning-platform handoff, and records archive. The package is built locally in the browser and includes a machine-readable publication manifest, plain-text readiness report, source inventory, workflow history, human-review records, delivery instructions, all currently available runtime artifacts, and SHA-256 checksums when browser support is available. No source or credential is transmitted during packaging.
+
+New files and subsystems:
+
+- `js/publication-pipeline.js` provides export profiles, delivery targets, project validation, accessible results, packaging, checksums, and publication history records.
+- `index.html` adds the project-level Publication Pipeline interface.
+- `css/styles.css` adds responsive, keyboard-visible publication controls and validation presentation.
+- `js/output-manager.js` now exposes available runtime artifacts to the publication packager.
+- `docs/Phase 26 Publication Pipeline.md` documents architecture, behavior, accessibility, package contents, and limitations.
+
+See `docs/Phase 26 Publication Pipeline.md`.
+
 ## Remaining Roadmap
-
-### Phase 26 - Publication Pipeline
-
-- Export profiles
-- Publication-readiness validation
-- Direct publishing
-- Packaging
-- Delivery targets
 
 ### Phase 27 - Production Features
 
@@ -350,4 +359,4 @@ Review completed work like an experienced accessibility consultant, identify iss
 
 ## Next Development Phase
 
-Phase 26 - Publication Pipeline.
+Phase 27 - Production Features.

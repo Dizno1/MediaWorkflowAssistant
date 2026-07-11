@@ -870,3 +870,26 @@ button:disabled:hover {
 .analysis-metrics div { border-left: 0.25rem solid currentColor; padding-left: 0.75rem; }
 .analysis-metrics dt { font-weight: 700; }
 .analysis-metrics dd { margin: 0.15rem 0 0; }
+
+.publication-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.publication-validation {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 2px solid currentColor;
+  border-radius: .5rem;
+}
+.publication-validation.is-ready { border-style: solid; }
+.publication-validation.has-blockers { border-style: double; }
+.button-link {
+  display: inline-block;
+  padding: .65rem 1rem;
+  border: 2px solid currentColor;
+  border-radius: .35rem;
+  font-weight: 700;
+}
+.button-link:focus { outline: 3px solid currentColor; outline-offset: 3px; }
