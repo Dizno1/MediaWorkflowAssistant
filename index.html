@@ -220,6 +220,32 @@
     </section>
 
 
+    <section id="image-description-review-section" class="panel" aria-labelledby="image-description-review-heading" tabindex="-1" hidden>
+      <h2 id="image-description-review-heading">Describe this picture</h2>
+      <p id="image-description-review-summary">Create and review a useful description of the selected image.</p>
+      <form id="image-description-review-form">
+        <div class="form-field">
+          <label for="image-description-title">Description title</label>
+          <input id="image-description-title" type="text" required>
+        </div>
+        <div class="form-field">
+          <label for="image-description-text">Image description</label>
+          <textarea id="image-description-text" rows="10" aria-describedby="image-description-help image-description-status" required></textarea>
+          <p id="image-description-help" class="help-text">Describe the image's purpose and essential visual information. Avoid guessing identity, emotion, or intent unless the image clearly supports it.</p>
+          <button type="button" id="draft-image-description">Request image description draft</button>
+        </div>
+        <label class="confirmation-option">
+          <input id="image-description-reviewed" type="checkbox">
+          I reviewed this description against the image for accuracy, usefulness, and unnecessary assumptions.
+        </label>
+        <div id="image-description-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save image description</button>
+          <button type="button" id="cancel-image-description">Cancel image description</button>
+        </div>
+      </form>
+    </section>
+
     <section id="caption-review-section" class="panel" aria-labelledby="caption-review-heading" tabindex="-1" hidden>
       <h2 id="caption-review-heading">Create captions</h2>
       <p id="caption-review-summary">Review and edit timed caption cues, then save a completed WebVTT file.</p>

@@ -1,0 +1,15 @@
+{
+  "id": "generate-alt-text",
+  "name": "Describe this picture",
+  "version": 1,
+  "mediaTypes": ["image"],
+  "goal": "Create a reviewed plain-language image description.",
+  "providerCapability": "visual-analysis",
+  "steps": [
+    "Read the selected image",
+    "Request a description draft when assistance is available",
+    "Require human review",
+    "Export a plain-text description"
+  ],
+  "outputs": ["reviewed image description"]
+}

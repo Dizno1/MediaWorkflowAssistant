@@ -42,10 +42,12 @@
         'audio-description',
         'Audio description',
         type === 'video' ? 4 : 3,
-        'Review recommended',
+        type === 'image' && model.accessibility.imageDescription && model.accessibility.imageDescription.present ? 'Already present' : 'Review recommended',
         type === 'video'
           ? 'The video contains visual information. Deeper scene and dialogue-gap analysis is needed before recommending Standard, Extended, Continuous, or Mixed Audio Description.'
-          : 'The image may need a text alternative. Visual analysis is needed before a description can be drafted.',
+          : (model.accessibility.imageDescription && model.accessibility.imageDescription.present
+            ? 'A reviewed image description is already recorded for this source.'
+            : 'The image may need a text alternative. Visual analysis is needed before a description can be drafted.'),
         'Moderate confidence that visual review is relevant. The best description approach cannot be chosen yet.',
         type === 'video' ? 'audio-description' : 'generate-alt-text'
       ));

@@ -82,6 +82,12 @@
       const errors = window.CaptionReview.validate(job.captionOptions.cues, job.inspection.durationSeconds);
       if (errors.length) throw new Error(errors[0]);
     }
+    if (job.workflow.id === 'generate-alt-text') {
+      if (!(job.sourceFile instanceof File)) throw new Error('Describe This Picture requires a local image file.');
+      if (!job.inspection || job.inspection.mediaType !== 'image') throw new Error('Choose a supported image file.');
+      if (!job.imageDescriptionOptions || !String(job.imageDescriptionOptions.description || '').trim()) throw new Error('Enter an image description before saving it.');
+      if (!job.imageDescriptionOptions.reviewed) throw new Error('Review and confirm the image description before saving it as complete.');
+    }
     if (job.workflow.id === 'audio-description') {
       if (!(job.sourceFile instanceof File)) throw new Error('Create Audio Description requires a local video file.');
       if (!job.inspection || job.inspection.mediaType !== 'video' || !job.inspection.hasVideo) throw new Error('Choose a supported video file.');

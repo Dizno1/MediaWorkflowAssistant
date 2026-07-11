@@ -7,7 +7,7 @@
       name: 'Browser Provider',
       kind: 'local browser',
       available: Boolean(browserProvider),
-      workflows: ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description'],
+      workflows: ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description', 'generate-alt-text'],
       description: 'Runs file information, media conversion, and guided transcript, caption, and audio description workspaces directly in the browser.',
       unavailableReason: browserProvider ? '' : 'Browser provider failed to load.',
       instance: browserProvider
@@ -47,7 +47,7 @@
       name: 'Image Provider',
       kind: 'browser provider',
       available: false,
-      workflows: ['generate-alt-text', 'ocr-image', 'compress-image', 'resize-image'],
+      workflows: ['ocr-image', 'compress-image', 'resize-image'],
       description: 'Will process images when image analysis and editing providers are connected.',
       unavailableReason: 'Image processing is not connected in this browser prototype yet.',
       instance: null

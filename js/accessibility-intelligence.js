@@ -33,6 +33,11 @@
         audioDescription: {
           present: Boolean(inspection.hasAudioDescription),
           confidence: confidence('low', 'The current browser inspection cannot reliably identify an audio-description track.')
+        },
+        imageDescription: {
+          present: false,
+          status: mediaType === 'image' ? 'not-created' : 'not-applicable',
+          confidence: confidence('low', 'No reviewed image description has been created in this workspace yet.')
         }
       },
       audio: {

@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 18 of the Accessibility Intelligence roadmap is complete.
+Phase 19 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -29,6 +29,8 @@ The application now includes:
 - Automatic provider guidance that keeps provider selection under the hood, favors private and no-additional-cost methods, warns before external processing or possible charges, securely stores connected-service credentials for the browser session only, and preserves provider overrides inside Advanced assistance settings.
 - Project-aware Human Review and Approval that automatically creates review records for completed transcript, caption, audio-description, and package work; supports assignments, comments, approval, rejection, and revision history; and prevents publication readiness until required reviews are approved.
 - Publication Readiness validation that combines workflow completion, accessibility intelligence, human approvals, and package freshness into a single project readiness score with clear blocking reasons and plain-language next steps.
+- Executable connected transcription that sends the selected local audio or video content only after privacy and cost confirmation, then places the returned text into the existing accessible review workspace.
+- A complete Describe This Picture workflow that sends the selected image only after confirmation, receives an editable description, requires human review, and exports a registered plain-text artifact.
 
 
 ## Design Principle
@@ -200,29 +202,30 @@ The application now supports persistent projects containing multiple related med
 
 The active workspace now receives project-wide accessibility guidance. Every source is evaluated against media-appropriate deliverables, with completion percentages calculated at source and project level. The intelligence layer distinguishes missing, blocked, in-progress, complete, and stale work; prioritizes dependencies such as transcript before captions; and detects when an accessibility package must be regenerated because newer transcript, caption, or audio-description work was completed. The Project Workspace presents an accessible summary, progress facts, and an ordered list of next actions that recalculates automatically as work changes.
 
-## Next Development Step
-
-Phase 18 will add Dependency and Version Management. It will detect when a source or upstream artifact changes, mark dependent transcripts, captions, audio-description scripts, reviews, and packages as stale, explain the impact in plain language, and recommend only the work that must be repeated.
-
 ### Phase 16 - Provider Guidance, Cost Awareness, and Secure Configuration - Completed
 
-Assistance selection is now automatic by default. The provider layer ranks compatible methods by task fit, privacy, and configured cost category while keeping technical provider names out of the normal workflow. Before any external or potentially metered service runs, the application presents a plain-language privacy and cost confirmation. Connected-service configuration now includes a service name, cost category, session-only API key handling, and an accessible connection test. Advanced users may override automatic selection, but the normal experience remains outcome based.
+Automatic provider guidance, privacy and cost confirmation, session-only credentials, and advanced overrides are complete.
 
 ### Phase 17 - Human Review and Approval - Completed
 
-Completed transcript, caption, audio-description, and accessibility-package workflows now create project-aware review records automatically. Reviewers can be assigned, comments can be recorded, and work can be approved, rejected with required revision guidance, or returned to pending. Every action is retained in an accessible revision history. Project status and project-wide accessibility intelligence now distinguish pending approval, required revision, and publication readiness so completed generation work is never mistaken for approved deliverables.
+Project-aware review records, assignments, comments, approval, rejection, and revision history are complete.
 
-### Phase 18 - Dependency and Version Management - Planned
+### Phase 18 - Publication Readiness - Completed
 
-Track source and artifact versions, identify downstream work made stale by changes, preserve prior approved versions, explain exactly what must be reviewed or regenerated, and update recommendations without forcing users to understand the dependency graph.
+Workflow completion, approvals, package freshness, blocking reasons, and project readiness scoring are combined into one plain-language evaluation.
 
+### Phase 19 - Executable Transcription and Image Description - Completed
 
-## Latest Phase
+Connected transcription now receives the actual selected audio or video source, and Describe This Picture is a complete accessible workflow with source transfer, editable AI draft, human review, export, Output Manager registration, and Shared Knowledge updates. Provider choice remains hidden during normal use. External processing and possible charges are disclosed before source content leaves the browser.
 
-### Phase 18 - Publication Readiness Dashboard
+## Remaining Roadmap
 
-Added a publication readiness subsystem that aggregates workflow completion, required approvals, artifact freshness, and accessibility package status into a single readiness evaluation exposed in plain language. This phase introduces project-level validation logic while preserving the existing architecture.
+- Add built-in adapters for supported transcription and vision services so users do not need to provide a custom endpoint contract.
+- Convert timed transcription results directly into caption cues.
+- Sample video frames and audio context for genuine audio-description drafting.
+- Generate or record narration and combine it with the source media.
+- Render and export a final accessible video package.
 
-### Next Phase
+## Next Development Phase
 
-Phase 19 - Intelligent publication export and delivery.
+Phase 20 - Built-in Provider Adapters and Direct Goal Execution. Add supported service adapters behind Advanced Settings and let users choose plain-language goals such as Transcribe This or Describe This Picture immediately after selecting a file. The application will select the configured method automatically, disclose privacy and possible cost before execution, and retain the existing human-review checkpoints.

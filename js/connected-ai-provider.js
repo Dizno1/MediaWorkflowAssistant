@@ -81,6 +81,8 @@
   function normalize(capability, result) {
     if (capability === 'transcription-draft' && typeof result.text !== 'string') throw new Error('The service response must include transcript text.');
     if ((capability === 'caption-draft' || capability === 'audio-description-draft') && !Array.isArray(result.cues)) throw new Error('The service response must include a cues array.');
+    if (capability === 'visual-analysis' && typeof result.description !== 'string' && typeof result.text !== 'string') throw new Error('The service response must include an image description.');
+    if (capability === 'visual-analysis' && typeof result.description !== 'string') result.description = result.text;
     return result;
   }
 

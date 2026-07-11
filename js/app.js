@@ -37,6 +37,15 @@
   const transcriptReviewedInput = document.getElementById('transcript-reviewed');
   const transcriptReviewStatus = document.getElementById('transcript-review-status');
   const cancelTranscriptReviewButton = document.getElementById('cancel-transcript-review');
+  const imageDescriptionReviewSection = document.getElementById('image-description-review-section');
+  const imageDescriptionReviewForm = document.getElementById('image-description-review-form');
+  const imageDescriptionReviewSummary = document.getElementById('image-description-review-summary');
+  const imageDescriptionTitleInput = document.getElementById('image-description-title');
+  const imageDescriptionTextInput = document.getElementById('image-description-text');
+  const imageDescriptionReviewedInput = document.getElementById('image-description-reviewed');
+  const imageDescriptionStatus = document.getElementById('image-description-status');
+  const draftImageDescriptionButton = document.getElementById('draft-image-description');
+  const cancelImageDescriptionButton = document.getElementById('cancel-image-description');
   const captionReviewSection = document.getElementById('caption-review-section');
   const captionReviewForm = document.getElementById('caption-review-form');
   const captionReviewSummary = document.getElementById('caption-review-summary');
@@ -110,6 +119,7 @@
   let currentInspection = null;
   let activeJob = null;
   let pendingTranscriptIntent = null;
+  let pendingImageDescriptionIntent = null;
   let pendingCaptionIntent = null;
   let captionCueCounter = 0;
   let pendingAudioDescriptionIntent = null;
@@ -267,7 +277,7 @@
     connectedProviderEndpoint.value = config.endpoint;
     connectedProviderModel.value = config.model;
     connectedProviderCost.value = config.costCategory;
-    const summaries = ['transcription-draft', 'caption-draft', 'audio-description-draft'].map((capability) => window.AIProviderLayer.getCapability(capability));
+    const summaries = ['transcription-draft', 'caption-draft', 'audio-description-draft', 'visual-analysis'].map((capability) => window.AIProviderLayer.getCapability(capability));
     const available = summaries.filter((item) => item.canRun).length;
     automaticProviderStatus.textContent = mode === 'automatic'
       ? `Automatic selection is active. ${available} of ${summaries.length} drafting tasks currently have an available method. Privacy and cost notices appear before any connected service runs.`
@@ -290,7 +300,7 @@
     return { confirmed: true, notice };
   }
 
-  function aiContext() {
+  async function aiContext(includeSourceData) {
     const transcriptArtifacts = window.OutputManager.listForSource(currentKnowledgeModel && currentKnowledgeModel.source)
       .filter((artifact) => artifact.workflowId === 'create-transcript');
     const transcript = transcriptTextInput.value.trim() || (transcriptArtifacts.find((artifact) => artifact.content) || {}).content || '';
@@ -299,8 +309,21 @@
       mediaType: currentInspection ? currentInspection.mediaType : '',
       durationSeconds: currentInspection ? currentInspection.durationSeconds : 0,
       transcriptText: transcript.replace(/^.*?\n\nSource:.*?\nCreated:.*?\nReviewed:.*?\n\n/s, ''),
-      knowledge: currentKnowledgeModel || {}
+      knowledge: currentKnowledgeModel || {},
+      sourceData: includeSourceData ? await readSourceData(currentFile) : null
     };
+  }
+
+  async function readSourceData(file) {
+    if (!(file instanceof File)) throw new Error('This task requires a file from your device.');
+    const maximumBytes = 50 * 1024 * 1024;
+    if (file.size > maximumBytes) throw new Error('This connected-service build currently supports source files up to 50 MB. Use a smaller copy or a local service endpoint that accepts the same request schema.');
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    return { name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, base64: btoa(binary) };
   }
 
   async function requestTranscriptDraft() {
@@ -309,7 +332,7 @@
     draftTranscriptButton.disabled = true;
     transcriptReviewStatus.textContent = 'Creating an editable transcript draft using the best available method.';
     try {
-      const result = await window.AIProviderLayer.run('transcription-draft', aiContext(), { confirmed: approval.confirmed });
+      const result = await window.AIProviderLayer.run('transcription-draft', await aiContext(true), { confirmed: approval.confirmed });
       transcriptTextInput.value = String(result.text || '').trim();
       transcriptReviewStatus.textContent = `${result.providerName} returned a draft. Review every word before confirming completion.`;
       transcriptTextInput.focus();
@@ -323,7 +346,7 @@
     try {
       const approval = confirmAssistanceUse('caption-draft', captionReviewStatus);
       if (!approval) return;
-      const result = await window.AIProviderLayer.run('caption-draft', aiContext(), { confirmed: approval.confirmed });
+      const result = await window.AIProviderLayer.run('caption-draft', await aiContext(false), { confirmed: approval.confirmed });
       captionCueCounter = 0; captionCues.innerHTML = '';
       result.cues.forEach((cue) => addCaptionCue(cue));
       captionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter cues created.'} Human timing and text review is required.`;
@@ -338,13 +361,28 @@
     try {
       const approval = confirmAssistanceUse('audio-description-draft', audioDescriptionReviewStatus);
       if (!approval) return;
-      const result = await window.AIProviderLayer.run('audio-description-draft', aiContext(), { confirmed: approval.confirmed });
+      const result = await window.AIProviderLayer.run('audio-description-draft', await aiContext(true), { confirmed: approval.confirmed });
       audioDescriptionCueCounter = 0; audioDescriptionCues.innerHTML = '';
       result.cues.forEach((cue) => addAudioDescriptionCue(cue));
       audioDescriptionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter checkpoints created.'} Review the video and replace prompts with accurate narration.`;
       audioDescriptionCues.querySelector('input, textarea, select').focus();
     } catch (error) { audioDescriptionReviewStatus.textContent = error.message; }
     finally { draftAudioDescriptionButton.disabled = false; }
+  }
+
+
+  async function requestImageDescriptionDraft() {
+    const approval = confirmAssistanceUse('visual-analysis', imageDescriptionStatus);
+    if (!approval) return;
+    draftImageDescriptionButton.disabled = true;
+    imageDescriptionStatus.textContent = 'Analyzing the selected image and creating an editable description draft.';
+    try {
+      const result = await window.AIProviderLayer.run('visual-analysis', await aiContext(true), { confirmed: approval.confirmed });
+      imageDescriptionTextInput.value = String(result.description || result.text || '').trim();
+      imageDescriptionStatus.textContent = `${result.providerName} returned a draft. Review it against the image before saving.`;
+      imageDescriptionTextInput.focus();
+    } catch (error) { imageDescriptionStatus.textContent = error.message; }
+    finally { draftImageDescriptionButton.disabled = false; }
   }
 
   async function handleFile(file) {
@@ -368,6 +406,7 @@
     resetProgress();
     resetResults();
     resetTranscriptReview();
+    resetImageDescriptionReview();
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
@@ -419,6 +458,7 @@
     resetProgress();
     resetResults();
     resetTranscriptReview();
+    resetImageDescriptionReview();
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
@@ -980,6 +1020,10 @@
       openTranscriptReview(intent);
       return;
     }
+    if (intent.workflowId === 'generate-alt-text') {
+      openImageDescriptionReview(intent);
+      return;
+    }
     if (intent.workflowId === 'create-captions') {
       openCaptionReview(intent);
       return;
@@ -999,6 +1043,7 @@
     resetProgress();
     resetResults();
     resetTranscriptReview();
+    resetImageDescriptionReview();
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
@@ -1011,6 +1056,7 @@
       renderWorkflowChainState();
     }
     activeJob.transcriptOptions = intent.workflowId === 'create-transcript' ? (exportOptions || null) : null;
+    activeJob.imageDescriptionOptions = intent.workflowId === 'generate-alt-text' ? (exportOptions || null) : null;
     activeJob.captionOptions = intent.workflowId === 'create-captions' ? (exportOptions || null) : null;
     activeJob.audioDescriptionOptions = intent.workflowId === 'audio-description' ? (exportOptions || null) : null;
     activeJob.knowledgeModel = currentKnowledgeModel;
@@ -1071,6 +1117,37 @@
     transcriptTextInput.value = '';
     transcriptReviewedInput.checked = false;
     transcriptReviewStatus.textContent = '';
+  }
+
+
+  function openImageDescriptionReview(intent) {
+    pendingImageDescriptionIntent = intent;
+    imageDescriptionTitleInput.value = `Image description for ${currentFile ? currentFile.name : currentInspection.name}`;
+    imageDescriptionTextInput.value = '';
+    imageDescriptionReviewedInput.checked = false;
+    imageDescriptionStatus.textContent = '';
+    imageDescriptionReviewSummary.textContent = `Review ${currentFile ? currentFile.name : currentInspection.name}, request a draft when an assistance service is available, and edit the result before saving.`;
+    imageDescriptionReviewSection.hidden = false;
+    imageDescriptionReviewSection.focus();
+  }
+
+  function submitImageDescriptionReview(event) {
+    event.preventDefault();
+    if (!pendingImageDescriptionIntent) return;
+    const description = imageDescriptionTextInput.value.trim();
+    if (!description) { imageDescriptionStatus.textContent = 'Enter an image description before saving.'; imageDescriptionTextInput.focus(); return; }
+    if (!imageDescriptionReviewedInput.checked) { imageDescriptionStatus.textContent = 'Confirm that you reviewed the description against the image.'; imageDescriptionReviewedInput.focus(); return; }
+    const intent = pendingImageDescriptionIntent;
+    startIntentJob(intent, { title: imageDescriptionTitleInput.value.trim(), description, reviewed: true, reviewedAt: new Date().toISOString() });
+  }
+
+  function resetImageDescriptionReview() {
+    pendingImageDescriptionIntent = null;
+    imageDescriptionReviewSection.hidden = true;
+    imageDescriptionTitleInput.value = '';
+    imageDescriptionTextInput.value = '';
+    imageDescriptionReviewedInput.checked = false;
+    imageDescriptionStatus.textContent = '';
   }
 
   function openCaptionReview(intent) {
@@ -1649,11 +1726,14 @@
     aiProviderStatus.textContent = 'Connected service configuration cleared. Automatic selection is active.'; renderAIProviders();
   });
   draftTranscriptButton.addEventListener('click', requestTranscriptDraft);
+  draftImageDescriptionButton.addEventListener('click', requestImageDescriptionDraft);
   draftCaptionsButton.addEventListener('click', requestCaptionDraft);
   draftAudioDescriptionButton.addEventListener('click', requestAudioDescriptionDraft);
   renderAIProviders();
 
   transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
+  imageDescriptionReviewForm.addEventListener('submit', submitImageDescriptionReview);
+  cancelImageDescriptionButton.addEventListener('click', () => { resetImageDescriptionReview(); goalsSection.focus(); setStatus('Image description cancelled.'); });
   captionReviewForm.addEventListener('submit', submitCaptionReview);
   audioDescriptionReviewForm.addEventListener('submit', submitAudioDescriptionReview);
   addAudioDescriptionCueButton.addEventListener('click', () => { addAudioDescriptionCue(); audioDescriptionReviewStatus.textContent = 'Description cue added.'; });
@@ -1669,6 +1749,7 @@
 
   cancelPackageReviewButton.addEventListener('click', () => {
     resetTranscriptReview();
+    resetImageDescriptionReview();
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();

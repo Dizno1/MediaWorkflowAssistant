@@ -115,6 +115,19 @@
       };
     }
 
+
+    if (workflowId === 'generate-alt-text') {
+      model.accessibility.imageDescription = model.accessibility.imageDescription || {};
+      model.accessibility.imageDescription.present = true;
+      model.accessibility.imageDescription.status = 'complete';
+      model.accessibility.imageDescription.artifacts = artifacts;
+      model.accessibility.imageDescription.reviewedAt = job.imageDescriptionOptions ? job.imageDescriptionOptions.reviewedAt : null;
+      model.accessibility.imageDescription.confidence = {
+        level: 'high',
+        reason: 'A reviewed image description was created and saved in this browser.'
+      };
+    }
+
     if (workflowId === 'create-captions') {
       model.accessibility.captions.present = true;
       model.accessibility.captions.status = 'complete';
@@ -168,6 +181,7 @@
     if (model.accessibility.transcript.present) completed.add('completed-transcript');
     if (model.accessibility.captions.present) completed.add('completed-captions');
     if (model.accessibility.audioDescription.present) completed.add('completed-audio-description-script');
+    if (model.accessibility.imageDescription && model.accessibility.imageDescription.present) completed.add('completed-image-description');
     if (model.audio.extractedCopy && model.audio.extractedCopy.status === 'complete') completed.add('extracted-audio');
     if (model.source.smallerCopy && model.source.smallerCopy.status === 'complete') completed.add('smaller-video-copy');
     if (model.analysis.accessibilityPackage && model.analysis.accessibilityPackage.status === 'complete') completed.add('accessibility-package');

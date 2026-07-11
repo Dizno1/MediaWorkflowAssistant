@@ -144,7 +144,13 @@
       durationSeconds: Number(value.durationSeconds) || 0,
       transcriptText: String(value.transcriptText || ''),
       captionCues: Array.isArray(value.captionCues) ? value.captionCues.map((cue) => ({ start: String(cue.start || ''), end: String(cue.end || ''), text: String(cue.text || '') })) : [],
-      knowledge: value.knowledge && typeof value.knowledge === 'object' ? value.knowledge : {}
+      knowledge: value.knowledge && typeof value.knowledge === 'object' ? value.knowledge : {},
+      sourceData: value.sourceData && typeof value.sourceData === 'object' ? {
+        name: String(value.sourceData.name || ''),
+        mimeType: String(value.sourceData.mimeType || ''),
+        size: Number(value.sourceData.size) || 0,
+        base64: String(value.sourceData.base64 || '')
+      } : null
     };
   }
 

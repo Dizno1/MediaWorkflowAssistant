@@ -3,7 +3,7 @@
     constructor() {
       this.id = 'browser';
       this.name = 'Browser Provider';
-      this.supportedWorkflows = ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description'];
+      this.supportedWorkflows = ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description', 'generate-alt-text'];
     }
 
     initialize() {
@@ -47,6 +47,10 @@
 
       if (job.workflow.id === 'audio-description') {
         return this.createDescriptionWorkspace(job);
+      }
+
+      if (job.workflow.id === 'generate-alt-text') {
+        return this.createImageDescription(job);
       }
 
       return this.createFileInformation(job);
@@ -145,7 +149,7 @@
       if (!transcriptText) throw new Error('Enter transcript text before running this workflow.');
       const baseName = stripExtension(job.sourceFileName);
       const title = String(options.title || `Transcript for ${job.sourceFileName}`).trim();
-      const text = [title, '', `Source: ${job.sourceFileName}`, `Created: ${new Date().toLocaleString()}`, `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`, '', transcriptText, ''].join('\n');
+      const text = [title, '', `Source: ${job.sourceFileName}`, `Created: ${new Date().toLocaleString()}`, `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`, '', description, ''].join('\n');
       return [createTextArtifact(`${baseName}-transcript.txt`, 'Completed transcript', `A reviewed plain-text transcript containing ${Number(options.wordCount) || transcriptText.split(/\s+/).length} words.`, text, 'text/plain')];
     }
 
@@ -168,6 +172,17 @@
         createTextArtifact(`${baseName}-captions.vtt`, 'Completed WebVTT captions', `A reviewed WebVTT caption file containing ${cues.length} timed cue${cues.length === 1 ? '' : 's'}.`, options.webVtt, 'text/vtt'),
         createTextArtifact(`${baseName}-caption-review.md`, 'Caption review record', 'A readable record of the completed caption cues and review confirmation.', worksheet, 'text/markdown')
       ];
+    }
+
+
+    createImageDescription(job) {
+      const options = job.imageDescriptionOptions || {};
+      const description = String(options.description || '').trim();
+      if (!description) throw new Error('Enter and review an image description before running this workflow.');
+      const baseName = stripExtension(job.sourceFileName);
+      const title = String(options.title || `Image description for ${job.sourceFileName}`).trim();
+      const text = [title, '', `Source: ${job.sourceFileName}`, `Created: ${new Date().toLocaleString()}`, `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`, '', description, ''].join('\n');
+      return [createTextArtifact(`${baseName}-image-description.txt`, 'Reviewed image description', 'A reviewed plain-text description suitable for adaptation as alt text or a longer image description.', text, 'text/plain')];
     }
 
     createDescriptionWorkspace(job) {
