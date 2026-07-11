@@ -115,11 +115,13 @@
 
     if (workflowId === 'create-captions') {
       model.accessibility.captions.present = true;
-      model.accessibility.captions.status = 'workspace-created';
+      model.accessibility.captions.status = 'complete';
       model.accessibility.captions.artifacts = artifacts;
+      model.accessibility.captions.cueCount = job.captionOptions ? job.captionOptions.cueCount : null;
+      model.accessibility.captions.reviewedAt = job.captionOptions ? job.captionOptions.reviewedAt : null;
       model.accessibility.captions.confidence = {
         level: 'high',
-        reason: 'A caption worksheet and WebVTT starter file were created in this browser.'
+        reason: 'A reviewed, timed WebVTT caption file was created and saved in this browser.'
       };
     }
 
@@ -160,7 +162,7 @@
     const pending = new Set(model.analysis.pending || []);
 
     if (model.accessibility.transcript.present) completed.add('completed-transcript');
-    if (model.accessibility.captions.present) completed.add('caption-workspace');
+    if (model.accessibility.captions.present) completed.add('completed-captions');
     if (model.accessibility.audioDescription.present) completed.add('audio-description-workspace');
     if (model.audio.extractedCopy && model.audio.extractedCopy.status === 'complete') completed.add('extracted-audio');
     if (model.source.smallerCopy && model.source.smallerCopy.status === 'complete') completed.add('smaller-video-copy');

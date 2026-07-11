@@ -3,9 +3,9 @@
     {
       id: 'create-captions',
       workflowId: 'create-captions',
-      title: 'Create a caption template',
-      description: 'Create a timed caption workspace and a WebVTT file you can edit.',
-      actionLabel: 'Create a caption template'
+      title: 'Create captions',
+      description: 'Create, review, validate, and save timed WebVTT captions.',
+      actionLabel: 'Create captions'
     },
     {
       id: 'create-transcript',

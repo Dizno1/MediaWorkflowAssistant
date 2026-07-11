@@ -626,3 +626,42 @@ button:disabled:hover {
   margin: 1rem 0;
   padding: 0.75rem;
 }
+
+
+#caption-review-form textarea {
+  border: 2px solid var(--border);
+  border-radius: 0.55rem;
+  display: block;
+  font: inherit;
+  line-height: 1.5;
+  margin-top: 0.4rem;
+  min-height: 6rem;
+  padding: 0.75rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.caption-cue {
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.caption-cue legend {
+  font-weight: 800;
+  padding: 0 0.35rem;
+}
+
+.caption-time-fields {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+#caption-review-status:not(:empty) {
+  border-left: 0.35rem solid currentColor;
+  font-weight: 700;
+  margin: 1rem 0;
+  padding: 0.75rem;
+}

@@ -20,6 +20,7 @@ The application now includes:
 - A production Accessibility Package workflow that creates a portable ZIP from Shared Knowledge, workflow history, and approved outputs.
 - An accessible pre-export review with artifact selection, package naming, privacy confirmation, and final manifest regeneration.
 - A complete Create Transcript workflow with an accessible editing and review workspace, validation, plain-text export, Output Manager registration, and Shared Knowledge updates.
+- A complete Create Captions workflow with transcript reuse, an accessible timed-cue editor, timing validation, reviewed WebVTT export, a caption review record, Output Manager registration, and Shared Knowledge updates.
 
 ## Design Principle
 
@@ -151,6 +152,10 @@ The Accessibility Package workflow now opens an accessible review before executi
 
 Create Transcript is now a complete production workflow. It opens a keyboard-accessible transcript editor beside the existing media viewer, requires transcript content and an explicit accuracy review, executes through the Workflow Execution Engine, creates a reviewed plain-text transcript, registers the artifact with the Output Manager, and records completion, word count, and review time in Shared Knowledge. Recommendations stop offering transcription once the completed transcript is recorded.
 
+### Phase 10 - Create Captions Production Workflow - Completed
+
+Create Captions is now a complete production workflow. It reuses a completed transcript when one is available, creates starter timed cues, and opens a keyboard-accessible cue editor with individually labeled start time, end time, and caption text controls. Users can add and remove cues, review the source in the existing Viewer, and confirm the completed caption set. Validation blocks empty cues, invalid timestamps, end times before start times, overlaps, and cues that extend beyond the source duration. The Workflow Execution Engine exports a reviewed WebVTT file and a readable caption review record, registers both outputs with the Output Manager, and records caption completion, cue count, review time, and high-confidence status in Shared Knowledge. Recommendations automatically stop offering Create Captions after completion.
+
 ## Next Development Step
 
-Phase 10 will convert Create Captions into a complete production workflow. It will reuse the completed transcript when available, provide an accessible timed-cue editor, validate cue order and timing, export a usable WebVTT file, and update Shared Knowledge and recommendations automatically. Audio Description will follow caption production so it can reuse the same timed-media editing patterns.
+Phase 11 will convert Audio Description into a complete production workflow. It will reuse the timed-media editing patterns established in Phase 10, provide an accessible description-cue editor, validate timing and narration placement, export a reviewed audio description script, and update Shared Knowledge and recommendations automatically.

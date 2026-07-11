@@ -74,6 +74,15 @@
       if (!job.transcriptOptions || !String(job.transcriptOptions.text || '').trim()) throw new Error('Enter transcript text before saving the transcript.');
       if (!job.transcriptOptions.reviewed) throw new Error('Review and confirm the transcript before saving it as complete.');
     }
+    if (job.workflow.id === 'create-captions') {
+      if (!(job.sourceFile instanceof File)) throw new Error('Create Captions requires a local video file.');
+      if (!job.inspection || job.inspection.mediaType !== 'video' || !job.inspection.hasAudio) throw new Error('Choose a supported video file containing audio.');
+      if (!job.captionOptions || !Array.isArray(job.captionOptions.cues) || !job.captionOptions.cues.length) throw new Error('Enter at least one timed caption cue.');
+      if (!job.captionOptions.reviewed) throw new Error('Review and confirm the captions before saving them as complete.');
+      const errors = window.CaptionReview.validate(job.captionOptions.cues, job.inspection.durationSeconds);
+      if (errors.length) throw new Error(errors[0]);
+    }
+
   }
 
   function throwIfCancelled(job) {

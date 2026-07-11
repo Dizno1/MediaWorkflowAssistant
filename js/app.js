@@ -37,6 +37,15 @@
   const transcriptReviewedInput = document.getElementById('transcript-reviewed');
   const transcriptReviewStatus = document.getElementById('transcript-review-status');
   const cancelTranscriptReviewButton = document.getElementById('cancel-transcript-review');
+  const captionReviewSection = document.getElementById('caption-review-section');
+  const captionReviewForm = document.getElementById('caption-review-form');
+  const captionReviewSummary = document.getElementById('caption-review-summary');
+  const captionTitleInput = document.getElementById('caption-title');
+  const captionCues = document.getElementById('caption-cues');
+  const addCaptionCueButton = document.getElementById('add-caption-cue');
+  const captionsReviewedInput = document.getElementById('captions-reviewed');
+  const captionReviewStatus = document.getElementById('caption-review-status');
+  const cancelCaptionReviewButton = document.getElementById('cancel-caption-review');
   const packageReviewSection = document.getElementById('package-review-section');
   const packageReviewForm = document.getElementById('package-review-form');
   const packageReviewSummary = document.getElementById('package-review-summary');
@@ -54,6 +63,8 @@
   let currentInspection = null;
   let activeJob = null;
   let pendingTranscriptIntent = null;
+  let pendingCaptionIntent = null;
+  let captionCueCounter = 0;
   let pendingPackageIntent = null;
   let currentPackageReview = null;
   let currentKnowledgeModel = null;
@@ -93,6 +104,7 @@
     resetProgress();
     resetResults();
     resetTranscriptReview();
+    resetCaptionReview();
     resetPackageReview();
 
     fileHelp.textContent = `${file.name} selected. The file stays on this device.`;
@@ -140,6 +152,7 @@
     resetProgress();
     resetResults();
     resetTranscriptReview();
+    resetCaptionReview();
     resetPackageReview();
 
     inspectionOutput.hidden = false;
@@ -596,6 +609,10 @@
       openTranscriptReview(intent);
       return;
     }
+    if (intent.workflowId === 'create-captions') {
+      openCaptionReview(intent);
+      return;
+    }
     if (intent.workflowId === 'accessibility-package') {
       openPackageReview(intent);
       return;
@@ -607,10 +624,12 @@
     resetProgress();
     resetResults();
     resetTranscriptReview();
+    resetCaptionReview();
     resetPackageReview();
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
     activeJob.exportOptions = exportOptions || null;
     activeJob.transcriptOptions = intent.workflowId === 'create-transcript' ? (exportOptions || null) : null;
+    activeJob.captionOptions = intent.workflowId === 'create-captions' ? (exportOptions || null) : null;
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
     activeJob.accessibilityPlan = currentPlan;
@@ -668,6 +687,117 @@
     transcriptTextInput.value = '';
     transcriptReviewedInput.checked = false;
     transcriptReviewStatus.textContent = '';
+  }
+
+  function openCaptionReview(intent) {
+    pendingCaptionIntent = intent;
+    const review = window.CaptionReview.build(
+      currentFile ? currentFile.name : currentInspection.name,
+      currentInspection.durationSeconds,
+      currentKnowledgeModel,
+      currentKnowledgeModel.source
+    );
+    captionTitleInput.value = review.suggestedTitle;
+    captionCueCounter = 0;
+    captionCues.innerHTML = '';
+    review.cues.forEach((cue) => addCaptionCue(cue));
+    captionsReviewedInput.checked = false;
+    captionReviewStatus.textContent = '';
+    captionReviewSummary.textContent = review.reusedTranscript
+      ? 'A completed transcript was used to create starter cues. Review every cue against the Viewer and correct the timing and text.'
+      : 'Use the Viewer to enter each caption and its timing. Include spoken words, speaker identification when needed, and meaningful sounds.';
+    captionReviewSection.hidden = false;
+    captionReviewSection.focus();
+  }
+
+  function addCaptionCue(cue = {}) {
+    captionCueCounter += 1;
+    const cueId = captionCueCounter;
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'caption-cue';
+    fieldset.dataset.cueId = String(cueId);
+    fieldset.innerHTML = `
+      <legend>Caption cue ${cueId}</legend>
+      <div class="caption-time-fields">
+        <div class="form-field">
+          <label for="caption-start-${cueId}">Start time</label>
+          <input id="caption-start-${cueId}" class="caption-start" type="text" inputmode="decimal" value="${escapeHtml(cue.start || '00:00:00.000')}" aria-describedby="caption-time-format-${cueId}" required>
+        </div>
+        <div class="form-field">
+          <label for="caption-end-${cueId}">End time</label>
+          <input id="caption-end-${cueId}" class="caption-end" type="text" inputmode="decimal" value="${escapeHtml(cue.end || '00:00:04.000')}" aria-describedby="caption-time-format-${cueId}" required>
+        </div>
+      </div>
+      <p id="caption-time-format-${cueId}" class="help-text">Format: 00:00:00.000</p>
+      <div class="form-field">
+        <label for="caption-text-${cueId}">Caption text</label>
+        <textarea id="caption-text-${cueId}" class="caption-text" rows="3" required>${escapeHtml(cue.text || '')}</textarea>
+      </div>
+      <button type="button" class="remove-caption-cue">Remove caption cue ${cueId}</button>
+    `;
+    fieldset.querySelector('.remove-caption-cue').addEventListener('click', () => {
+      if (captionCues.children.length === 1) {
+        captionReviewStatus.textContent = 'At least one caption cue is required.';
+        return;
+      }
+      const nextFocus = fieldset.previousElementSibling || fieldset.nextElementSibling || addCaptionCueButton;
+      fieldset.remove();
+      renumberCaptionCues();
+      captionReviewStatus.textContent = 'Caption cue removed.';
+      nextFocus.focus();
+    });
+    captionCues.appendChild(fieldset);
+  }
+
+  function renumberCaptionCues() {
+    Array.from(captionCues.children).forEach((fieldset, index) => {
+      fieldset.querySelector('legend').textContent = `Caption cue ${index + 1}`;
+    });
+  }
+
+  function collectCaptionCues() {
+    return Array.from(captionCues.querySelectorAll('.caption-cue')).map((fieldset) => ({
+      start: fieldset.querySelector('.caption-start').value.trim(),
+      end: fieldset.querySelector('.caption-end').value.trim(),
+      text: fieldset.querySelector('.caption-text').value.trim()
+    }));
+  }
+
+  function submitCaptionReview(event) {
+    event.preventDefault();
+    if (!pendingCaptionIntent) return;
+    const cues = collectCaptionCues();
+    const errors = window.CaptionReview.validate(cues, currentInspection.durationSeconds);
+    if (errors.length) {
+      captionReviewStatus.textContent = errors.join(' ');
+      const firstInvalid = captionCues.querySelector(':invalid');
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+    if (!captionsReviewedInput.checked) {
+      captionReviewStatus.textContent = 'Confirm that you reviewed the caption text and timing before saving the captions as complete.';
+      captionsReviewedInput.focus();
+      return;
+    }
+    const options = {
+      title: captionTitleInput.value.trim() || `Captions for ${currentFile ? currentFile.name : currentInspection.name}`,
+      cues,
+      cueCount: cues.length,
+      reviewed: true,
+      reviewedAt: new Date().toISOString(),
+      webVtt: window.CaptionReview.toWebVtt(captionTitleInput.value, currentFile ? currentFile.name : currentInspection.name, cues)
+    };
+    const intent = pendingCaptionIntent;
+    startIntentJob(intent, options);
+  }
+
+  function resetCaptionReview() {
+    pendingCaptionIntent = null;
+    captionReviewSection.hidden = true;
+    captionTitleInput.value = '';
+    captionCues.innerHTML = '';
+    captionsReviewedInput.checked = false;
+    captionReviewStatus.textContent = '';
   }
 
   function openPackageReview(intent) {
@@ -993,6 +1123,9 @@
   });
 
   transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
+  captionReviewForm.addEventListener('submit', submitCaptionReview);
+  addCaptionCueButton.addEventListener('click', () => { addCaptionCue(); captionCues.lastElementChild.querySelector('.caption-start').focus(); });
+  cancelCaptionReviewButton.addEventListener('click', () => { resetCaptionReview(); goalsSection.focus(); });
   cancelTranscriptReviewButton.addEventListener('click', () => {
     resetTranscriptReview();
     goalsSection.focus();
@@ -1002,6 +1135,7 @@
 
   cancelPackageReviewButton.addEventListener('click', () => {
     resetTranscriptReview();
+    resetCaptionReview();
     resetPackageReview();
     goalsSection.focus();
     setStatus('Package review cancelled.');

@@ -8,8 +8,8 @@
       description: 'Create a caption file from spoken audio in a video.',
       mediaTypes: ['video'],
       requirements: ['hasAudio'],
-      outputs: ['VTT caption file', 'editable transcript draft'],
-      steps: ['Extract audio', 'Detect speech', 'Create transcript', 'Synchronize timestamps', 'Export VTT caption file']
+      outputs: ['reviewed WebVTT caption file', 'caption review record'],
+      steps: ['Review transcript and source', 'Edit timed caption cues', 'Validate timing and reading order', 'Export reviewed WebVTT captions']
     },
     {
       id: 'create-transcript',

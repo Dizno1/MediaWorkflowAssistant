@@ -42,7 +42,7 @@
       }
 
       if (job.workflow.id === 'create-captions') {
-        return this.createCaptionWorkspace(job);
+        return this.createCaptions(job);
       }
 
       if (job.workflow.id === 'audio-description') {
@@ -149,18 +149,24 @@
       return [createTextArtifact(`${baseName}-transcript.txt`, 'Completed transcript', `A reviewed plain-text transcript containing ${Number(options.wordCount) || transcriptText.split(/\s+/).length} words.`, text, 'text/plain')];
     }
 
-    createCaptionWorkspace(job) {
-      const inspection = job.inspection || {};
+    createCaptions(job) {
+      const options = job.captionOptions || {};
+      const cues = Array.isArray(options.cues) ? options.cues : [];
+      if (!cues.length || !String(options.webVtt || '').trim()) throw new Error('Enter and review at least one caption cue before running this workflow.');
       const baseName = stripExtension(job.sourceFileName);
-      const worksheet = buildTimedWorksheet(job.sourceFileName, inspection.durationSeconds, 'Caption text', [
-        'Use the viewer to find the beginning and end of each spoken phrase.',
-        'Keep each caption concise and synchronized with the audio.',
-        'Include meaningful sounds when they are needed to understand the media.'
-      ]);
-      const vtt = ['WEBVTT', '', 'NOTE Add caption cues using this pattern:', 'NOTE 00:00:00.000 --> 00:00:04.000', 'NOTE Caption text', ''].join('\n');
+      const worksheet = [
+        `# Caption Review Record for ${job.sourceFileName}`,
+        '',
+        `Title: ${options.title || `Captions for ${job.sourceFileName}`}`,
+        `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`,
+        `Reviewed at: ${options.reviewedAt || new Date().toISOString()}`,
+        `Cue count: ${cues.length}`,
+        '',
+        ...cues.flatMap((cue, index) => [`## Cue ${index + 1}`, `${cue.start} --> ${cue.end}`, cue.text, ''])
+      ].join('\n');
       return [
-        createTextArtifact(`${baseName}-caption-workspace.md`, 'Caption worksheet', 'A timestamped worksheet for drafting and reviewing captions.', worksheet, 'text/markdown'),
-        createTextArtifact(`${baseName}-captions.vtt`, 'WebVTT caption file', 'A valid WebVTT starter file ready for caption cues.', vtt, 'text/vtt')
+        createTextArtifact(`${baseName}-captions.vtt`, 'Completed WebVTT captions', `A reviewed WebVTT caption file containing ${cues.length} timed cue${cues.length === 1 ? '' : 's'}.`, options.webVtt, 'text/vtt'),
+        createTextArtifact(`${baseName}-caption-review.md`, 'Caption review record', 'A readable record of the completed caption cues and review confirmation.', worksheet, 'text/markdown')
       ];
     }
 

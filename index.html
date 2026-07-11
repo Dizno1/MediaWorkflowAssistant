@@ -113,6 +113,34 @@
       </form>
     </section>
 
+
+    <section id="caption-review-section" class="panel" aria-labelledby="caption-review-heading" tabindex="-1" hidden>
+      <h2 id="caption-review-heading">Create captions</h2>
+      <p id="caption-review-summary">Review and edit timed caption cues, then save a completed WebVTT file.</p>
+      <form id="caption-review-form">
+        <div class="form-field">
+          <label for="caption-title">Caption title</label>
+          <input id="caption-title" name="captionTitle" type="text" aria-describedby="caption-title-help" required>
+          <p id="caption-title-help" class="help-text">This title is included as a note in the saved WebVTT file.</p>
+        </div>
+        <fieldset>
+          <legend>Timed caption cues</legend>
+          <p id="caption-cues-help" class="help-text">Enter start and end times in hours, minutes, seconds, and milliseconds. Cues must be in chronological order and may not overlap.</p>
+          <div id="caption-cues" aria-describedby="caption-cues-help"></div>
+          <button type="button" id="add-caption-cue">Add caption cue</button>
+        </fieldset>
+        <label class="confirmation-option">
+          <input id="captions-reviewed" type="checkbox">
+          I reviewed these captions for accuracy, timing, reading order, speaker identification, and meaningful sounds.
+        </label>
+        <div id="caption-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save captions</button>
+          <button type="button" id="cancel-caption-review">Cancel captions</button>
+        </div>
+      </form>
+    </section>
+
     <section id="package-review-section" class="panel" aria-labelledby="package-review-heading" tabindex="-1" hidden>
       <h2 id="package-review-heading">Review accessibility package</h2>
       <p id="package-review-summary">Review the package before it is created.</p>
@@ -176,6 +204,7 @@
   <script src="js/job.js"></script>
   <script src="js/output-manager.js"></script>
   <script src="js/transcript-review.js"></script>
+  <script src="js/caption-review.js"></script>
   <script src="js/package-review.js"></script>
   <script src="js/workflow-runner.js"></script>
   <script src="js/execution-engine.js"></script>
