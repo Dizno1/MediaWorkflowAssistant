@@ -826,3 +826,42 @@ button:disabled:hover {
 .provider-summary h3, .provider-summary p { margin-block: 0 0.4rem; }
 #advanced-provider-settings > summary { font-weight: 700; cursor: pointer; padding-block: 0.5rem; }
 #advanced-provider-settings fieldset { margin-block: 1rem; }
+
+
+/* Phase 17 human review and approval */
+.project-reviews {
+  border-block: 2px solid var(--border);
+  margin-block: 1.5rem;
+  padding-block: 1rem;
+}
+#project-review-status:not(:empty) {
+  border-left: 0.35rem solid currentColor;
+  font-weight: 700;
+  margin: 1rem 0;
+  padding: 0.75rem;
+}
+.review-card {
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  margin-block: 1rem;
+  padding: 1rem;
+}
+.review-card h4 { margin-top: 0; }
+.review-card form {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.review-card textarea {
+  border: 2px solid var(--border);
+  border-radius: 0.55rem;
+  display: block;
+  font: inherit;
+  line-height: 1.5;
+  margin-top: 0.4rem;
+  padding: 0.65rem 0.75rem;
+  resize: vertical;
+  width: min(100%, 48rem);
+}
+.review-card details { margin-top: 1rem; }
+.review-card summary { cursor: pointer; font-weight: 700; }

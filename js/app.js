@@ -95,6 +95,9 @@
   const projectFacts = document.getElementById('project-facts');
   const projectSources = document.getElementById('project-sources');
   const projectHistory = document.getElementById('project-history');
+  const projectReviewSummary = document.getElementById('project-review-summary');
+  const projectReviewStatus = document.getElementById('project-review-status');
+  const projectReviews = document.getElementById('project-reviews');
   const projectIntelligenceSummary = document.getElementById('project-intelligence-summary');
   const projectIntelligenceFacts = document.getElementById('project-intelligence-facts');
   const projectIntelligenceActions = document.getElementById('project-intelligence-actions');
@@ -144,7 +147,7 @@
 
   function renderProjectWorkspace(message) {
     const projects = window.ProjectWorkspace.list();
-    const active = activeProject();
+    let active = activeProject();
     projectSelect.innerHTML = '<option value="">No active project</option>' + projects.map((project) =>
       `<option value="${escapeHtml(project.id)}" ${active && active.id === project.id ? 'selected' : ''}>${escapeHtml(project.name)}${project.archived ? ' (Archived)' : ''}</option>`
     ).join('');
@@ -156,6 +159,8 @@
       return;
     }
 
+    window.ProjectReview.ensureForProjectHistory(active.id);
+    active = activeProject();
     const summary = window.ProjectWorkspace.summary(active);
     projectDashboard.hidden = false;
     projectWorkspaceSummary.textContent = `${active.name} is ${summary.status.toLowerCase()}. It contains ${summary.sourceCount} source${summary.sourceCount === 1 ? '' : 's'} and ${summary.artifactCount} recorded artifact${summary.artifactCount === 1 ? '' : 's'}.`;
@@ -165,6 +170,7 @@
       ['Sources', String(summary.sourceCount)],
       ['Recorded artifacts', String(summary.artifactCount)],
       ['Completed workflows', String(summary.workflowCount)],
+      ['Approved reviews', `${summary.approvalCount} of ${summary.reviewCount}`],
       ['Last updated', formatWorkspaceDate(active.updatedAt)]
     ].map(([label, value]) => fact(label, value)).join('');
 
@@ -172,11 +178,48 @@
     projectIntelligenceFacts.innerHTML = [
       ['Accessibility completion', `${intelligence.percentComplete}%`],
       ['Remaining actions', String(intelligence.recommendations.length)],
-      ['Out-of-date packages', String(intelligence.stalePackages)]
+      ['Out-of-date packages', String(intelligence.stalePackages)],
+      ['Pending reviews', String(intelligence.reviewSummary.pending)],
+      ['Rejected reviews', String(intelligence.reviewSummary.rejected)]
     ].map(([label, value]) => fact(label, value)).join('');
     projectIntelligenceActions.innerHTML = intelligence.recommendations.length
       ? `<ol class="workspace-list intelligence-action-list">${intelligence.recommendations.map((item) => `<li><h5>${escapeHtml(item.title)} - ${escapeHtml(item.sourceName)}</h5><p><strong>${escapeHtml(titleCase(item.state))}</strong></p><p>${escapeHtml(item.reason)}</p></li>`).join('')}</ol>`
       : '<p>There are no remaining project-wide accessibility actions.</p>';
+
+
+    const reviews = Array.isArray(active.reviews) ? active.reviews.slice().reverse() : [];
+    const reviewSummary = window.ProjectReview.summary(active);
+    projectReviewSummary.textContent = reviews.length
+      ? `${reviewSummary.pending} pending, ${reviewSummary.approved} approved, and ${reviewSummary.rejected} rejected review${reviews.length === 1 ? '' : 's'}.`
+      : 'Completed transcript, caption, audio description, and package work will be added here for human approval.';
+    projectReviews.innerHTML = reviews.length ? `<div class="review-list">${reviews.map((review) => {
+      const comments = Array.isArray(review.comments) ? review.comments : [];
+      const revisions = Array.isArray(review.revisions) ? review.revisions : [];
+      return `<article class="review-card" data-review-id="${escapeHtml(review.id)}" aria-labelledby="review-title-${escapeHtml(review.id)}">
+        <h4 id="review-title-${escapeHtml(review.id)}">${escapeHtml(review.title)} - ${escapeHtml(review.sourceName)}</h4>
+        <p><strong>Status: ${escapeHtml(titleCase(review.status))}</strong></p>
+        <p>${review.artifactNames && review.artifactNames.length ? `Files: ${escapeHtml(review.artifactNames.join(', '))}.` : 'No artifact names were recorded.'}</p>
+        <form class="review-assignment-form">
+          <label for="assignee-${escapeHtml(review.id)}">Assign reviewer</label>
+          <input id="assignee-${escapeHtml(review.id)}" name="assignee" type="text" maxlength="100" value="${escapeHtml(review.assignee || '')}">
+          <button type="submit">Save assignment</button>
+        </form>
+        <form class="review-comment-form">
+          <div class="form-field"><label for="comment-author-${escapeHtml(review.id)}">Comment author</label><input id="comment-author-${escapeHtml(review.id)}" name="author" type="text" maxlength="100" value="${escapeHtml(review.assignee || review.reviewedBy || '')}"></div>
+          <div class="form-field"><label for="comment-${escapeHtml(review.id)}">Review comment</label><textarea id="comment-${escapeHtml(review.id)}" name="comment" rows="3" required></textarea></div>
+          <button type="submit">Add comment</button>
+        </form>
+        <form class="review-decision-form">
+          <div class="form-field"><label for="reviewer-${escapeHtml(review.id)}">Reviewer name</label><input id="reviewer-${escapeHtml(review.id)}" name="reviewer" type="text" maxlength="100" value="${escapeHtml(review.reviewedBy || review.assignee || '')}" required></div>
+          <div class="form-field"><label for="decision-note-${escapeHtml(review.id)}">Decision note</label><textarea id="decision-note-${escapeHtml(review.id)}" name="note" rows="3">${escapeHtml(review.decisionNote || '')}</textarea></div>
+          <div class="next-actions"><button type="submit" name="decision" value="approved">Approve</button><button type="submit" name="decision" value="rejected">Reject and request revision</button><button type="submit" name="decision" value="pending">Return to pending</button></div>
+        </form>
+        <details><summary>Comments and revision history</summary>
+          <h5>Comments</h5>${comments.length ? `<ol>${comments.map((comment) => `<li><strong>${escapeHtml(comment.author)}</strong>: ${escapeHtml(comment.text)} <span class="muted">${escapeHtml(formatWorkspaceDate(comment.createdAt))}</span></li>`).join('')}</ol>` : '<p class="muted">No comments yet.</p>'}
+          <h5>Revision history</h5>${revisions.length ? `<ol>${revisions.slice().reverse().map((revision) => `<li><strong>${escapeHtml(titleCase(revision.status))}</strong>: ${escapeHtml(revision.note || 'Status changed.')} <span class="muted">${escapeHtml(formatWorkspaceDate(revision.changedAt))}</span></li>`).join('')}</ol>` : '<p class="muted">No revision history recorded.</p>'}
+        </details>
+      </article>`;
+    }).join('')}</div>` : '<p class="muted">No human reviews have been created yet.</p>';
 
     const sources = Array.isArray(active.sources) ? active.sources : [];
     projectSources.innerHTML = sources.length ? `<ul class="workspace-list">${sources.map((source) => {
@@ -1360,7 +1403,10 @@
     currentKnowledgeModel = window.SharedKnowledge.recordJob(currentKnowledgeModel, job);
     job.knowledgeModel = currentKnowledgeModel;
     const project = activeProject();
-    if (project) window.ProjectWorkspace.recordWorkflow(project.id, currentSource, job, currentKnowledgeModel);
+    if (project) {
+      window.ProjectWorkspace.recordWorkflow(project.id, currentSource, job, currentKnowledgeModel);
+      window.ProjectReview.ensureForWorkflow(project.id, job);
+    }
     renderProjectWorkspace();
     currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
     currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, window.IntentEngine.getIntents(currentInspection));
@@ -1681,6 +1727,33 @@
     window.ProjectWorkspace.remove(project.id);
     renderProjectWorkspace(`${project.name} deleted from the workspace.`);
     projectSelect.focus();
+  });
+
+  projectReviews.addEventListener('submit', (event) => {
+    const card = event.target.closest('[data-review-id]');
+    if (!card) return;
+    event.preventDefault();
+    const project = activeProject();
+    if (!project) return;
+    const reviewId = card.dataset.reviewId;
+    try {
+      if (event.target.classList.contains('review-assignment-form')) {
+        const data = new FormData(event.target);
+        window.ProjectReview.assign(project.id, reviewId, data.get('assignee'));
+        renderProjectWorkspace('Review assignment updated.');
+      } else if (event.target.classList.contains('review-comment-form')) {
+        const data = new FormData(event.target);
+        window.ProjectReview.addComment(project.id, reviewId, data.get('author'), data.get('comment'));
+        renderProjectWorkspace('Review comment added.');
+      } else if (event.target.classList.contains('review-decision-form')) {
+        const data = new FormData(event.target);
+        const decision = event.submitter ? event.submitter.value : 'pending';
+        window.ProjectReview.setDecision(project.id, reviewId, decision, data.get('reviewer'), data.get('note'));
+        renderProjectWorkspace(`Review marked ${decision}.`);
+      }
+    } catch (error) {
+      projectReviewStatus.textContent = error.message;
+    }
   });
 
   renderProjectWorkspace();

@@ -57,7 +57,8 @@
       createdAt,
       updatedAt: createdAt,
       sources: [],
-      history: []
+      history: [],
+      reviews: []
     };
     projects.push(project);
     writeProjects(projects);
@@ -159,11 +160,14 @@
     const sources = Array.isArray(project.sources) ? project.sources : [];
     if (!sources.length) return 'Incomplete';
     if (sources.some((source) => source.knowledge && source.knowledge.activeJobCount > 0)) return 'In Progress';
+    const reviews = Array.isArray(project.reviews) ? project.reviews : [];
+    if (reviews.some((review) => review.status === 'rejected')) return 'Revision Required';
+    if (reviews.some((review) => review.status === 'pending')) return 'Review Required';
     const allReady = sources.every((source) => {
       const knowledge = source.knowledge || {};
       return knowledge.transcriptComplete && knowledge.captionsComplete && knowledge.audioDescriptionComplete && knowledge.packageComplete;
     });
-    if (allReady) return 'Ready to Publish';
+    if (allReady && (!reviews.length || reviews.every((review) => review.status === 'approved'))) return 'Ready to Publish';
     const hasReviewableWork = sources.some((source) => {
       const knowledge = source.knowledge || {};
       return knowledge.transcriptComplete || knowledge.captionsComplete || knowledge.audioDescriptionComplete;
@@ -178,12 +182,14 @@
       sourceCount: sources.length,
       artifactCount: sources.reduce((total, source) => total + Number((source.knowledge || {}).resultCount || 0), 0),
       workflowCount: history.filter((entry) => entry.status === 'completed').length,
+      reviewCount: project && Array.isArray(project.reviews) ? project.reviews.length : 0,
+      approvalCount: project && Array.isArray(project.reviews) ? project.reviews.filter((review) => review.status === 'approved').length : 0,
       status: project ? (project.archived ? 'Archived' : calculateStatus(project)) : 'No active project'
     };
   }
 
   window.ProjectWorkspace = {
     list, get, getActive, select, create, rename, setArchived, remove,
-    addOrUpdateSource, recordWorkflow, summary
+    addOrUpdateSource, recordWorkflow, summary, update
   };
 })();

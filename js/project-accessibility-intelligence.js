@@ -19,14 +19,16 @@
     const requiredCount = sourceReports.reduce((total, report) => total + report.requiredCount, 0);
     const percentComplete = requiredCount ? Math.round((completedCount / requiredCount) * 100) : 0;
     const stalePackages = sourceReports.filter((report) => report.packageState === 'stale').length;
+    const reviewSummary = window.ProjectReview ? window.ProjectReview.summary(project) : { pending: 0, rejected: 0, approved: 0, total: 0 };
 
     return {
       sourceReports,
       recommendations,
       percentComplete,
       stalePackages,
+      reviewSummary,
       status: projectStatus(project, sourceReports),
-      summary: summaryText(sources.length, recommendations.length, percentComplete, stalePackages),
+      summary: summaryText(sources.length, recommendations.length, percentComplete, stalePackages, reviewSummary),
       createdAt: new Date().toISOString()
     };
   }
@@ -129,6 +131,9 @@
 
   function projectStatus(project, reports) {
     if (project && project.archived) return 'Archived';
+    const reviews = project && Array.isArray(project.reviews) ? project.reviews : [];
+    if (reviews.some((review) => review.status === 'rejected')) return 'Revision Required';
+    if (reviews.some((review) => review.status === 'pending')) return 'Review Required';
     if (!reports.length) return 'Incomplete';
     if (reports.some((report) => Object.values(report.states).includes('in-progress'))) return 'In Progress';
     if (reports.every((report) => report.percentComplete === 100)) return 'Ready to Publish';
@@ -136,9 +141,11 @@
     return 'Incomplete';
   }
 
-  function summaryText(sourceCount, recommendationCount, percentComplete, stalePackages) {
+  function summaryText(sourceCount, recommendationCount, percentComplete, stalePackages, reviewSummary) {
     if (!sourceCount) return 'Add a source to receive project-wide accessibility guidance.';
-    if (!recommendationCount) return `Project accessibility work is 100% complete across ${sourceCount} source${sourceCount === 1 ? '' : 's'}.`;
+    if (reviewSummary.rejected) return `Accessibility work is ${percentComplete}% complete, but ${reviewSummary.rejected} review${reviewSummary.rejected === 1 ? '' : 's'} require revision.`;
+    if (reviewSummary.pending) return `Accessibility work is ${percentComplete}% complete. ${reviewSummary.pending} completed item${reviewSummary.pending === 1 ? '' : 's'} await human approval.`;
+    if (!recommendationCount) return `Project accessibility work is 100% complete across ${sourceCount} source${sourceCount === 1 ? '' : 's'}, and required reviews are approved.`;
     const stale = stalePackages ? ` ${stalePackages} accessibility package${stalePackages === 1 ? ' is' : 's are'} out of date.` : '';
     return `Project accessibility work is ${percentComplete}% complete. ${recommendationCount} next action${recommendationCount === 1 ? '' : 's'} remain.${stale}`;
   }

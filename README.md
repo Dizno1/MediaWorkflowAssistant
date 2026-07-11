@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 16 of the Accessibility Intelligence roadmap is complete.
+Phase 17 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -27,6 +27,7 @@ The application now includes:
 - An accessible Project Workspace that organizes multiple related sources, source-level Shared Knowledge summaries, generated artifact counts, workflow history, and project readiness status under one persistent project.
 - Project-aware Accessibility Intelligence that evaluates every source, calculates completion, detects missing or blocked work, identifies stale accessibility packages, and prioritizes the best next actions across the active project.
 - Automatic provider guidance that keeps provider selection under the hood, favors private and no-additional-cost methods, warns before external processing or possible charges, securely stores connected-service credentials for the browser session only, and preserves provider overrides inside Advanced assistance settings.
+- Project-aware Human Review and Approval that automatically creates review records for completed transcript, caption, audio-description, and package work; supports assignments, comments, approval, rejection, and revision history; and prevents publication readiness until required reviews are approved.
 
 ## Design Principle
 
@@ -199,13 +200,16 @@ The active workspace now receives project-wide accessibility guidance. Every sou
 
 ## Next Development Step
 
-Phase 17 will add Human Review and Approval. It will record review assignments, approval and rejection states, reviewer comments, revision history, and project-wide review readiness without replacing the existing workflow execution or Shared Knowledge architecture.
+Phase 18 will add Dependency and Version Management. It will detect when a source or upstream artifact changes, mark dependent transcripts, captions, audio-description scripts, reviews, and packages as stale, explain the impact in plain language, and recommend only the work that must be repeated.
 
 ### Phase 16 - Provider Guidance, Cost Awareness, and Secure Configuration - Completed
 
 Assistance selection is now automatic by default. The provider layer ranks compatible methods by task fit, privacy, and configured cost category while keeping technical provider names out of the normal workflow. Before any external or potentially metered service runs, the application presents a plain-language privacy and cost confirmation. Connected-service configuration now includes a service name, cost category, session-only API key handling, and an accessible connection test. Advanced users may override automatic selection, but the normal experience remains outcome based.
 
-### Phase 17 - Human Review and Approval - Planned
+### Phase 17 - Human Review and Approval - Completed
 
-Add project-aware review assignments, approval and rejection states, reviewer comments, revision history, and recommendation updates so generated drafts move through clear human checkpoints before publishing.
+Completed transcript, caption, audio-description, and accessibility-package workflows now create project-aware review records automatically. Reviewers can be assigned, comments can be recorded, and work can be approved, rejected with required revision guidance, or returned to pending. Every action is retained in an accessible revision history. Project status and project-wide accessibility intelligence now distinguish pending approval, required revision, and publication readiness so completed generation work is never mistaken for approved deliverables.
 
+### Phase 18 - Dependency and Version Management - Planned
+
+Track source and artifact versions, identify downstream work made stale by changes, preserve prior approved versions, explain exactly what must be reviewed or regenerated, and update recommendations without forcing users to understand the dependency graph.
