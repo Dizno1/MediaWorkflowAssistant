@@ -927,3 +927,10 @@ button:disabled:hover {
   padding-top: 1rem;
 }
 .advisor-acceptance textarea { width: min(100%, 48rem); }
+
+/* Phase 30 Provider Manager */
+.provider-manager-nav { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: 1rem; }
+.provider-manager-nav a { border: 2px solid currentColor; border-radius: .35rem; padding: .45rem .7rem; font-weight: 700; }
+.provider-manager-summary, .configuration-status { border-left: .35rem solid currentColor; padding: .65rem .8rem; }
+#ai-provider-form fieldset { margin-block: 1.25rem; }
+#ai-provider-form fieldset:target { outline: 3px solid currentColor; outline-offset: 3px; }

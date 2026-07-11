@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 29 of the executable accessibility workflow roadmap is complete.
+Phase 30 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -45,6 +45,14 @@ The application now includes:
 - Persistent resumable jobs with centralized state transitions, checkpoints, recoverable errors, retry limits, startup crash recovery, accessible resume controls, batch records and controls, chronological project event history, and duplicate-worker protection for browser-background execution.
 - A project-level Accessibility Advisor that reviews completed work like an accessibility consultant, identifies critical, major, and minor risks, recommends improvements, scores six readiness categories, assigns an overall accessibility-readiness score, detects stale reviews, records final reviewer acceptance, and blocks publication until the current review is accepted.
 - A secure Provider Manager with copy-and-paste configuration for OpenAI, Azure OpenAI, and Google Gemini; encrypted browser-profile storage; connection testing; clear controls; automatic capability-based selection; and no credential storage in repositories or project exports.
+- A complete Provider Manager workspace with show-or-hide key controls, configured and last-tested status, multiple named Azure resources, Anthropic support, optional local Ollama and Whisper detection, and automatic migration of existing Phase 29 Azure settings.
+
+
+## Phase 30 Provider Manager
+
+Phase 30 makes provider setup directly discoverable inside Advanced assistance settings. Users can paste credentials into protected fields, reveal a key only while editing, save it to encrypted browser-profile storage, test the connection, and clear it without touching repository files. Azure OpenAI supports multiple named resource profiles. Anthropic, local Ollama, and local Whisper are now registered with the capability-selection layer.
+
+The normal workflow remains provider-neutral. Automatic selection asks which configured method can perform the required task and continues to require privacy and possible-cost confirmation before external processing. See `docs/Phase 30 Provider Manager.md` for implementation details, migration behavior, accessibility notes, and local-service limitations.
 
 
 ## Design Principle
@@ -398,12 +406,29 @@ New and modified files:
 
 See `docs/Phase 29 Secure Provider Manager.md`.
 
+## Phase 30 - Complete Provider Manager - Completed
+
+Phase 30 turns provider configuration into a complete, discoverable workspace. It adds protected copy-and-paste fields, show-or-hide controls, configured and last-tested status, multiple named Azure OpenAI resources, an Anthropic adapter, and optional local Ollama and Whisper detection. Existing Phase 29 Azure settings migrate automatically into the new profile structure.
+
+New and modified files:
+
+- `js/provider-manager-ui.js` coordinates provider configuration status, key visibility, Azure resource profiles, and local-service detection.
+- `js/azure-openai-provider.js` now supports multiple encrypted Azure resource profiles and migration from the Phase 29 single-resource format.
+- `js/anthropic-provider.js` adds Anthropic visual-analysis, audio-description, and accessibility-analysis capabilities.
+- `js/local-service-provider.js` adds optional local Ollama and Whisper capability registration and connection detection.
+- `js/openai-provider.js` and `js/gemini-provider.js` persist last-tested status.
+- `index.html` adds provider shortcuts, status text, profile controls, Anthropic configuration, and local-service configuration.
+- `css/styles.css` adds Provider Manager navigation and status presentation.
+- `docs/Phase 30 Provider Manager.md` documents behavior, migration, accessibility, security, and limitations.
+
+See `docs/Phase 30 Provider Manager.md`.
+
 ## Remaining Roadmap
 
-### Phase 30 - Automated Playback Quality Assurance
+### Phase 31 - Automated Playback Quality Assurance
 
 Inspect completed media playback, caption timing, track availability, audio-description placement, packaging integrity, and delivery behavior with repeatable diagnostics before release.
 
 ## Next Development Phase
 
-Phase 30 - Automated Playback Quality Assurance.
+Phase 31 - Automated Playback Quality Assurance.

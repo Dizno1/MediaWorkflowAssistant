@@ -223,12 +223,14 @@
     ready = true;
     return getConfiguration();
   }
-  function getConfiguration() { return { hasApiKey: Boolean(configuration.apiKey), transcriptionModel: configuration.transcriptionModel || 'gpt-4o-mini-transcribe', visionModel: configuration.visionModel || 'gpt-4.1-mini', ready }; }
+  function getConfiguration() { return { hasApiKey: Boolean(configuration.apiKey), transcriptionModel: configuration.transcriptionModel || 'gpt-4o-mini-transcribe', visionModel: configuration.visionModel || 'gpt-4.1-mini', lastTestedAt: configuration.lastTestedAt || '', lastTestStatus: configuration.lastTestStatus || '', ready }; }
   async function clear() { configuration = {}; ready = true; await window.SecureCredentialStore.remove(STORE_ID); }
   async function testConnection(signal) {
     if (!configuration.apiKey) throw new Error('Save an OpenAI API key before testing.');
     const response = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${configuration.apiKey}` }, signal });
     if (!response.ok) throw new Error(`OpenAI connection test returned HTTP ${response.status}.`);
+    configuration.lastTestedAt = new Date().toISOString(); configuration.lastTestStatus = 'Connected';
+    await window.SecureCredentialStore.save(STORE_ID, configuration);
     return { message: 'OpenAI responded successfully.' };
   }
   async function initialize() {

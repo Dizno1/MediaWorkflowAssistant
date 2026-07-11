@@ -1885,15 +1885,15 @@
   });
   document.getElementById('save-azure-provider').addEventListener('click', async () => {
     try {
-      await window.AzureOpenAIProvider.configure({ endpoint: azureOpenAIEndpoint.value, deployment: azureOpenAIDeployment.value, apiKey: azureOpenAIKey.value });
+      await window.AzureOpenAIProvider.configure({ profileId: document.getElementById('azure-profile-select').value, name: document.getElementById('azure-profile-name').value, endpoint: azureOpenAIEndpoint.value, deployment: azureOpenAIDeployment.value, apiKey: azureOpenAIKey.value });
       azureOpenAIKey.value = '';
       aiProviderStatus.textContent = 'Azure OpenAI settings saved securely in this browser profile.';
-      renderAIProviders();
+      renderAIProviders(); if (window.ProviderManagerUI) window.ProviderManagerUI.render();
     } catch (error) { aiProviderStatus.textContent = error.message; azureOpenAIEndpoint.focus(); }
   });
   document.getElementById('test-azure-provider').addEventListener('click', async () => {
     aiProviderStatus.textContent = 'Testing Azure OpenAI connection.';
-    try { const result = await window.AzureOpenAIProvider.testConnection(); aiProviderStatus.textContent = `${result.message} No workflow was started.`; }
+    try { const result = await window.AzureOpenAIProvider.testConnection(); aiProviderStatus.textContent = `${result.message} No workflow was started.`; if (window.ProviderManagerUI) window.ProviderManagerUI.render(); }
     catch (error) { aiProviderStatus.textContent = error.message; }
   });
   document.getElementById('clear-azure-provider').addEventListener('click', async () => {

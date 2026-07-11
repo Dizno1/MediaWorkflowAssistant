@@ -30,9 +30,9 @@
   function extractText(result) { return (result.candidates || []).flatMap((candidate) => candidate.content && candidate.content.parts || []).map((part) => part.text || '').filter(Boolean).join('\n').trim(); }
   function parseJson(text) { return JSON.parse(String(text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')); }
   async function configure(next) { configuration = { apiKey: String(next.apiKey || '').trim() || configuration.apiKey || '', model: String(next.model || '').trim() || 'gemini-2.5-flash' }; await window.SecureCredentialStore.save(STORE_ID, configuration); ready = true; return getConfiguration(); }
-  function getConfiguration() { return { model: configuration.model || 'gemini-2.5-flash', hasApiKey: Boolean(configuration.apiKey), ready }; }
+  function getConfiguration() { return { model: configuration.model || 'gemini-2.5-flash', hasApiKey: Boolean(configuration.apiKey), lastTestedAt: configuration.lastTestedAt || '', lastTestStatus: configuration.lastTestStatus || '', ready }; }
   async function clear() { configuration = {}; ready = true; await window.SecureCredentialStore.remove(STORE_ID); }
-  async function testConnection(signal) { const result = await generate('visual-analysis', { sourceData: null }, signal); if (!extractText(result)) throw new Error('Gemini returned no response.'); return { message: 'Gemini responded successfully.' }; }
+  async function testConnection(signal) { const result = await generate('visual-analysis', { sourceData: null }, signal); if (!extractText(result)) throw new Error('Gemini returned no response.'); configuration.lastTestedAt = new Date().toISOString(); configuration.lastTestStatus = 'Connected'; await window.SecureCredentialStore.save(STORE_ID, configuration); return { message: 'Gemini responded successfully.' }; }
   async function initialize() { configuration = await window.SecureCredentialStore.load(STORE_ID) || {}; ready = true; document.dispatchEvent(new CustomEvent('provider-credentials-ready')); }
   window.GeminiProvider = { configure, getConfiguration, clear, testConnection, initialize }; window.AIProviderLayer.register(provider); initialize();
 })();

@@ -147,15 +147,19 @@
       <details id="advanced-provider-settings">
         <summary>Advanced assistance settings</summary>
         <p class="help-text">Most people do not need to change these settings. Provider names and technical controls are kept here so the main workflow remains goal focused.</p>
+        <nav class="provider-manager-nav" aria-label="Provider configuration shortcuts"><a href="#openai-provider-settings">OpenAI</a> <a href="#azure-provider-settings">Azure OpenAI</a> <a href="#gemini-provider-settings">Gemini</a> <a href="#anthropic-provider-settings">Anthropic</a> <a href="#local-provider-settings">Local services</a></nav>
+        <div id="provider-manager-summary" class="provider-manager-summary" role="status" aria-live="polite">Checking saved provider configurations.</div>
         <form id="ai-provider-form">
           <fieldset>
             <legend>Selection method</legend>
             <div id="ai-provider-options"></div>
           </fieldset>
-          <fieldset>
+          <fieldset id="openai-provider-settings">
             <legend>Built-in OpenAI service</legend>
+            <p id="openai-configuration-status" class="configuration-status">Not configured.</p>
             <p class="help-text">Optional. The key is encrypted and stored only in this browser profile on this computer. OpenAI usage may incur charges. The application asks for confirmation before sending a source.</p>
             <div class="form-field"><label for="openai-api-key">OpenAI API key</label><input id="openai-api-key" type="password" autocomplete="off" aria-describedby="openai-key-help"></div>
+            <label class="confirmation-option"><input id="show-openai-key" type="checkbox"> Show OpenAI key while editing</label>
             <p id="openai-key-help" class="help-text">The key is never written into project files. Leave this field blank after saving unless you are replacing the key.</p>
             <div class="form-field"><label for="openai-transcription-model">Transcription model</label><input id="openai-transcription-model" type="text" value="gpt-4o-mini-transcribe"></div>
             <div class="form-field"><label for="openai-vision-model">Image description model</label><input id="openai-vision-model" type="text" value="gpt-4.1-mini"></div>
@@ -164,26 +168,57 @@
             <button type="button" id="clear-openai-provider">Clear OpenAI service</button>
           </fieldset>
 
-          <fieldset>
+          <fieldset id="azure-provider-settings">
             <legend>Azure OpenAI service</legend>
+            <p id="azure-configuration-status" class="configuration-status">Not configured.</p>
+            <div class="form-field"><label for="azure-profile-select">Saved Azure resource</label><select id="azure-profile-select"><option value="">New Azure resource</option></select></div>
+            <div class="form-field"><label for="azure-profile-name">Resource label</label><input id="azure-profile-name" type="text" placeholder="Production Azure resource"></div>
             <p class="help-text">Paste the Azure resource endpoint, deployment name, and key. The key is encrypted and stored only in this browser profile on this computer.</p>
             <div class="form-field"><label for="azure-openai-endpoint">Azure resource endpoint</label><input id="azure-openai-endpoint" type="url" placeholder="https://your-resource.openai.azure.com"></div>
             <div class="form-field"><label for="azure-openai-deployment">Deployment name</label><input id="azure-openai-deployment" type="text" autocomplete="off"></div>
             <div class="form-field"><label for="azure-openai-key">Azure API key</label><input id="azure-openai-key" type="password" autocomplete="off" aria-describedby="azure-key-help"></div>
+            <label class="confirmation-option"><input id="show-azure-key" type="checkbox"> Show Azure key while editing</label>
             <p id="azure-key-help" class="help-text">Leave the key field blank after saving unless you are replacing it.</p>
             <button type="button" id="save-azure-provider">Save Azure OpenAI service</button>
             <button type="button" id="test-azure-provider">Test Azure connection</button>
-            <button type="button" id="clear-azure-provider">Clear Azure OpenAI service</button>
+            <button type="button" id="clear-azure-provider">Clear all Azure resources</button>
+            <button type="button" id="remove-azure-profile">Remove selected Azure resource</button>
           </fieldset>
-          <fieldset>
+          <fieldset id="gemini-provider-settings">
             <legend>Google Gemini service</legend>
+            <p id="gemini-configuration-status" class="configuration-status">Not configured.</p>
             <p class="help-text">Paste a Gemini API key. The key is encrypted and stored only in this browser profile on this computer.</p>
             <div class="form-field"><label for="gemini-api-key">Gemini API key</label><input id="gemini-api-key" type="password" autocomplete="off" aria-describedby="gemini-key-help"></div>
+            <label class="confirmation-option"><input id="show-gemini-key" type="checkbox"> Show Gemini key while editing</label>
             <p id="gemini-key-help" class="help-text">Leave the key field blank after saving unless you are replacing it.</p>
             <div class="form-field"><label for="gemini-model">Gemini model</label><input id="gemini-model" type="text" value="gemini-2.5-flash"></div>
             <button type="button" id="save-gemini-provider">Save Gemini service</button>
             <button type="button" id="test-gemini-provider">Test Gemini connection</button>
             <button type="button" id="clear-gemini-provider">Clear Gemini service</button>
+          </fieldset>
+          <fieldset id="anthropic-provider-settings">
+            <legend>Anthropic service</legend>
+            <p id="anthropic-configuration-status" class="configuration-status">Not configured.</p>
+            <p class="help-text">Optional. This adapter supports image descriptions, audio-description planning, and advanced accessibility analysis.</p>
+            <div class="form-field"><label for="anthropic-api-key">Anthropic API key</label><input id="anthropic-api-key" type="password" autocomplete="off"></div>
+            <label class="confirmation-option"><input id="show-anthropic-key" type="checkbox"> Show Anthropic key while editing</label>
+            <div class="form-field"><label for="anthropic-model">Anthropic model</label><input id="anthropic-model" type="text" value="claude-sonnet-4-5"></div>
+            <button type="button" id="save-anthropic-provider">Save Anthropic service</button>
+            <button type="button" id="test-anthropic-provider">Test Anthropic connection</button>
+            <button type="button" id="clear-anthropic-provider">Clear Anthropic service</button>
+          </fieldset>
+          <fieldset id="local-provider-settings">
+            <legend>Local Ollama and Whisper services</legend>
+            <p id="local-configuration-status" class="configuration-status">Not configured.</p>
+            <p class="help-text">Optional services running on this computer can provide private, no-additional-cost assistance. The local service must permit requests from this application address.</p>
+            <div class="form-field"><label for="ollama-endpoint">Ollama address</label><input id="ollama-endpoint" type="url" value="http://localhost:11434"></div>
+            <div class="form-field"><label for="ollama-model">Ollama model</label><input id="ollama-model" type="text" placeholder="llava or another vision model"></div>
+            <button type="button" id="test-ollama-provider">Detect Ollama</button>
+            <div class="form-field"><label for="whisper-endpoint">Local Whisper endpoint</label><input id="whisper-endpoint" type="url" value="http://localhost:9000/transcribe"></div>
+            <div class="form-field"><label for="whisper-model">Whisper model</label><input id="whisper-model" type="text" value="base"></div>
+            <button type="button" id="test-whisper-provider">Detect local Whisper</button>
+            <button type="button" id="save-local-provider">Save local service settings</button>
+            <button type="button" id="clear-local-provider">Clear local service settings</button>
           </fieldset>
           <fieldset>
             <legend>Custom connected service</legend>
@@ -513,8 +548,11 @@
   <script src="js/openai-provider.js"></script>
   <script src="js/azure-openai-provider.js"></script>
   <script src="js/gemini-provider.js"></script>
+  <script src="js/anthropic-provider.js"></script>
+  <script src="js/local-service-provider.js"></script>
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
+  <script src="js/provider-manager-ui.js"></script>
   <script src="js/intent-engine.js"></script>
   <script src="js/production-features.js"></script>
   <script src="js/job.js"></script>
