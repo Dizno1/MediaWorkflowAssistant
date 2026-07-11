@@ -144,6 +144,9 @@
       durationSeconds: Number(value.durationSeconds) || 0,
       transcriptText: String(value.transcriptText || ''),
       captionCues: Array.isArray(value.captionCues) ? value.captionCues.map((cue) => ({ start: String(cue.start || ''), end: String(cue.end || ''), text: String(cue.text || '') })) : [],
+      narrationCues: Array.isArray(value.narrationCues) ? value.narrationCues.map((cue) => ({ start: String(cue.start || ''), end: String(cue.end || ''), text: String(cue.text || ''), placement: String(cue.placement || '') })) : [],
+      narrationVoice: String(value.narrationVoice || 'alloy'),
+      narrationSpeed: Number(value.narrationSpeed) || 1,
       knowledge: value.knowledge && typeof value.knowledge === 'object' ? value.knowledge : {},
       sourceData: value.sourceData && typeof value.sourceData === 'object' ? {
         name: String(value.sourceData.name || ''),

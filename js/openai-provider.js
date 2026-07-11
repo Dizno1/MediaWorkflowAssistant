@@ -6,16 +6,16 @@
     id: 'openai-direct',
     name: 'OpenAI service',
     kind: 'built-in connected service adapter',
-    description: 'Directly transcribes media, creates timed caption drafts, analyzes sampled video frames for audio-description drafts, and creates image-description drafts through the OpenAI API.',
+    description: 'Directly transcribes media, creates timed caption drafts, analyzes sampled video frames for audio-description drafts, creates image-description drafts, and synthesizes reviewed narration through the OpenAI API.',
     privacy: 'The selected source or locally sampled frames are sent to OpenAI only after confirmation.',
     external: true,
     costCategory: 'may-charge',
     costMessage: 'May charge for usage',
     requiresConfirmation: true,
-    quality: { 'transcription-draft': 96, 'caption-draft': 98, 'visual-analysis': 96, 'audio-description-draft': 94 },
-    preferredCapabilities: ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft'],
+    quality: { 'transcription-draft': 96, 'caption-draft': 98, 'visual-analysis': 96, 'audio-description-draft': 94, 'narration-audio': 96 },
+    preferredCapabilities: ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio'],
     isAvailable: () => Boolean(configuration.apiKey),
-    getCapabilities: () => ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft'],
+    getCapabilities: () => ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio'],
     async run(capability, context, options) {
       if (!configuration.apiKey) throw new Error('Add an OpenAI API key in Advanced assistance settings first.');
       if (capability === 'transcription-draft') {
@@ -34,6 +34,7 @@
         requireSource(context);
         return createAudioDescriptionDraft(context, options.signal);
       }
+      if (capability === 'narration-audio') return createNarrationAudio(context, options.signal);
       throw new Error('This OpenAI adapter does not support that task.');
     }
   };
@@ -111,6 +112,37 @@
     const cues = window.AudioDescriptionDrafting.normalizeCues(parsed && parsed.cues, sample.durationSeconds);
     if (!cues.length) throw new Error('OpenAI did not return usable audio-description cues.');
     return { cues, summary: `${cues.length} timed audio-description cues were drafted from ${sample.frames.length} sampled video frames. Review the complete video, dialogue, sounds, timing, and every narration line before approval.` };
+  }
+
+  async function createNarrationAudio(context, signal) {
+    const cues = Array.isArray(context.narrationCues) ? context.narrationCues : [];
+    if (!cues.length) throw new Error('Reviewed narration cues are required.');
+    const voice = String(context.narrationVoice || 'alloy');
+    const speed = Math.min(1.25, Math.max(0.75, Number(context.narrationSpeed) || 1));
+    const clips = [];
+    for (let index = 0; index < cues.length; index += 1) {
+      const response = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${configuration.apiKey}`, 'Content-Type': 'application/json' },
+        signal,
+        body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input: cues[index].text, speed, response_format: 'mp3' })
+      });
+      if (!response.ok) {
+        let detail = {}; try { detail = await response.json(); } catch (error) {}
+        throw new Error(detail && detail.error && detail.error.message ? detail.error.message : `OpenAI returned HTTP ${response.status}.`);
+      }
+      clips.push({ cueIndex: index, mimeType: 'audio/mpeg', base64: await blobToBase64(await response.blob()) });
+    }
+    return { clips, summary: `${clips.length} narration clips were synthesized from the reviewed script.` };
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+      reader.onerror = () => reject(new Error('The narration audio could not be prepared.'));
+      reader.readAsDataURL(blob);
+    });
   }
 
   async function requestResponse(content, signal) {

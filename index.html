@@ -283,6 +283,7 @@
           <p id="caption-cues-help" class="help-text">Enter start and end times in hours, minutes, seconds, and milliseconds. Cues must be in chronological order and may not overlap.</p>
           <div id="caption-cues" aria-describedby="caption-cues-help"></div>
           <button type="button" id="add-caption-cue">Add caption cue</button>
+          <button type="button" id="draft-captions">Request timed caption draft</button>
         </fieldset>
         <label class="confirmation-option">
           <input id="captions-reviewed" type="checkbox">
@@ -315,6 +316,33 @@
           <p id="audio-description-cues-help" class="help-text">Use 00:00:00.000 timestamps. Place narration in natural pauses whenever possible and avoid covering dialogue or essential sound.</p>
           <div id="audio-description-cues" aria-describedby="audio-description-cues-help"></div>
           <button type="button" id="add-audio-description-cue">Add description cue</button>
+          <button type="button" id="draft-audio-description">Request audio-description draft</button>
+        </fieldset>
+        <fieldset>
+          <legend>Narration production</legend>
+          <p class="help-text">You can save the reviewed script at no additional cost, or request synthesized narration and a described-audio mix. Connected narration may charge your service account. A no-cost alternative is to save the script and record narration manually.</p>
+          <label class="confirmation-option">
+            <input id="generate-narration-mix" type="checkbox">
+            Generate narration audio and mix it with the source audio after I save this reviewed script.
+          </label>
+          <div class="form-field">
+            <label for="narration-voice">Narration voice</label>
+            <select id="narration-voice">
+              <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option><option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option><option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="narration-speed">Narration speed</label>
+            <input id="narration-speed" type="number" min="0.75" max="1.25" step="0.05" value="1">
+          </div>
+          <div class="form-field">
+            <label for="narration-volume">Narration volume, percent</label>
+            <input id="narration-volume" type="number" min="10" max="100" step="5" value="100">
+          </div>
+          <div class="form-field">
+            <label for="source-ducking">Source audio level during narration, percent</label>
+            <input id="source-ducking" type="number" min="0" max="100" step="5" value="35">
+          </div>
         </fieldset>
         <label class="confirmation-option">
           <input id="audio-description-reviewed" type="checkbox">
@@ -402,6 +430,7 @@
   <script src="js/transcript-review.js"></script>
   <script src="js/caption-review.js"></script>
   <script src="js/audio-description-review.js"></script>
+  <script src="js/narration-mixer.js"></script>
   <script src="js/package-review.js"></script>
   <script src="js/workflow-chain.js"></script>
   <script src="js/workflow-runner.js"></script>

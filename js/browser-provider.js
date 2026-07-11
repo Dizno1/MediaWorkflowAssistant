@@ -46,7 +46,7 @@
       }
 
       if (job.workflow.id === 'audio-description') {
-        return this.createDescriptionWorkspace(job);
+        return this.createDescriptionWorkspace(job, onProgress);
       }
 
       if (job.workflow.id === 'generate-alt-text') {
@@ -185,7 +185,7 @@
       return [createTextArtifact(`${baseName}-image-description.txt`, 'Reviewed image description', 'A reviewed plain-text description suitable for adaptation as alt text or a longer image description.', text, 'text/plain')];
     }
 
-    createDescriptionWorkspace(job) {
+    async createDescriptionWorkspace(job, onProgress) {
       const options = job.audioDescriptionOptions || {};
       const cues = Array.isArray(options.cues) ? options.cues : [];
       if (!cues.length || !String(options.scriptMarkdown || '').trim()) throw new Error('Enter and review at least one audio description cue before running this workflow.');
@@ -200,10 +200,22 @@
         'The script was reviewed for visual relevance, objective language, timing, dialogue conflicts, and preservation of essential sound.',
         ''
       ].join('\n');
-      return [
+      const artifacts = [
         createTextArtifact(`${baseName}-audio-description-script.md`, 'Completed audio description script', `A reviewed, timestamped audio description script containing ${cues.length} narration cue${cues.length === 1 ? '' : 's'}.`, options.scriptMarkdown, 'text/markdown'),
         createTextArtifact(`${baseName}-audio-description-review.md`, 'Audio description review record', 'A readable record of the completed script review.', reviewRecord, 'text/markdown')
       ];
+      if (options.generateNarrationMix) {
+        if (!Array.isArray(options.narrationClips) || options.narrationClips.length !== cues.length) throw new Error('Narration generation did not return every reviewed cue.');
+        const mix = await window.NarrationMixer.createMix(job.sourceFile, cues, options.narrationClips, options, job.abortController && job.abortController.signal, onProgress);
+        artifacts.push({
+          name: `${baseName}-described-audio.wav`,
+          type: 'Described audio mix',
+          description: `A local WAV mix containing the original soundtrack and ${cues.length} synthesized narration cue${cues.length === 1 ? '' : 's'}.`,
+          provider: options.narrationProviderName ? `${options.narrationProviderName} and ${this.name}` : this.name,
+          status: 'Created', url: URL.createObjectURL(mix), mimeType: 'audio/wav', size: mix.size, durationSeconds: Number(job.inspection.durationSeconds) || null
+        });
+      }
+      return artifacts;
     }
 
     async createAccessibilityPackage(job, onProgress) {

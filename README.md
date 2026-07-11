@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 21 of the executable accessibility workflow roadmap is complete.
+Phase 22 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -36,6 +36,8 @@ The application now includes:
 - Automatic provider selection that can choose the built-in adapter while preserving privacy and possible-cost confirmation before any source leaves the browser.
 - Automatic timed caption drafting from provider speech timestamps, with readable cue segmentation and a transcript-based fallback when exact timing is unavailable.
 - Automatic timed audio-description drafting from locally sampled video frames and available transcript context, with all narration returned to the existing mandatory review workspace.
+- Reviewed narration synthesis through the built-in OpenAI adapter, with voice and speed controls, explicit cost and privacy confirmation, and a no-cost manual-recording alternative.
+- Local browser-based audio mixing that ducks the original soundtrack during narration cues and exports a described-audio WAV file while preserving the reviewed script and review record.
 
 
 ## Design Principle
@@ -44,11 +46,24 @@ Users choose outcomes. The application builds and executes the workflow.
 
 Implementation details such as media tracks, codecs, containers, browser recording APIs, and processing providers remain behind plain-language goals.
 
-## Local Use
+## Getting the Application Running
 
-Open `index.html` in a current browser. No build step is required.
+1. Copy the project source into a local folder. The `.git` directory is not required to run the application.
+2. Open the folder in a current version of Chrome, Edge, or Firefox.
+3. Start a simple local web server from the project folder. Python users can run `python -m http.server 8000`. Node users can run `npx serve .`. A local server is recommended because browser security restrictions can block media, module, and file features when `index.html` is opened directly.
+4. Open the address reported by the server, commonly `http://localhost:8000`.
+5. Choose a local media file. The original file remains on the device unless a connected assistance feature is explicitly confirmed.
+6. To use transcription, automatic caption drafting, image description, audio-description drafting, or synthesized narration, open Advanced assistance settings and add an OpenAI API key. The key is stored only in browser session storage and is removed when the browser session ends or when the configuration is cleared.
+7. Leave provider selection on Automatic, recommended. The application chooses the available provider and displays privacy and possible-cost confirmation before external processing.
+8. Enter a plain-language goal such as `Make this video accessible`, then review each required human checkpoint.
+9. Keep the browser tab open while long media jobs run. Generated runtime files remain available only for the current browser session, so download important outputs before closing the tab.
+10. For narration mixing, use a browser that can decode the source video's audio track through the Web Audio API. MP4 and WebM support depends on the browser and operating system codecs. If decoding fails, create a browser-compatible copy of the source and run the workflow again.
 
-Media processing remains on the user's device. Extract Audio requires a supported local video containing an audio track and a browser that supports `MediaRecorder` and media stream capture.
+No build step or package installation is required for the application itself.
+
+## Local Processing Requirements
+
+Extract Audio requires a supported local video containing an audio track and a browser that supports `MediaRecorder` and media stream capture. Described-audio mixing requires `AudioContext`, `OfflineAudioContext`, and browser support for decoding the selected source audio. The described-audio result is exported as WAV. Final video rendering with selectable captions and a mixed narration track remains a later phase.
 
 ## Architecture
 
@@ -250,6 +265,21 @@ New files and subsystems:
 - `js/openai-provider.js` now provides built-in `caption-draft` and `audio-description-draft` capabilities in addition to transcription and image analysis.
 - `js/app.js` now supplies the selected local source to timed caption drafting after the required privacy and cost confirmation.
 
+### Phase 22 - Narration Generation and Accessible Audio Mixing - Completed
+
+Phase 22 converts a reviewed audio-description script into synthesized narration clips and a locally mixed described-audio WAV file. It adds voice, speed, narration-volume, and source-ducking controls; requires explicit privacy and possible-cost confirmation before synthesis; preserves a no-cost manual-recording path; and uses browser-native audio decoding and offline rendering so the original source audio is mixed locally.
+
+New architecture includes `js/narration-mixer.js`, the `narration-audio` provider capability, synthesized cue handling in the built-in OpenAI adapter, and optional narration production within the existing audio-description review checkpoint.
+
+See `docs/Phase 22 Narration Generation and Accessible Audio Mixing.md`.
+
+## Remaining Roadmap
+
+- Add narration preview, per-cue regeneration, pronunciation overrides, and cue-specific gain controls.
+- Render a final accessible video containing the original picture, mixed described audio, and selectable captions.
+- Add resilient large-file processing, resumable jobs, and provider-specific size-limit guidance.
+- Add export presets for web publication and common media platforms.
+
 ## Next Development Phase
 
-Phase 22 - Narration Generation and Accessible Audio Mixing. Generate or record narration from an approved audio-description script, provide accessible voice and pronunciation review, mix narration with the original audio while preserving dialogue and important sounds, and prepare the result for final accessible video rendering.
+Phase 23 - Accessible Video Rendering and Publication Export. Render the original picture with the approved described-audio mix and selectable captions, then provide publication-ready export controls and validation.

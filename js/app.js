@@ -68,6 +68,11 @@
   const addAudioDescriptionCueButton = document.getElementById('add-audio-description-cue');
   const audioDescriptionReviewedInput = document.getElementById('audio-description-reviewed');
   const audioDescriptionReviewStatus = document.getElementById('audio-description-review-status');
+  const generateNarrationMixInput = document.getElementById('generate-narration-mix');
+  const narrationVoiceInput = document.getElementById('narration-voice');
+  const narrationSpeedInput = document.getElementById('narration-speed');
+  const narrationVolumeInput = document.getElementById('narration-volume');
+  const sourceDuckingInput = document.getElementById('source-ducking');
   const aiProviderOptions = document.getElementById('ai-provider-options');
   const aiProviderStatus = document.getElementById('ai-provider-status');
   const automaticProviderStatus = document.getElementById('automatic-provider-status');
@@ -287,7 +292,7 @@
     connectedProviderEndpoint.value = config.endpoint;
     connectedProviderModel.value = config.model;
     connectedProviderCost.value = config.costCategory;
-    const summaries = ['transcription-draft', 'caption-draft', 'audio-description-draft', 'visual-analysis'].map((capability) => window.AIProviderLayer.getCapability(capability));
+    const summaries = ['transcription-draft', 'caption-draft', 'audio-description-draft', 'visual-analysis', 'narration-audio'].map((capability) => window.AIProviderLayer.getCapability(capability));
     const available = summaries.filter((item) => item.canRun).length;
     automaticProviderStatus.textContent = mode === 'automatic'
       ? `Automatic selection is active. ${available} of ${summaries.length} drafting tasks currently have an available method. Privacy and cost notices appear before any connected service runs.`
@@ -1323,6 +1328,11 @@
     audioDescriptionCues.innerHTML = '';
     review.cues.forEach((cue) => addAudioDescriptionCue(cue));
     audioDescriptionReviewedInput.checked = false;
+    generateNarrationMixInput.checked = false;
+    narrationVoiceInput.value = 'alloy';
+    narrationSpeedInput.value = '1';
+    narrationVolumeInput.value = '100';
+    sourceDuckingInput.value = '35';
     audioDescriptionReviewStatus.textContent = '';
     audioDescriptionReviewSummary.textContent = 'Use the Viewer to identify essential visual information that is not already communicated by dialogue, narration, or sound. Add concise narration and verify each proposed placement.';
     audioDescriptionReviewSection.hidden = false;
@@ -1373,7 +1383,7 @@
     }));
   }
 
-  function submitAudioDescriptionReview(event) {
+  async function submitAudioDescriptionReview(event) {
     event.preventDefault();
     if (!pendingAudioDescriptionIntent) return;
     const cues = collectAudioDescriptionCues();
@@ -1397,8 +1407,30 @@
       cueCount: cues.length,
       reviewed: true,
       reviewedAt: new Date().toISOString(),
-      scriptMarkdown: window.AudioDescriptionReview.toMarkdown(audioDescriptionTitleInput.value, sourceName, cues, audioDescriptionNotesInput.value)
+      scriptMarkdown: window.AudioDescriptionReview.toMarkdown(audioDescriptionTitleInput.value, sourceName, cues, audioDescriptionNotesInput.value),
+      generateNarrationMix: generateNarrationMixInput.checked,
+      narrationVoice: narrationVoiceInput.value,
+      narrationSpeed: Number(narrationSpeedInput.value) || 1,
+      narrationVolume: Number(narrationVolumeInput.value) || 100,
+      sourceDucking: Number(sourceDuckingInput.value) || 35
     };
+    if (options.generateNarrationMix) {
+      const approval = confirmAssistanceUse('narration-audio', audioDescriptionReviewStatus);
+      if (!approval) return;
+      try {
+        audioDescriptionReviewStatus.textContent = 'Creating narration clips. The reviewed script remains available if narration generation fails.';
+        const result = await window.AIProviderLayer.run('narration-audio', {
+          narrationCues: cues,
+          narrationVoice: options.narrationVoice,
+          narrationSpeed: options.narrationSpeed
+        }, { confirmed: approval.confirmed });
+        options.narrationClips = result.clips;
+        options.narrationProviderName = result.providerName;
+      } catch (error) {
+        audioDescriptionReviewStatus.textContent = error.message;
+        return;
+      }
+    }
     const intent = pendingAudioDescriptionIntent;
     startIntentJob(intent, options);
   }
@@ -1410,6 +1442,11 @@
     audioDescriptionNotesInput.value = '';
     audioDescriptionCues.innerHTML = '';
     audioDescriptionReviewedInput.checked = false;
+    generateNarrationMixInput.checked = false;
+    narrationVoiceInput.value = 'alloy';
+    narrationSpeedInput.value = '1';
+    narrationVolumeInput.value = '100';
+    sourceDuckingInput.value = '35';
     audioDescriptionReviewStatus.textContent = '';
   }
 
