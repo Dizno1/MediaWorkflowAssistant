@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 23 of the executable accessibility workflow roadmap is complete.
+Phase 24 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -39,6 +39,7 @@ The application now includes:
 - Reviewed narration synthesis through the built-in OpenAI adapter, with voice and speed controls, explicit cost and privacy confirmation, and a no-cost manual-recording alternative.
 - Local browser-based audio mixing that ducks the original soundtrack during narration cues and exports a described-audio WAV file while preserving the reviewed script and review record.
 - Local accessible-video rendering that combines the original picture with the approved described-audio soundtrack, then creates a publication ZIP containing the rendered WebM, selectable WebVTT captions, an accessible HTML player, a manifest, and a final validation checklist.
+- A complete Make This Accessible orchestrator that builds a media-specific plan, skips completed work, runs automatic steps, pauses only for required human review, resumes after approval, refreshes dependencies after every result, renders the accessible video when possible, and creates the final accessibility package.
 
 
 ## Design Principle
@@ -296,6 +297,52 @@ New files and subsystems:
 
 See `docs/Phase 23 Accessible Video Rendering and Publication Export.md`.
 
+## Phase 24 - Make This Accessible Orchestrator - Completed
+
+Phase 24 completes the unified goal-driven orchestration workflow. Choosing Make This Accessible now starts the required media-specific plan directly. The application skips completed work, executes non-review steps automatically, opens existing accessible human-review checkpoints only when judgment is required, and resumes after approved work is saved.
+
+The video plan now coordinates Extract Audio, Create Transcript, Create Captions, Audio Description, Render Accessible Video, and Accessibility Package. Audio and image sources receive smaller media-appropriate plans. Provider availability and Shared Knowledge are refreshed after every completed step so downstream work can use newly created artifacts. Blocked, failed, and cancelled work pauses safely without discarding completed outputs.
+
+New architecture and workflow changes:
+
+- `js/workflow-chain.js` now owns media-specific orchestration order, dynamic step refresh, review pauses, blocked states, failure states, and completion summaries.
+- `js/app.js` starts Make This Accessible directly, resumes it after each completed job, and defaults orchestrated audio-description review to narration production so accessible-video rendering can use the described soundtrack.
+- Existing execution, provider, review, Shared Knowledge, Output Manager, project, rendering, and packaging systems are reused.
+- `docs/Phase 24 Make This Accessible Orchestrator.md` documents the completed behavior and architecture.
+
+## Remaining Roadmap
+
+### Phase 25 - Advanced AI Analysis
+
+- Scene understanding
+- Speaker recognition
+- Caption quality scoring
+- Audio-description quality analysis
+- Visual accessibility analysis
+- Reading-speed analysis
+- Narration optimization
+
+### Phase 26 - Publication Pipeline
+
+- Export profiles
+- Publication-readiness validation
+- Direct publishing
+- Packaging
+- Delivery targets
+
+### Phase 27 - Production Features
+
+- Resumable jobs
+- Batch processing
+- Crash recovery
+- Checkpointing
+- Project history
+- Background processing
+
+### Phase 28 - Accessibility Advisor
+
+Review completed work like an experienced accessibility consultant, identify issues, recommend improvements, and assign an overall accessibility-readiness score before publication.
+
 ## Next Development Phase
 
-Phase 24 - Resilient Processing and Narration Refinement. Add large-file guidance, resumable rendering checkpoints, narration preview, per-cue regeneration, pronunciation overrides, and cue-specific gain controls.
+Phase 25 - Advanced AI Analysis.

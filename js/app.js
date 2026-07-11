@@ -903,7 +903,7 @@
       directGoalStatus.textContent = 'That goal was not recognized for this source. Try Transcribe this, Describe this picture, Create captions, Create audio description, or Make this accessible.';
       directGoalInput.focus(); return;
     }
-    if (match.chain) { directGoalStatus.textContent = 'The accessibility workflow is ready for review.'; openWorkflowChainReview(match.chain); return; }
+    if (match.chain) { directGoalStatus.textContent = 'Make This Accessible started.'; startWorkflowChain(match.chain); return; }
     if (!match.intent.capability.canRun) { directGoalStatus.textContent = match.intent.capability.message || 'That task needs an assistance service configured in Advanced assistance settings.'; return; }
     directGoalStatus.textContent = `${match.intent.title} selected.`;
     runIntent(match.intent);
@@ -937,8 +937,8 @@
       `;
       const chainButton = document.createElement('button');
       chainButton.type = 'button';
-      chainButton.textContent = 'Review accessibility plan';
-      chainButton.addEventListener('click', () => openWorkflowChainReview(chainPlan));
+      chainButton.textContent = 'Make this accessible';
+      chainButton.addEventListener('click', () => startWorkflowChain(chainPlan));
       chainCard.appendChild(chainButton);
       goals.appendChild(chainCard);
     }
@@ -989,6 +989,19 @@
     });
   }
 
+  function startWorkflowChain(chain) {
+    if (!chain || !window.WorkflowChain.selectedSteps(chain).length) {
+      setStatus('No unfinished accessibility work is available for this source.');
+      return;
+    }
+    activeWorkflowChain = chain;
+    activeWorkflowChain.status = 'running';
+    activeWorkflowChain.startedAt = new Date().toISOString();
+    workflowChainSection.hidden = true;
+    setStatus('Make This Accessible started. The application will continue automatically and pause only when your review is required.');
+    continueWorkflowChain();
+  }
+
   function openWorkflowChainReview(chain) {
     activeWorkflowChain = chain;
     workflowChainSteps.innerHTML = '';
@@ -1034,18 +1047,31 @@
   }
 
   function continueWorkflowChain() {
-    if (!activeWorkflowChain || activeWorkflowChain.status !== 'running') return;
+    if (!activeWorkflowChain || !['running', 'review'].includes(activeWorkflowChain.status)) return;
+    const refreshedIntents = window.IntentEngine.getIntents(currentInspection);
+    const refreshedRecommendations = window.RecommendationEngine.build(currentKnowledgeModel, currentAssessment, currentPlan, refreshedIntents);
+    window.WorkflowChain.refresh(activeWorkflowChain, refreshedRecommendations.recommendations);
+    activeWorkflowChain.status = 'running';
     const step = window.WorkflowChain.next(activeWorkflowChain);
     if (!step) {
-      const completedCount = activeWorkflowChain.steps.filter((item) => item.selected && item.completed).length;
-      jobStatus.textContent = `Accessibility plan complete. ${completedCount} selected workflow${completedCount === 1 ? '' : 's'} completed.`;
-      setStatus('The accessibility plan is complete. All selected work was saved.');
+      const summary = window.WorkflowChain.summary(activeWorkflowChain);
+      jobStatus.textContent = `Make This Accessible complete. ${summary.completed} workflow${summary.completed === 1 ? '' : 's'} completed.`;
+      setStatus('Make This Accessible is complete. The accessibility package and available publication outputs are ready.');
       activeWorkflowChain = null;
       renderGoals(currentInspection);
       goalsSection.focus();
       return;
     }
-    setStatus(`${step.title} is the next step in the accessibility plan.`);
+    if (step.blocked) {
+      jobStatus.textContent = `Make This Accessible paused before ${step.title}. ${activeWorkflowChain.pauseReason}`;
+      setStatus(`Make This Accessible paused. ${activeWorkflowChain.pauseReason}`);
+      renderGoals(currentInspection);
+      goalsSection.focus();
+      return;
+    }
+    setStatus(step.requiresReview
+      ? `${step.title} requires your review. Make This Accessible will resume automatically after approval.`
+      : `${step.title} is running as the next Make This Accessible step.`);
     runIntent(step.intent);
   }
 
@@ -1330,7 +1356,7 @@
     audioDescriptionCues.innerHTML = '';
     review.cues.forEach((cue) => addAudioDescriptionCue(cue));
     audioDescriptionReviewedInput.checked = false;
-    generateNarrationMixInput.checked = false;
+    generateNarrationMixInput.checked = Boolean(activeWorkflowChain);
     narrationVoiceInput.value = 'alloy';
     narrationSpeedInput.value = '1';
     narrationVolumeInput.value = '100';
