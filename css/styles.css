@@ -532,3 +532,78 @@ button:disabled:hover {
 .recommendation-card [data-state="in-progress"] {
   font-weight: 700;
 }
+
+
+.form-field,
+#package-review-form fieldset,
+.privacy-review {
+  margin: 1rem 0;
+}
+
+.form-field label,
+#package-review-form legend {
+  font-weight: 700;
+}
+
+.form-field input[type="text"] {
+  border: 2px solid var(--border);
+  border-radius: 0.55rem;
+  display: block;
+  font: inherit;
+  margin-top: 0.4rem;
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+  width: min(100%, 38rem);
+}
+
+#package-review-form fieldset {
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.package-option {
+  border-top: 1px solid var(--border);
+  padding: 0.85rem 0;
+}
+
+.package-option:first-of-type {
+  border-top: 0;
+}
+
+.package-option label,
+.confirmation-option {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.package-option input,
+.confirmation-option input {
+  flex: 0 0 auto;
+  height: 1.3rem;
+  margin-top: 0.15rem;
+  width: 1.3rem;
+}
+
+.package-option p {
+  margin: 0.35rem 0 0 1.95rem;
+}
+
+.privacy-review {
+  background: #fbf3df;
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.privacy-review h3 {
+  margin-top: 0;
+}
+
+#package-review-status:not(:empty) {
+  border-left: 0.35rem solid currentColor;
+  font-weight: 700;
+  margin: 1rem 0;
+  padding: 0.75rem;
+}

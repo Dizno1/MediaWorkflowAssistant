@@ -29,6 +29,15 @@
   const progressBar = document.getElementById('progress-bar');
   const progressSteps = document.getElementById('progress-steps');
   const cancelJobButton = document.getElementById('cancel-job');
+  const packageReviewSection = document.getElementById('package-review-section');
+  const packageReviewForm = document.getElementById('package-review-form');
+  const packageReviewSummary = document.getElementById('package-review-summary');
+  const packageNameInput = document.getElementById('package-name');
+  const packageArtifactOptions = document.getElementById('package-artifact-options');
+  const packagePrivacyNotices = document.getElementById('package-privacy-notices');
+  const packagePrivacyConfirm = document.getElementById('package-privacy-confirm');
+  const packageReviewStatus = document.getElementById('package-review-status');
+  const cancelPackageReviewButton = document.getElementById('cancel-package-review');
   const resultsSection = document.getElementById('results-section');
   const resultsOutput = document.getElementById('results-output');
 
@@ -36,6 +45,8 @@
   let currentSource = null;
   let currentInspection = null;
   let activeJob = null;
+  let pendingPackageIntent = null;
+  let currentPackageReview = null;
   let currentKnowledgeModel = null;
   let currentAssessment = null;
   let currentPlan = null;
@@ -72,6 +83,7 @@
     resetPlan();
     resetProgress();
     resetResults();
+    resetPackageReview();
 
     fileHelp.textContent = `${file.name} selected. The file stays on this device.`;
     dropZone.querySelector('strong').textContent = file.name;
@@ -117,6 +129,7 @@
     resetPlan();
     resetProgress();
     resetResults();
+    resetPackageReview();
 
     inspectionOutput.hidden = false;
     inspectionOutput.innerHTML = '<p class="muted">Checking the web address...</p>';
@@ -568,9 +581,20 @@
   function runIntent(intent) {
     if (!currentSource || !currentInspection || !intent.capability.canRun) return;
 
+    if (intent.workflowId === 'accessibility-package') {
+      openPackageReview(intent);
+      return;
+    }
+
+    startIntentJob(intent, null);
+  }
+
+  function startIntentJob(intent, exportOptions) {
     resetProgress();
     resetResults();
+    resetPackageReview();
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
+    activeJob.exportOptions = exportOptions || null;
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
     activeJob.accessibilityPlan = currentPlan;
@@ -582,6 +606,80 @@
     progressSection.hidden = false;
     progressSection.focus();
     executionEngine.enqueue(activeJob);
+  }
+
+  function openPackageReview(intent) {
+    pendingPackageIntent = intent;
+    currentPackageReview = window.PackageReview.build(
+      currentKnowledgeModel,
+      currentKnowledgeModel.source,
+      currentInspection,
+      currentPlan
+    );
+
+    packageNameInput.value = currentPackageReview.suggestedName;
+    packagePrivacyConfirm.checked = false;
+    packageReviewStatus.textContent = '';
+    packageReviewSummary.textContent = `${currentPackageReview.availableArtifacts.length} generated file${currentPackageReview.availableArtifacts.length === 1 ? '' : 's'} can be included. The package will also contain two manifests, ${currentPackageReview.historyCount} workflow history record${currentPackageReview.historyCount === 1 ? '' : 's'}, and ${currentPackageReview.remainingGapCount} remaining accessibility gap${currentPackageReview.remainingGapCount === 1 ? '' : 's'}.`;
+
+    if (currentPackageReview.availableArtifacts.length) {
+      packageArtifactOptions.innerHTML = currentPackageReview.availableArtifacts.map((artifact) => `
+        <div class="package-option">
+          <label>
+            <input type="checkbox" name="packageArtifact" value="${escapeHtml(artifact.id)}" checked>
+            <strong>${escapeHtml(artifact.name)}</strong>
+          </label>
+          <p>${escapeHtml(artifact.type)}${Number.isFinite(artifact.size) ? `, ${escapeHtml(formatBytes(artifact.size))}` : ''}</p>
+          ${artifact.description ? `<p class="muted">${escapeHtml(artifact.description)}</p>` : ''}
+        </div>
+      `).join('');
+    } else {
+      packageArtifactOptions.innerHTML = '<p>No generated files are available in this browser session. The manifests, history, completed work, remaining gaps, and follow-up actions can still be packaged.</p>';
+    }
+
+    const privacyItems = currentPackageReview.availableArtifacts.filter((artifact) => artifact.privacyNotice);
+    packagePrivacyNotices.innerHTML = privacyItems.length
+      ? `<ul>${privacyItems.map((artifact) => `<li><strong>${escapeHtml(artifact.name)}:</strong> ${escapeHtml(artifact.privacyNotice)}</li>`).join('')}</ul>`
+      : '<p>No selected generated files have a specific privacy warning. Review the manifest information before export.</p>';
+
+    packageReviewSection.hidden = false;
+    packageReviewSection.focus();
+  }
+
+  function submitPackageReview(event) {
+    event.preventDefault();
+    if (!pendingPackageIntent || !currentPackageReview) return;
+
+    const selectedArtifactIds = Array.from(packageArtifactOptions.querySelectorAll('input[name="packageArtifact"]:checked'))
+      .map((input) => input.value);
+    const selectedSensitive = currentPackageReview.availableArtifacts
+      .some((artifact) => selectedArtifactIds.includes(artifact.id) && artifact.privacyNotice);
+
+    if (selectedSensitive && !packagePrivacyConfirm.checked) {
+      packageReviewStatus.textContent = 'Confirm the privacy review before creating a package that includes source-derived files.';
+      packagePrivacyConfirm.focus();
+      return;
+    }
+
+    const packageName = window.PackageReview.normalizeName(packageNameInput.value, currentPackageReview.suggestedName);
+    const options = {
+      packageName,
+      selectedArtifactIds,
+      privacyConfirmed: packagePrivacyConfirm.checked,
+      reviewedAt: new Date().toISOString()
+    };
+    const intent = pendingPackageIntent;
+    startIntentJob(intent, options);
+  }
+
+  function resetPackageReview() {
+    pendingPackageIntent = null;
+    currentPackageReview = null;
+    packageReviewSection.hidden = true;
+    packageArtifactOptions.innerHTML = '';
+    packagePrivacyNotices.innerHTML = '';
+    packageReviewStatus.textContent = '';
+    packagePrivacyConfirm.checked = false;
   }
 
   function queuedProgress(job, position) {
@@ -830,6 +928,14 @@
 
   fileInput.addEventListener('change', (event) => {
     handleFile(event.target.files[0]);
+  });
+
+  packageReviewForm.addEventListener('submit', submitPackageReview);
+
+  cancelPackageReviewButton.addEventListener('click', () => {
+    resetPackageReview();
+    goalsSection.focus();
+    setStatus('Package review cancelled.');
   });
 
   cancelJobButton.addEventListener('click', () => {

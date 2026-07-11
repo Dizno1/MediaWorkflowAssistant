@@ -86,6 +86,40 @@
       <div id="goals" class="recommendations"></div>
     </section>
 
+
+    <section id="package-review-section" class="panel" aria-labelledby="package-review-heading" tabindex="-1" hidden>
+      <h2 id="package-review-heading">Review accessibility package</h2>
+      <p id="package-review-summary">Review the package before it is created.</p>
+      <form id="package-review-form">
+        <div class="form-field">
+          <label for="package-name">Package file name</label>
+          <input id="package-name" name="packageName" type="text" aria-describedby="package-name-help" required>
+          <p id="package-name-help" class="help-text">The .zip extension will be added automatically.</p>
+        </div>
+
+        <fieldset>
+          <legend>Generated files to include</legend>
+          <p id="package-artifact-help" class="help-text">Choose the generated files that should be copied into the package.</p>
+          <div id="package-artifact-options" aria-describedby="package-artifact-help"></div>
+        </fieldset>
+
+        <section class="privacy-review" aria-labelledby="package-privacy-heading">
+          <h3 id="package-privacy-heading">Privacy review</h3>
+          <div id="package-privacy-notices"></div>
+          <label class="confirmation-option">
+            <input id="package-privacy-confirm" type="checkbox">
+            I reviewed the selected files and understand that the package may contain source-derived or sensitive information.
+          </label>
+        </section>
+
+        <div id="package-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit" id="create-reviewed-package">Create this package</button>
+          <button type="button" id="cancel-package-review">Cancel package review</button>
+        </div>
+      </form>
+    </section>
+
     <section id="progress-section" class="panel" aria-labelledby="progress-heading" tabindex="-1" hidden>
       <h2 id="progress-heading">Working</h2>
       <div id="job-status" role="status" aria-live="polite" aria-atomic="true">Nothing is running.</div>
@@ -115,6 +149,7 @@
   <script src="js/intent-engine.js"></script>
   <script src="js/job.js"></script>
   <script src="js/output-manager.js"></script>
+  <script src="js/package-review.js"></script>
   <script src="js/workflow-runner.js"></script>
   <script src="js/execution-engine.js"></script>
   <script src="js/app.js"></script>

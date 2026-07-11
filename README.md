@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 7 of the Accessibility Intelligence roadmap is complete.
+Phase 8 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -17,7 +17,8 @@ The application now includes:
 - A Workflow Execution Engine with a queue, step execution, progress, errors, cancellation, and completion notifications.
 - An Output Manager that registers generated artifacts, associates them with their source and workflow, and exposes runtime outputs to later workflows.
 - The first complete production workflow: Extract Audio.
-- A production Accessibility Package workflow that creates a portable ZIP from Shared Knowledge, workflow history, and available outputs.
+- A production Accessibility Package workflow that creates a portable ZIP from Shared Knowledge, workflow history, and approved outputs.
+- An accessible pre-export review with artifact selection, package naming, privacy confirmation, and final manifest regeneration.
 
 ## Design Principle
 
@@ -141,10 +142,14 @@ The application creates a portable ZIP containing readable and machine-readable 
 
 Every development cycle must begin by reading this README and the full repository. Update this README before returning the project ZIP so it records the completion state and identifies the next phase.
 
-### Phase 8 - Package Review and Export Controls - Planned
+### Phase 8 - Package Review and Export Controls - Completed
 
-Add a pre-export review that lets users inspect package contents, choose which available artifacts to include, rename the package, and confirm privacy-sensitive inclusions before creation.
+The Accessibility Package workflow now opens an accessible review before execution. Users can inspect available artifacts, include or exclude files, rename the ZIP, review privacy notices, and confirm sensitive inclusions. The final selection is passed through the existing execution pipeline, both manifests are regenerated from the approved contents, exclusions are recorded, and Shared Knowledge stores the export choices.
+
+### Phase 9 - Additional Production Workflows - Planned
+
+Convert the existing transcript and caption workspaces into complete production workflows that create usable transcript and caption outputs through the established execution, output, knowledge, and recommendation architecture.
 
 ## Next Development Step
 
-Phase 8 will add accessible package review and export controls while preserving the Phase 7 package builder and Output Manager pipeline.
+Phase 9 will implement the next complete production workflow, beginning with transcription and then caption generation, while preserving the Phase 8 review and export pipeline.

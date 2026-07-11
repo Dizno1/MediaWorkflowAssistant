@@ -190,9 +190,14 @@
       const source = model.source || {};
       const sourceName = job.sourceFileName || source.name || 'media-source';
       const baseName = stripExtension(sourceName).replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'media-source';
-      const runtimeArtifacts = window.OutputManager
+      const allRuntimeArtifacts = window.OutputManager
         .listForSource(source)
         .filter((artifact) => artifact.workflowId !== 'accessibility-package');
+      const exportOptions = job.exportOptions || {};
+      const selectedArtifactIds = Array.isArray(exportOptions.selectedArtifactIds) ? new Set(exportOptions.selectedArtifactIds) : null;
+      const runtimeArtifacts = selectedArtifactIds
+        ? allRuntimeArtifacts.filter((artifact) => selectedArtifactIds.has(artifact.id))
+        : allRuntimeArtifacts;
       const persistentArtifacts = Array.isArray(model.results)
         ? model.results.filter((artifact) => artifact.workflowId !== 'accessibility-package')
         : [];
@@ -213,7 +218,13 @@
       if (onProgress) onProgress({ progress: 15, message: 'Collected Shared Knowledge and workflow history.' });
 
       const manifest = {
-        packageVersion: 1,
+        packageVersion: 2,
+        exportReview: {
+          reviewedAt: exportOptions.reviewedAt || generatedAt,
+          privacyConfirmed: Boolean(exportOptions.privacyConfirmed),
+          selectedArtifactIds: runtimeArtifacts.map((artifact) => artifact.id),
+          excludedArtifactNames: allRuntimeArtifacts.filter((artifact) => !runtimeArtifacts.includes(artifact)).map((artifact) => artifact.name)
+        },
         generatedAt,
         source: {
           name: sourceName,
@@ -272,7 +283,7 @@
       if (onProgress) onProgress({ progress: 90, message: 'Built the accessibility package ZIP.' });
 
       return [{
-        name: `${baseName}-accessibility-package.zip`,
+        name: exportOptions.packageName || `${baseName}-accessibility-package.zip`,
         type: 'Accessibility package',
         description: `A portable ZIP containing a readable manifest, project history, remaining gaps, follow-up actions, and ${runtimeArtifacts.length} available output file${runtimeArtifacts.length === 1 ? '' : 's'}.`,
         provider: this.name,
@@ -435,7 +446,17 @@
       lines.push('- No follow-up actions are currently recommended.');
     }
 
-    lines.push('', '## Package Notes', '', 'The original source file is not included automatically. Generated files are included only when their browser-session data is still available. The JSON manifest contains the same package record in a machine-readable format.', '');
+    lines.push('', '## Export Review', '');
+    lines.push(`- Reviewed: ${manifest.exportReview.reviewedAt}`);
+    lines.push(`- Privacy confirmation recorded: ${manifest.exportReview.privacyConfirmed ? 'Yes' : 'No'}`);
+    if (manifest.exportReview.excludedArtifactNames.length) {
+      lines.push('- Files excluded by the user:');
+      manifest.exportReview.excludedArtifactNames.forEach((name) => lines.push(`  - ${name}`));
+    } else {
+      lines.push('- Files excluded by the user: None');
+    }
+
+    lines.push('', '## Package Notes', '', 'The original source file is not included automatically. Generated files are included only when their browser-session data is still available and selected during export review. The JSON manifest contains the same package record in a machine-readable format.', '');
     return lines.join('\n');
   }
 

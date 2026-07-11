@@ -11,9 +11,10 @@
   ],
   "goal": "Bundle Shared Knowledge, generated outputs, completed work, remaining gaps, workflow history, and follow-up actions into one portable package.",
   "steps": [
+    "Apply the approved package name and file selections",
     "Collect Shared Knowledge and workflow history",
-    "Collect available generated files",
-    "Create readable and machine-readable manifests",
+    "Collect selected generated files",
+    "Regenerate readable and machine-readable manifests",
     "Build the accessibility package ZIP",
     "Register the package and update Shared Knowledge"
   ],

@@ -90,7 +90,8 @@
       completedAt: job.completedAt ? job.completedAt.toISOString() : createdAt,
       durationMs: job.durationMs,
       createdAt,
-      artifactNames: artifacts.map((artifact) => artifact.name)
+      artifactNames: artifacts.map((artifact) => artifact.name),
+      exportOptions: job.exportOptions || null
     });
 
     applyWorkflowKnowledge(updated, job.workflow.id, artifacts);
@@ -142,7 +143,12 @@
     }
 
     if (workflowId === 'accessibility-package') {
-      model.analysis.accessibilityPackage = { status: 'complete', artifacts, createdAt: new Date().toISOString() };
+      model.analysis.accessibilityPackage = {
+        status: 'complete',
+        artifacts,
+        createdAt: new Date().toISOString(),
+        exportOptions: job.exportOptions || null
+      };
     }
   }
 
