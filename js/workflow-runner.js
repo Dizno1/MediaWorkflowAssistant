@@ -68,6 +68,12 @@
       if (!(job.sourceFile instanceof File)) throw new Error('Extract Audio requires a local media file.');
       if (!job.inspection || job.inspection.mediaType !== 'video' || !job.inspection.hasAudio) throw new Error('Choose a supported video file that contains an audio track.');
     }
+    if (job.workflow.id === 'create-transcript') {
+      if (!(job.sourceFile instanceof File)) throw new Error('Create Transcript requires a local audio or video file.');
+      if (!job.inspection || !['audio', 'video'].includes(job.inspection.mediaType) || !job.inspection.hasAudio) throw new Error('Choose a supported audio or video file containing speech.');
+      if (!job.transcriptOptions || !String(job.transcriptOptions.text || '').trim()) throw new Error('Enter transcript text before saving the transcript.');
+      if (!job.transcriptOptions.reviewed) throw new Error('Review and confirm the transcript before saving it as complete.');
+    }
   }
 
   function throwIfCancelled(job) {

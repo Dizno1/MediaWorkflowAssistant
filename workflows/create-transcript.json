@@ -2,12 +2,8 @@
   "id": "create-transcript",
   "name": "Create transcript",
   "supportedMedia": ["video", "audio"],
-  "goal": "Create readable text from speech.",
-  "steps": [
-    "Extract or read audio",
-    "Detect speech",
-    "Create draft transcript",
-    "Prepare transcript for review"
-  ],
-  "status": "placeholder"
+  "goal": "Create and save readable text from speech.",
+  "steps": ["Review the source media", "Enter spoken content", "Review transcript accuracy", "Save the completed transcript"],
+  "outputs": ["reviewed plain-text transcript"],
+  "status": "production"
 }

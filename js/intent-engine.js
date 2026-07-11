@@ -10,9 +10,9 @@
     {
       id: 'create-transcript',
       workflowId: 'create-transcript',
-      title: 'Create a transcript worksheet',
-      description: 'Create an editable worksheet for typing and reviewing the spoken words.',
-      actionLabel: 'Create a transcript worksheet'
+      title: 'Create a transcript',
+      description: 'Create and save a reviewed plain-text transcript from the spoken content.',
+      actionLabel: 'Create a transcript'
     },
     {
       id: 'audio-description',

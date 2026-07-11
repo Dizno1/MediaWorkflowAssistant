@@ -87,6 +87,32 @@
     </section>
 
 
+    <section id="transcript-review-section" class="panel" aria-labelledby="transcript-review-heading" tabindex="-1" hidden>
+      <h2 id="transcript-review-heading">Create transcript</h2>
+      <p id="transcript-review-summary">Play the source in the viewer, then enter and review the spoken content.</p>
+      <form id="transcript-review-form">
+        <div class="form-field">
+          <label for="transcript-title">Transcript title</label>
+          <input id="transcript-title" name="transcriptTitle" type="text" aria-describedby="transcript-title-help" required>
+          <p id="transcript-title-help" class="help-text">This title appears at the top of the saved transcript.</p>
+        </div>
+        <div class="form-field">
+          <label for="transcript-text">Transcript text</label>
+          <textarea id="transcript-text" name="transcriptText" rows="18" aria-describedby="transcript-text-help transcript-review-status" required></textarea>
+          <p id="transcript-text-help" class="help-text">Include speaker names when useful and meaningful sounds in brackets, such as [music] or [door closes].</p>
+        </div>
+        <label class="confirmation-option">
+          <input id="transcript-reviewed" type="checkbox">
+          I reviewed this transcript for accuracy and completeness.
+        </label>
+        <div id="transcript-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save transcript</button>
+          <button type="button" id="cancel-transcript-review">Cancel transcript</button>
+        </div>
+      </form>
+    </section>
+
     <section id="package-review-section" class="panel" aria-labelledby="package-review-heading" tabindex="-1" hidden>
       <h2 id="package-review-heading">Review accessibility package</h2>
       <p id="package-review-summary">Review the package before it is created.</p>
@@ -149,6 +175,7 @@
   <script src="js/intent-engine.js"></script>
   <script src="js/job.js"></script>
   <script src="js/output-manager.js"></script>
+  <script src="js/transcript-review.js"></script>
   <script src="js/package-review.js"></script>
   <script src="js/workflow-runner.js"></script>
   <script src="js/execution-engine.js"></script>

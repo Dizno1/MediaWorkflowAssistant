@@ -20,7 +20,7 @@
       mediaTypes: ['video', 'audio'],
       requirements: ['hasAudio'],
       outputs: ['plain text transcript'],
-      steps: ['Read audio track', 'Detect speech', 'Create draft transcript', 'Prepare transcript for review']
+      steps: ['Review source media', 'Enter spoken content', 'Review transcript accuracy', 'Save completed transcript']
     },
     {
       id: 'audio-description',

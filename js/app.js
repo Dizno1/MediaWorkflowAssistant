@@ -29,6 +29,14 @@
   const progressBar = document.getElementById('progress-bar');
   const progressSteps = document.getElementById('progress-steps');
   const cancelJobButton = document.getElementById('cancel-job');
+  const transcriptReviewSection = document.getElementById('transcript-review-section');
+  const transcriptReviewForm = document.getElementById('transcript-review-form');
+  const transcriptReviewSummary = document.getElementById('transcript-review-summary');
+  const transcriptTitleInput = document.getElementById('transcript-title');
+  const transcriptTextInput = document.getElementById('transcript-text');
+  const transcriptReviewedInput = document.getElementById('transcript-reviewed');
+  const transcriptReviewStatus = document.getElementById('transcript-review-status');
+  const cancelTranscriptReviewButton = document.getElementById('cancel-transcript-review');
   const packageReviewSection = document.getElementById('package-review-section');
   const packageReviewForm = document.getElementById('package-review-form');
   const packageReviewSummary = document.getElementById('package-review-summary');
@@ -45,6 +53,7 @@
   let currentSource = null;
   let currentInspection = null;
   let activeJob = null;
+  let pendingTranscriptIntent = null;
   let pendingPackageIntent = null;
   let currentPackageReview = null;
   let currentKnowledgeModel = null;
@@ -83,6 +92,7 @@
     resetPlan();
     resetProgress();
     resetResults();
+    resetTranscriptReview();
     resetPackageReview();
 
     fileHelp.textContent = `${file.name} selected. The file stays on this device.`;
@@ -129,6 +139,7 @@
     resetPlan();
     resetProgress();
     resetResults();
+    resetTranscriptReview();
     resetPackageReview();
 
     inspectionOutput.hidden = false;
@@ -581,20 +592,25 @@
   function runIntent(intent) {
     if (!currentSource || !currentInspection || !intent.capability.canRun) return;
 
+    if (intent.workflowId === 'create-transcript') {
+      openTranscriptReview(intent);
+      return;
+    }
     if (intent.workflowId === 'accessibility-package') {
       openPackageReview(intent);
       return;
     }
-
     startIntentJob(intent, null);
   }
 
   function startIntentJob(intent, exportOptions) {
     resetProgress();
     resetResults();
+    resetTranscriptReview();
     resetPackageReview();
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
     activeJob.exportOptions = exportOptions || null;
+    activeJob.transcriptOptions = intent.workflowId === 'create-transcript' ? (exportOptions || null) : null;
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
     activeJob.accessibilityPlan = currentPlan;
@@ -606,6 +622,52 @@
     progressSection.hidden = false;
     progressSection.focus();
     executionEngine.enqueue(activeJob);
+  }
+
+  function openTranscriptReview(intent) {
+    pendingTranscriptIntent = intent;
+    const review = window.TranscriptReview.build(currentFile ? currentFile.name : currentInspection.name);
+    transcriptTitleInput.value = review.suggestedTitle;
+    transcriptTextInput.value = '';
+    transcriptReviewedInput.checked = false;
+    transcriptReviewStatus.textContent = '';
+    transcriptReviewSummary.textContent = `Use the Viewer for ${currentFile ? currentFile.name : currentInspection.name}. Enter the spoken content, identify speakers when useful, and include meaningful sounds.`;
+    transcriptReviewSection.hidden = false;
+    transcriptReviewSection.focus();
+  }
+
+  function submitTranscriptReview(event) {
+    event.preventDefault();
+    if (!pendingTranscriptIntent) return;
+    const text = window.TranscriptReview.normalizeText(transcriptTextInput.value);
+    if (!text) {
+      transcriptReviewStatus.textContent = 'Enter transcript text before saving.';
+      transcriptTextInput.focus();
+      return;
+    }
+    if (!transcriptReviewedInput.checked) {
+      transcriptReviewStatus.textContent = 'Confirm that you reviewed the transcript before saving it as complete.';
+      transcriptReviewedInput.focus();
+      return;
+    }
+    const options = {
+      title: transcriptTitleInput.value.trim() || `Transcript for ${currentFile ? currentFile.name : currentInspection.name}`,
+      text,
+      wordCount: window.TranscriptReview.wordCount(text),
+      reviewed: true,
+      reviewedAt: new Date().toISOString()
+    };
+    const intent = pendingTranscriptIntent;
+    startIntentJob(intent, options);
+  }
+
+  function resetTranscriptReview() {
+    pendingTranscriptIntent = null;
+    transcriptReviewSection.hidden = true;
+    transcriptTitleInput.value = '';
+    transcriptTextInput.value = '';
+    transcriptReviewedInput.checked = false;
+    transcriptReviewStatus.textContent = '';
   }
 
   function openPackageReview(intent) {
@@ -930,9 +992,16 @@
     handleFile(event.target.files[0]);
   });
 
+  transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
+  cancelTranscriptReviewButton.addEventListener('click', () => {
+    resetTranscriptReview();
+    goalsSection.focus();
+    setStatus('Transcript creation cancelled.');
+  });
   packageReviewForm.addEventListener('submit', submitPackageReview);
 
   cancelPackageReviewButton.addEventListener('click', () => {
+    resetTranscriptReview();
     resetPackageReview();
     goalsSection.focus();
     setStatus('Package review cancelled.');

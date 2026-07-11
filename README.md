@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 8 of the Accessibility Intelligence roadmap is complete.
+Phase 9 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -19,6 +19,7 @@ The application now includes:
 - The first complete production workflow: Extract Audio.
 - A production Accessibility Package workflow that creates a portable ZIP from Shared Knowledge, workflow history, and approved outputs.
 - An accessible pre-export review with artifact selection, package naming, privacy confirmation, and final manifest regeneration.
+- A complete Create Transcript workflow with an accessible editing and review workspace, validation, plain-text export, Output Manager registration, and Shared Knowledge updates.
 
 ## Design Principle
 
@@ -146,10 +147,10 @@ Every development cycle must begin by reading this README and the full repositor
 
 The Accessibility Package workflow now opens an accessible review before execution. Users can inspect available artifacts, include or exclude files, rename the ZIP, review privacy notices, and confirm sensitive inclusions. The final selection is passed through the existing execution pipeline, both manifests are regenerated from the approved contents, exclusions are recorded, and Shared Knowledge stores the export choices.
 
-### Phase 9 - Additional Production Workflows - Planned
+### Phase 9 - Create Transcript Production Workflow - Completed
 
-Convert the existing transcript and caption workspaces into complete production workflows that create usable transcript and caption outputs through the established execution, output, knowledge, and recommendation architecture.
+Create Transcript is now a complete production workflow. It opens a keyboard-accessible transcript editor beside the existing media viewer, requires transcript content and an explicit accuracy review, executes through the Workflow Execution Engine, creates a reviewed plain-text transcript, registers the artifact with the Output Manager, and records completion, word count, and review time in Shared Knowledge. Recommendations stop offering transcription once the completed transcript is recorded.
 
 ## Next Development Step
 
-Phase 9 will implement the next complete production workflow, beginning with transcription and then caption generation, while preserving the Phase 8 review and export pipeline.
+Phase 10 will convert Create Captions into a complete production workflow. It will reuse the completed transcript when available, provide an accessible timed-cue editor, validate cue order and timing, export a usable WebVTT file, and update Shared Knowledge and recommendations automatically. Audio Description will follow caption production so it can reuse the same timed-media editing patterns.

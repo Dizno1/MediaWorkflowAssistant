@@ -94,19 +94,22 @@
       exportOptions: job.exportOptions || null
     });
 
-    applyWorkflowKnowledge(updated, job.workflow.id, artifacts);
+    applyWorkflowKnowledge(updated, job, artifacts);
     refreshAnalysisLists(updated);
     return save(updated);
   }
 
-  function applyWorkflowKnowledge(model, workflowId, artifacts) {
+  function applyWorkflowKnowledge(model, job, artifacts) {
+    const workflowId = job.workflow.id;
     if (workflowId === 'create-transcript') {
       model.accessibility.transcript.present = true;
-      model.accessibility.transcript.status = 'workspace-created';
+      model.accessibility.transcript.status = 'complete';
       model.accessibility.transcript.artifacts = artifacts;
+      model.accessibility.transcript.wordCount = job.transcriptOptions ? job.transcriptOptions.wordCount : null;
+      model.accessibility.transcript.reviewedAt = job.transcriptOptions ? job.transcriptOptions.reviewedAt : null;
       model.accessibility.transcript.confidence = {
         level: 'high',
-        reason: 'A transcript worksheet was created in this browser.'
+        reason: 'A reviewed transcript was created and saved in this browser.'
       };
     }
 
@@ -156,7 +159,7 @@
     const completed = new Set(model.analysis.completed || []);
     const pending = new Set(model.analysis.pending || []);
 
-    if (model.accessibility.transcript.present) completed.add('transcript-workspace');
+    if (model.accessibility.transcript.present) completed.add('completed-transcript');
     if (model.accessibility.captions.present) completed.add('caption-workspace');
     if (model.accessibility.audioDescription.present) completed.add('audio-description-workspace');
     if (model.audio.extractedCopy && model.audio.extractedCopy.status === 'complete') completed.add('extracted-audio');

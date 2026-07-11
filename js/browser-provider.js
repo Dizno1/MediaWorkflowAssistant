@@ -38,7 +38,7 @@
       }
 
       if (job.workflow.id === 'create-transcript') {
-        return this.createTranscriptWorkspace(job);
+        return this.createTranscript(job);
       }
 
       if (job.workflow.id === 'create-captions') {
@@ -139,24 +139,14 @@
     }
 
 
-    createTranscriptWorkspace(job) {
-      const inspection = job.inspection || {};
+    createTranscript(job) {
+      const options = job.transcriptOptions || {};
+      const transcriptText = String(options.text || '').trim();
+      if (!transcriptText) throw new Error('Enter transcript text before running this workflow.');
       const baseName = stripExtension(job.sourceFileName);
-      const text = [
-        `Transcript worksheet for ${job.sourceFileName}`,
-        '',
-        `Duration: ${inspection.durationLabel || 'Unknown'}`,
-        '',
-        'Instructions',
-        'Play the media in the viewer. Pause as needed and type the spoken words below.',
-        'Identify speakers when that information is important. Include meaningful non-speech audio in brackets.',
-        '',
-        'Transcript',
-        '',
-        '[Begin typing here]',
-        ''
-      ].join('\n');
-      return [createTextArtifact(`${baseName}-transcript.txt`, 'Transcript worksheet', 'An editable plain-text worksheet for creating a transcript while reviewing the media.', text, 'text/plain')];
+      const title = String(options.title || `Transcript for ${job.sourceFileName}`).trim();
+      const text = [title, '', `Source: ${job.sourceFileName}`, `Created: ${new Date().toLocaleString()}`, `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`, '', transcriptText, ''].join('\n');
+      return [createTextArtifact(`${baseName}-transcript.txt`, 'Completed transcript', `A reviewed plain-text transcript containing ${Number(options.wordCount) || transcriptText.split(/\s+/).length} words.`, text, 'text/plain')];
     }
 
     createCaptionWorkspace(job) {
