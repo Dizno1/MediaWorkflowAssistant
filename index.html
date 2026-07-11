@@ -44,6 +44,28 @@
       </form>
     </section>
 
+
+    <section id="ai-provider-section" class="panel" aria-labelledby="ai-provider-heading">
+      <h2 id="ai-provider-heading">AI assistance providers</h2>
+      <p id="ai-provider-summary">Choose which provider supplies optional drafts. Human review remains required before any workflow is completed.</p>
+      <form id="ai-provider-form">
+        <fieldset>
+          <legend>Preferred provider</legend>
+          <div id="ai-provider-options"></div>
+        </fieldset>
+        <details>
+          <summary>Configure a connected JSON provider</summary>
+          <p class="help-text">A connected provider may receive source-derived text and metadata. Credentials are kept only for this browser tab.</p>
+          <div class="form-field"><label for="connected-provider-endpoint">HTTPS endpoint</label><input id="connected-provider-endpoint" type="url" placeholder="https://example.com/accessibility-assist"></div>
+          <div class="form-field"><label for="connected-provider-model">Model name, optional</label><input id="connected-provider-model" type="text"></div>
+          <div class="form-field"><label for="connected-provider-key">API key, optional</label><input id="connected-provider-key" type="password" autocomplete="off"></div>
+          <button type="button" id="save-connected-provider">Save connected provider</button>
+          <button type="button" id="clear-connected-provider">Clear connected provider</button>
+        </details>
+        <div id="ai-provider-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      </form>
+    </section>
+
     <section class="panel" aria-labelledby="current-heading">
       <h2 id="current-heading">Current source</h2>
       <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No file selected.</div>
@@ -117,6 +139,7 @@
           <label for="transcript-text">Transcript text</label>
           <textarea id="transcript-text" name="transcriptText" rows="18" aria-describedby="transcript-text-help transcript-review-status" required></textarea>
           <p id="transcript-text-help" class="help-text">Include speaker names when useful and meaningful sounds in brackets, such as [music] or [door closes].</p>
+          <button type="button" id="draft-transcript">Request transcript draft</button>
         </div>
         <label class="confirmation-option">
           <input id="transcript-reviewed" type="checkbox">
@@ -247,6 +270,9 @@
   <script src="js/accessibility-plan.js"></script>
   <script src="js/recommendation-engine.js"></script>
   <script src="js/zip-builder.js"></script>
+  <script src="js/ai-provider-layer.js"></script>
+  <script src="js/local-assist-provider.js"></script>
+  <script src="js/connected-ai-provider.js"></script>
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
   <script src="js/intent-engine.js"></script>

@@ -721,3 +721,18 @@ button:disabled:hover {
   padding: 0.75rem;
 }
 .chain-outcome-card { border-width: 3px; }
+
+
+.provider-choice {
+  border: 1px solid var(--border-color, #767676);
+  border-radius: 0.5rem;
+  margin-block: 0.75rem;
+  padding: 1rem;
+}
+
+.provider-choice p { margin-block: 0.4rem 0; }
+
+#ai-provider-status,
+#transcript-review-status,
+#caption-review-status,
+#audio-description-review-status { min-height: 1.5rem; margin-block: 0.75rem; }

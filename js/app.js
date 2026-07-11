@@ -55,6 +55,14 @@
   const addAudioDescriptionCueButton = document.getElementById('add-audio-description-cue');
   const audioDescriptionReviewedInput = document.getElementById('audio-description-reviewed');
   const audioDescriptionReviewStatus = document.getElementById('audio-description-review-status');
+  const aiProviderOptions = document.getElementById('ai-provider-options');
+  const aiProviderStatus = document.getElementById('ai-provider-status');
+  const connectedProviderEndpoint = document.getElementById('connected-provider-endpoint');
+  const connectedProviderModel = document.getElementById('connected-provider-model');
+  const connectedProviderKey = document.getElementById('connected-provider-key');
+  const draftTranscriptButton = document.getElementById('draft-transcript');
+  const draftCaptionsButton = document.getElementById('draft-captions');
+  const draftAudioDescriptionButton = document.getElementById('draft-audio-description');
   const cancelAudioDescriptionReviewButton = document.getElementById('cancel-audio-description-review');
 
   const packageReviewSection = document.getElementById('package-review-section');
@@ -101,6 +109,77 @@
 
   function setStatus(message) {
     statusRegion.textContent = message;
+  }
+
+  function renderAIProviders() {
+    const providers = window.AIProviderLayer.list();
+    aiProviderOptions.innerHTML = providers.map((provider) => `
+      <div class="provider-choice">
+        <label><input type="radio" name="aiProvider" value="${escapeHtml(provider.id)}" ${provider.selected ? 'checked' : ''} ${provider.available ? '' : 'aria-describedby="provider-state-' + escapeHtml(provider.id) + '"'}> <strong>${escapeHtml(provider.name)}</strong></label>
+        <p>${escapeHtml(provider.description)}</p>
+        <p id="provider-state-${escapeHtml(provider.id)}" class="help-text">${provider.available ? 'Available' : 'Needs configuration'}. ${escapeHtml(provider.privacy)} Capabilities: ${escapeHtml(provider.capabilities.join(', '))}.</p>
+      </div>`).join('');
+    aiProviderOptions.querySelectorAll('input[name="aiProvider"]').forEach((input) => input.addEventListener('change', () => {
+      window.AIProviderLayer.select(input.value);
+      aiProviderStatus.textContent = `${input.closest('.provider-choice').querySelector('strong').textContent} selected.`;
+      renderAIProviders();
+    }));
+    const config = window.ConnectedAIProvider.getConfiguration();
+    connectedProviderEndpoint.value = config.endpoint;
+    connectedProviderModel.value = config.model;
+  }
+
+  function aiContext() {
+    const transcriptArtifacts = window.OutputManager.listForSource(currentKnowledgeModel && currentKnowledgeModel.source)
+      .filter((artifact) => artifact.workflowId === 'create-transcript');
+    const transcript = transcriptTextInput.value.trim() || (transcriptArtifacts.find((artifact) => artifact.content) || {}).content || '';
+    return {
+      sourceName: currentFile ? currentFile.name : (currentInspection ? currentInspection.name : ''),
+      mediaType: currentInspection ? currentInspection.mediaType : '',
+      durationSeconds: currentInspection ? currentInspection.durationSeconds : 0,
+      transcriptText: transcript.replace(/^.*?\n\nSource:.*?\nCreated:.*?\nReviewed:.*?\n\n/s, ''),
+      knowledge: currentKnowledgeModel || {}
+    };
+  }
+
+  async function requestTranscriptDraft() {
+    const capability = window.AIProviderLayer.getCapability('transcription-draft');
+    if (!capability.canRun) { transcriptReviewStatus.textContent = capability.message; return; }
+    draftTranscriptButton.disabled = true;
+    transcriptReviewStatus.textContent = `Requesting a draft from ${capability.provider.name}. Source-derived information may be sent according to that provider's privacy notice.`;
+    try {
+      const result = await window.AIProviderLayer.run('transcription-draft', aiContext());
+      transcriptTextInput.value = String(result.text || '').trim();
+      transcriptReviewStatus.textContent = `${result.providerName} returned a draft. Review every word before confirming completion.`;
+      transcriptTextInput.focus();
+    } catch (error) { transcriptReviewStatus.textContent = error.message; }
+    finally { draftTranscriptButton.disabled = false; }
+  }
+
+  async function requestCaptionDraft() {
+    draftCaptionsButton.disabled = true;
+    captionReviewStatus.textContent = 'Requesting editable caption cues.';
+    try {
+      const result = await window.AIProviderLayer.run('caption-draft', aiContext());
+      captionCueCounter = 0; captionCues.innerHTML = '';
+      result.cues.forEach((cue) => addCaptionCue(cue));
+      captionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter cues created.'} Human timing and text review is required.`;
+      captionCues.querySelector('input, textarea').focus();
+    } catch (error) { captionReviewStatus.textContent = error.message; }
+    finally { draftCaptionsButton.disabled = false; }
+  }
+
+  async function requestAudioDescriptionDraft() {
+    draftAudioDescriptionButton.disabled = true;
+    audioDescriptionReviewStatus.textContent = 'Requesting editable audio description checkpoints.';
+    try {
+      const result = await window.AIProviderLayer.run('audio-description-draft', aiContext());
+      audioDescriptionCueCounter = 0; audioDescriptionCues.innerHTML = '';
+      result.cues.forEach((cue) => addAudioDescriptionCue(cue));
+      audioDescriptionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter checkpoints created.'} Review the video and replace prompts with accurate narration.`;
+      audioDescriptionCues.querySelector('input, textarea, select').focus();
+    } catch (error) { audioDescriptionReviewStatus.textContent = error.message; }
+    finally { draftAudioDescriptionButton.disabled = false; }
   }
 
   async function handleFile(file) {
@@ -1371,6 +1450,24 @@
 
   workflowChainForm.addEventListener('submit', submitWorkflowChain);
   cancelWorkflowChainButton.addEventListener('click', () => cancelWorkflowChain());
+  document.getElementById('save-connected-provider').addEventListener('click', () => {
+    try {
+      window.ConnectedAIProvider.configure({ endpoint: connectedProviderEndpoint.value, model: connectedProviderModel.value, apiKey: connectedProviderKey.value });
+      connectedProviderKey.value = '';
+      window.AIProviderLayer.select('connected-json');
+      aiProviderStatus.textContent = 'Connected provider configuration saved for this browser tab and selected.';
+      renderAIProviders();
+    } catch (error) { aiProviderStatus.textContent = error.message; connectedProviderEndpoint.focus(); }
+  });
+  document.getElementById('clear-connected-provider').addEventListener('click', () => {
+    window.ConnectedAIProvider.clear(); connectedProviderEndpoint.value = ''; connectedProviderModel.value = ''; connectedProviderKey.value = '';
+    window.AIProviderLayer.select('local-assist'); aiProviderStatus.textContent = 'Connected provider configuration cleared.'; renderAIProviders();
+  });
+  draftTranscriptButton.addEventListener('click', requestTranscriptDraft);
+  draftCaptionsButton.addEventListener('click', requestCaptionDraft);
+  draftAudioDescriptionButton.addEventListener('click', requestAudioDescriptionDraft);
+  renderAIProviders();
+
   transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
   captionReviewForm.addEventListener('submit', submitCaptionReview);
   audioDescriptionReviewForm.addEventListener('submit', submitAudioDescriptionReview);
