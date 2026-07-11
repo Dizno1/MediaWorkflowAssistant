@@ -1,179 +1,131 @@
 # MediaWorkflowAssistant
 
-An accessibility-first media workflow application that automatically analyzes media and helps users accomplish tasks such as captioning, transcription, audio description, compression, and AI preparation through intelligent, goal-oriented workflows.
+An accessibility-first media workflow application that analyzes media and helps users accomplish captioning, transcription, audio description, compression, conversion, and AI preparation through goal-oriented workflows.
 
 ## Current Milestone
 
-This repository now contains Phase 5 of the Accessibility Intelligence roadmap.
+Phase 6 of the Accessibility Intelligence roadmap is complete.
 
-The application can:
+The application now includes:
 
-- Accept a file through a drop zone or file picker.
-- Inspect the file in the browser.
-- Identify the general media type from MIME type and extension.
-- Read supported audio and video duration metadata.
-- Read supported video dimensions.
-- Build a reusable media inspection object.
-- Announce status changes through a polite live region.
-- Recommend possible goal-oriented workflows from registry rules.
-- Preview placeholder workflow steps and expected outputs.
-- Build one shared media knowledge model from the source inspection.
-- Present an initial accessibility assessment with reasons and confidence statements.
-- Distinguish technical inspection from deeper analysis that has not yet been performed.
-- Pass shared knowledge, assessment data, and the ordered accessibility plan into later workflow jobs.
-- Build a dependency-aware accessibility plan from the assessment.
-- Show which plan steps are complete, available now, preparation-only, or waiting for deeper processing.
-- Save completed workflow history and created-result metadata in one shared knowledge record.
-- Restore previous work for the same source in the same browser.
-- Rebuild the assessment and accessibility plan after each completed action.
-- Rank available actions using missing accessibility features, completed work, workflow dependencies, and provider availability.
-- Explain why each action is recommended, delayed, optional, or already complete.
-- Identify the best next action and reorder the user choices accordingly.
+- Goal-first workflow architecture.
+- Local file and web address source abstraction.
+- Browser-based media inspection and viewing.
+- Shared Knowledge persistence for source analysis, completed work, workflow history, and output metadata.
+- Accessibility assessment and dependency-aware planning.
+- Prioritized recommendations that adapt to workflow state.
+- A Workflow Execution Engine with a queue, step execution, progress, errors, cancellation, and completion notifications.
+- An Output Manager that registers generated artifacts, associates them with their source and workflow, and exposes runtime outputs to later workflows.
+- The first complete production workflow: Extract Audio.
 
 ## Design Principle
 
-Users choose outcomes. The application builds the workflow.
+Users choose outcomes. The application builds and executes the workflow.
 
-The interface should not require users to understand FFmpeg, codecs, bitrates, containers, OCR engines, speech recognition services, or AI processing steps. Those are implementation details hidden behind meaningful user goals.
-
-## First App Structure
-
-```text
-MediaWorkflowAssistant/
-  index.html
-  README.md
-  css/
-    styles.css
-  js/
-    app.js
-    media-inspector.js
-    workflow-registry.js
-  workflows/
-    audio-description.json
-    compress-video.json
-    create-captions.json
-    create-transcript.json
-    extract-audio.json
-    prepare-for-ai.json
-  docs/
-    First Sprint Notes.md
-    Sprint 2 Notes.md
-```
+Implementation details such as media tracks, codecs, containers, browser recording APIs, and processing providers remain behind plain-language goals.
 
 ## Local Use
 
-Open `index.html` in a browser.
+Open `index.html` in a current browser. No build step is required.
 
-No build step is required.
+Media processing remains on the user's device. Extract Audio requires a supported local video containing an audio track and a browser that supports `MediaRecorder` and media stream capture.
 
-## Next Sprint
+## Architecture
 
-The next development step is the first real workflow implementation. Extract Audio is the recommended starting point because it can prove workflow execution, progress reporting, output handling, and error states before AI-based transcription, captioning, OCR, or audio description are added.
+### Source and inspection
 
+`media-inspector.js` creates the source inspection used throughout the application. `shared-knowledge.js` merges that inspection with saved source knowledge.
 
-## Sprint 3
+### Assessment, planning, and recommendations
 
-Sprint 3 adds the reusable workflow runner, job model, progress panel, and results panel. Recommended workflows can now be reviewed and run as browser-based workflow jobs with accessible status updates.
+The accessibility assessment identifies relevant improvements. The accessibility plan orders dependent work. The Recommendation Engine combines those results with provider availability, completed history, and active jobs.
 
+Recommendations now distinguish between:
 
-## Sprint 4 Part 2
+- Ready to execute
+- In progress
+- Completed
+- Blocked
 
-Sprint 4 Part 2 adds status-aware providers, workflow capability checks, provider messages in the workflow review panel, richer job metadata, and structured results that distinguish created artifacts from planned artifacts.
+Completed workflows are removed from unfinished recommendations automatically.
 
+### Workflow Execution Engine
 
-## Sprint 4 Part 5
+`execution-engine.js` owns the workflow queue and active job. It:
 
-Sprint 4 Part 5 fixes the provider execution path. Prepare for AI now uses the Browser Provider to create a real downloadable Markdown artifact from the inspected media metadata.
+- Queues jobs.
+- Starts queued work in order.
+- Routes progress, completion, failure, and cancellation events.
+- Cancels queued or active work.
+- Starts the next queued job when the current job ends.
 
+`workflow-runner.js` validates jobs, executes workflow steps, invokes the selected provider, reports progress, handles cancellation, and sends successful outputs to the Output Manager.
 
-## Sprint 4 Part 6
+### Output Manager
 
-Sprint 4 Part 6 improves the first real artifact workflow with a clear results explanation, artifact preview, copy-to-clipboard support, and clearer download instructions.
+`output-manager.js` registers each generated artifact with:
 
+- Artifact and job identifiers.
+- Originating workflow.
+- Originating source key and source name.
+- Provider.
+- MIME type, size, duration, and creation time when available.
+- Runtime URL or readable content.
 
-## Sprint 5 Part 1
+Persistent output metadata and workflow history are stored in Shared Knowledge. Runtime file URLs remain available during the current browser session.
 
-Sprint 5 Part 1 introduces the intent-first interface. Users choose plain-language goals while workflows, providers, AI, and other implementation details remain internal. URL input is documented as a planned source option.
+### Extract Audio pipeline
 
+The production Extract Audio workflow:
 
-## Sprint 5 Part 2
+1. Validates that the source is a supported local video with audio.
+2. Queues and starts a workflow job.
+3. Reads the source media and captures its audio track.
+4. Creates an Opus audio-only WebM or Ogg file, depending on browser support.
+5. Reports accessible progress and errors.
+6. Allows cancellation while processing.
+7. Registers the artifact with the Output Manager.
+8. Records workflow history and output metadata in Shared Knowledge.
+9. Updates recommendations so Extract Audio becomes Completed.
 
-Added the Viewer for video, audio, images, text, Markdown, and PDF files while preserving the intent-first experience.
+## Accessibility
 
-## Sprint 5 Part 3
-
-Added web address input and source recognition. The assistant can recognize likely media from a URL, display supported direct media and YouTube videos in the Viewer, provide safe external links for unsupported pages, and use the same goal-driven choices for local and web sources.
-## Sprint 5 Part 4
-
-Local video files can now be made smaller and their audio can be saved as a separate file directly in a supported browser. The original file remains unchanged.
-
-
-## Sprint 5 Part 5
-
-Video choices now include working local workspaces for transcripts, captions, and audio description. The audio-only action is labeled "Extract the audio" to make its purpose clear.
-
+New execution controls use native buttons, labeled status messages, a programmatic progress bar, keyboard-operable cancellation, focus management, and polite live-region announcements. Existing screen-reader and keyboard behavior is preserved.
 
 ## Accessibility Intelligence Engine Roadmap
 
-This README is the governing architecture document for the project. Review it before implementing future changes.
-
-### Vision
-
-Analyze media once. Build a shared knowledge model. Reuse that knowledge for every accessibility task.
-
 ### Phase 1 - Accessibility Intelligence Engine - Completed
 
-Create a single media analysis that records:
-- Media summary
-- Speech
-- Speakers
-- Language
-- Music and sound
-- Silence
-- Scene changes
-- On-screen text
-- Existing accessibility features
-- Confidence
-
-All future features should consume this shared model instead of repeating analysis.
+One shared media knowledge model supports every task.
 
 ### Phase 2 - Accessibility Assessment - Completed
 
-The application now converts the shared knowledge model into plain-language recommendations with reasons and confidence. It clearly identifies where deeper speech or visual analysis is still required.
+Shared Knowledge is converted into plain-language accessibility findings and confidence statements.
 
 ### Phase 3 - Accessibility Plan - Completed
 
-The application now turns the assessment into an ordered, dependency-aware plan. The plan explains what should happen first, what later work reuses, and which steps are currently available or still waiting for deeper processing.
+Assessment results become an ordered, dependency-aware plan.
 
 ### Phase 4 - Shared Knowledge - Completed
 
-The application now persists completed analysis and created-result metadata in the shared knowledge model. When the same source is selected again, prior work is restored and later actions can reuse it instead of starting over.
+Completed work and output metadata persist for the same source.
 
 ### Phase 5 - Recommendation Engine - Completed
 
-The application now turns Shared Knowledge, assessment results, workflow dependencies, completed work, and provider availability into prioritized recommendations. It identifies the best next action, explains every ranking, and prevents completed work from being presented as unfinished.
+Recommendations use Shared Knowledge, dependencies, completed work, and provider availability.
 
-### Planned Phases
+### Phase 6 - Workflow Execution and Extract Audio - Completed
 
-6. Accessibility Package
+The execution queue, cancellation, progress pipeline, Output Manager, automatic knowledge updates, state-aware recommendations, and production Extract Audio workflow are implemented.
 
-Future development should extend the shared model rather than create isolated workflows.
+### Phase 7 - Accessibility Package - Planned
 
+Create an Accessibility Package from Shared Knowledge and completed outputs. The package should include a readable manifest, created files, completed accessibility work, remaining gaps, workflow history, and recommended follow-up actions.
 
 ## Development Progress Rule
 
-Every development cycle must begin by reading this README and must update it before the project ZIP is returned. This file is the governing architecture and progress record for the application.
+Every development cycle must begin by reading this README and the full repository. Update this README before returning the project ZIP so it records the completion state and identifies the next phase.
 
 ## Next Development Step
 
-Phase 6 will create an Accessibility Package from completed results and Shared Knowledge. The package will include a readable manifest of created files, completed accessibility work, remaining gaps, and recommended follow-up actions.
-
-
-## Phase 4
-
-Phase 4 adds persistent Shared Knowledge. Completed workflows now update the media knowledge model, created results are restored for the same source, and the assessment and ordered plan refresh after every action.
-
-
-## Phase 5
-
-Phase 5 adds the Recommendation Engine. Recommendations now use Shared Knowledge, missing accessibility features, completed work, workflow dependencies, and provider availability to identify and explain the best next action.
+Phase 7 will implement the Accessibility Package workflow and package manifest using artifacts already registered by the Output Manager and knowledge already stored in Shared Knowledge.

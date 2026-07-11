@@ -28,6 +28,7 @@
   const jobStatus = document.getElementById('job-status');
   const progressBar = document.getElementById('progress-bar');
   const progressSteps = document.getElementById('progress-steps');
+  const cancelJobButton = document.getElementById('cancel-job');
   const resultsSection = document.getElementById('results-section');
   const resultsOutput = document.getElementById('results-output');
 
@@ -39,6 +40,13 @@
   let currentAssessment = null;
   let currentPlan = null;
   let currentRecommendations = null;
+  const executionEngine = new window.WorkflowExecutionEngine({
+    onQueued: queuedProgress,
+    onUpdate: updateProgress,
+    onComplete: completeProgress,
+    onError: failProgress,
+    onCancel: cancelProgress
+  });
 
   function setStatus(message) {
     statusRegion.textContent = message;
@@ -539,6 +547,10 @@
         button.textContent = 'Already complete';
         button.disabled = true;
         button.setAttribute('aria-label', `${intent.title}. Already complete.`);
+      } else if (intent.inProgress) {
+        button.textContent = 'In progress';
+        button.disabled = true;
+        button.setAttribute('aria-label', `${intent.title}. In progress.`);
       } else if (intent.capability.canRun) {
         button.textContent = intent.actionLabel;
         button.addEventListener('click', () => runIntent(intent));
@@ -553,7 +565,7 @@
     });
   }
 
-  async function runIntent(intent) {
+  function runIntent(intent) {
     if (!currentSource || !currentInspection || !intent.capability.canRun) return;
 
     resetProgress();
@@ -562,23 +574,25 @@
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
     activeJob.accessibilityPlan = currentPlan;
+    currentKnowledgeModel.activeJobs = Array.isArray(currentKnowledgeModel.activeJobs) ? currentKnowledgeModel.activeJobs : [];
+    currentKnowledgeModel.activeJobs.push({ jobId: activeJob.id, workflowId: intent.workflowId, status: 'queued' });
+    window.SharedKnowledge.save(currentKnowledgeModel);
     renderProgress(activeJob);
-
-    const runner = new window.WorkflowRunner({
-      onUpdate: updateProgress,
-      onComplete: completeProgress,
-      onError: failProgress
-    });
-
+    refreshAfterJobStateChange();
     progressSection.hidden = false;
     progressSection.focus();
-    await runner.run(activeJob);
+    executionEngine.enqueue(activeJob);
+  }
+
+  function queuedProgress(job, position) {
+    jobStatus.textContent = position > 1 ? `${job.intent.title} is queued at position ${position}.` : `${job.intent.title} is queued and ready to start.`;
   }
 
   function renderProgress(job) {
     progressSection.hidden = false;
     jobStatus.textContent = `${job.intent.title} is starting.`;
     progressBar.style.width = '0%';
+    cancelJobButton.disabled = false;
     progressSteps.innerHTML = job.intent.steps.map((step) => `
       <li data-step-status="pending">
         <span class="step-state">Waiting</span>
@@ -589,7 +603,10 @@
 
   function updateProgress(job, detail) {
     jobStatus.textContent = detail.message;
+    updateActiveJobStatus(job, job.status);
     progressBar.style.width = `${job.progress}%`;
+    const meter = progressBar.parentElement;
+    if (meter) meter.setAttribute('aria-valuenow', String(job.progress));
 
     Array.from(progressSteps.children).forEach((item, index) => {
       let state = 'pending';
@@ -609,6 +626,7 @@
   }
 
   function completeProgress(job) {
+    removeActiveJob(job.id);
     currentKnowledgeModel = window.SharedKnowledge.recordJob(currentKnowledgeModel, job);
     job.knowledgeModel = currentKnowledgeModel;
     currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
@@ -621,17 +639,51 @@
 
     jobStatus.textContent = `${job.intent.title} finished. Your file is ready.`;
     progressBar.style.width = '100%';
+    const meter = progressBar.parentElement;
+    if (meter) meter.setAttribute('aria-valuenow', '100');
 
     Array.from(progressSteps.children).forEach((item) => {
       item.dataset.stepStatus = 'done';
       item.querySelector('.step-state').textContent = 'Done';
     });
 
+    cancelJobButton.disabled = true;
     renderResults(job);
   }
 
   function failProgress(job, error) {
+    removeActiveJob(job.id);
+    refreshAfterJobStateChange();
+    cancelJobButton.disabled = true;
     jobStatus.textContent = `This action could not be completed. ${error.message}`;
+  }
+
+  function cancelProgress(job) {
+    removeActiveJob(job.id);
+    refreshAfterJobStateChange();
+    cancelJobButton.disabled = true;
+    jobStatus.textContent = 'The workflow was cancelled. No output was saved.';
+  }
+
+  function updateActiveJobStatus(job, status) {
+    const entry = (currentKnowledgeModel.activeJobs || []).find((item) => item.jobId === job.id);
+    if (entry) entry.status = status;
+    window.SharedKnowledge.save(currentKnowledgeModel);
+    renderRecommendations(currentInspection);
+    renderGoals(currentInspection);
+  }
+
+  function removeActiveJob(jobId) {
+    currentKnowledgeModel.activeJobs = (currentKnowledgeModel.activeJobs || []).filter((item) => item.jobId !== jobId);
+    window.SharedKnowledge.save(currentKnowledgeModel);
+  }
+
+  function refreshAfterJobStateChange() {
+    currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
+    currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, window.IntentEngine.getIntents(currentInspection));
+    renderRecommendations(currentInspection);
+    renderGoals(currentInspection);
+    renderKnowledge();
   }
 
   function renderResults(job) {
@@ -721,6 +773,9 @@
     jobStatus.textContent = 'Nothing is running.';
     progressBar.style.width = '0%';
     progressSteps.innerHTML = '';
+    cancelJobButton.disabled = true;
+    const meter = progressBar.parentElement;
+    if (meter) meter.setAttribute('aria-valuenow', '0');
   }
 
   function resetResults() {
@@ -775,6 +830,10 @@
 
   fileInput.addEventListener('change', (event) => {
     handleFile(event.target.files[0]);
+  });
+
+  cancelJobButton.addEventListener('click', () => {
+    if (activeJob) executionEngine.cancel(activeJob.id);
   });
 
   urlForm.addEventListener('submit', (event) => {

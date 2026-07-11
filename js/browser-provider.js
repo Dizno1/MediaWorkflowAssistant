@@ -19,7 +19,7 @@
       );
     }
 
-    async execute(job) {
+    async execute(job, onProgress) {
       if (!this.canRun(job)) {
         throw new Error('This action needs a file from your device. Web addresses cannot be processed yet.');
       }
@@ -29,7 +29,7 @@
       }
 
       if (job.workflow.id === 'extract-audio') {
-        return this.createAudioCopy(job);
+        return this.createAudioCopy(job, onProgress);
       }
 
       if (job.workflow.id === 'create-transcript') {
@@ -98,7 +98,7 @@
       ];
     }
 
-    async createAudioCopy(job) {
+    async createAudioCopy(job, onProgress) {
       ensureRecordingSupport();
       const file = job.sourceFile;
       const result = await recordMedia(file, {
@@ -110,7 +110,9 @@
         ],
         recorderOptions: {
           audioBitsPerSecond: 128000
-        }
+        },
+        signal: job.abortController ? job.abortController.signal : null,
+        onProgress
       });
       const extension = result.blob.type.includes('ogg') ? 'ogg' : 'webm';
       const baseName = stripExtension(file.name);
@@ -124,7 +126,9 @@
           provider: this.name,
           status: 'Created',
           url: URL.createObjectURL(result.blob),
-          mimeType: result.blob.type || 'audio/webm'
+          mimeType: result.blob.type || 'audio/webm',
+          size: result.blob.size,
+          durationSeconds: Number(job.inspection.durationSeconds) || null
         }
       ];
     }
@@ -366,6 +370,7 @@
         let settled = false;
 
         function cleanup() {
+          window.clearInterval(progressTimer);
           element.pause();
           outputStream.getTracks().forEach((track) => track.stop());
           sourceStream.getTracks().forEach((track) => track.stop());
@@ -378,6 +383,20 @@
           settled = true;
           cleanup();
           reject(error instanceof Error ? error : new Error('The file could not be processed.'));
+        }
+
+        const duration = Number(element.duration) || 0;
+        const progressTimer = window.setInterval(() => {
+          if (typeof options.onProgress === 'function' && duration > 0) {
+            options.onProgress(Math.min(100, Math.round((element.currentTime / duration) * 100)));
+          }
+        }, 500);
+
+        if (options.signal) {
+          options.signal.addEventListener('abort', () => {
+            if (recorder.state !== 'inactive') recorder.stop();
+            fail(new DOMException('Cancelled', 'AbortError'));
+          }, { once: true });
         }
 
         recorder.ondataavailable = (event) => {

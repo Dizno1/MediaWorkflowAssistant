@@ -30,6 +30,7 @@
     });
 
     const history = Array.isArray(model.history) ? model.history : [];
+    const activeJobs = Array.isArray(model.activeJobs) ? model.activeJobs : [];
     const completedWorkflows = new Set(
       history.filter((entry) => entry.status === 'completed').map((entry) => entry.workflowId)
     );
@@ -38,18 +39,22 @@
       const assessmentItem = assessmentByIntent.get(intent.id);
       const planStep = planByIntent.get(intent.id);
       const completed = completedWorkflows.has(intent.workflowId) || isPresent(model, intent.workflowId);
+      const inProgress = activeJobs.some((entry) => entry.workflowId === intent.workflowId && ['queued', 'running'].includes(entry.status));
       const available = Boolean(intent.capability && intent.capability.canRun);
       const dependencyState = dependencyStatus(planStep, plan);
       const score = calculateScore(intent, assessmentItem, planStep, completed, available, dependencyState);
+      const state = completed ? 'completed' : inProgress ? 'in-progress' : (available && dependencyState === 'clear') ? 'ready' : 'blocked';
 
       return {
         ...intent,
         score,
         completed,
+        inProgress,
+        state,
         available,
         dependencyState,
-        recommendationLevel: recommendationLevel(score, completed, available),
-        recommendationReason: buildReason(intent, assessmentItem, planStep, completed, available, dependencyState)
+        recommendationLevel: recommendationLevel(score, completed, available, inProgress, dependencyState),
+        recommendationReason: buildReason(intent, assessmentItem, planStep, completed, available, dependencyState, inProgress)
       };
     });
 
@@ -102,16 +107,19 @@
     return false;
   }
 
-  function recommendationLevel(score, completed, available) {
+  function recommendationLevel(score, completed, available, inProgress, dependencyState) {
     if (completed) return 'Completed';
-    if (!available) return 'Recommended when available';
+    if (inProgress) return 'In progress';
+    if (!available || dependencyState === 'waiting') return 'Blocked';
+    if (available) return 'Ready to execute';
     if (score >= 135) return 'Recommended first';
     if (score >= 90) return 'Recommended next';
     return 'Optional';
   }
 
-  function buildReason(intent, assessmentItem, planStep, completed, available, dependencyState) {
+  function buildReason(intent, assessmentItem, planStep, completed, available, dependencyState, inProgress) {
     if (completed) return 'This work is already recorded in Shared Knowledge, so it does not need to be started again.';
+    if (inProgress) return 'This workflow is currently queued or running. Its result will update Shared Knowledge automatically.';
     if (!available) {
       return assessmentItem
         ? `${assessmentItem.reason} The required processing provider is not connected yet.`

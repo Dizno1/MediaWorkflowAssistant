@@ -8,71 +8,72 @@
 
     async run(job) {
       const steps = job.intent.steps || [];
-
+      job.abortController = new AbortController();
       try {
+        validateJob(job);
         job.status = 'running';
-        this.onUpdate(job, {
-          message: `${job.intent.title} started.`,
-          stepIndex: -1
-        });
+        this.onUpdate(job, { message: `${job.intent.title} started.`, stepIndex: -1 });
 
         for (let index = 0; index < steps.length; index += 1) {
+          throwIfCancelled(job);
           job.currentStepIndex = index;
-          job.progress = Math.round((index / steps.length) * 100);
-          this.onUpdate(job, {
-            message: `${steps[index]} started.`,
-            stepIndex: index
-          });
-
-          await this.executeStep(index);
-
-          job.progress = Math.round(((index + 1) / steps.length) * 100);
-          this.onUpdate(job, {
-            message: `${steps[index]} completed.`,
-            stepIndex: index
-          });
+          job.progress = Math.max(job.progress, Math.round((index / Math.max(steps.length, 1)) * 85));
+          this.onUpdate(job, { message: `${steps[index]} started.`, stepIndex: index });
+          await this.executeStep(job, index);
         }
 
-        let outputs = null;
-        if (job.capability && job.capability.canRun) {
-          outputs = await window.ProviderManager.execute(job);
-        }
+        const outputs = await window.ProviderManager.execute(job, (providerProgress) => {
+          job.progress = Math.min(99, Math.max(job.progress, 85 + Math.round(providerProgress * 0.14)));
+          this.onUpdate(job, { message: 'Creating the output file.', stepIndex: Math.max(0, steps.length - 1) });
+        });
+        throwIfCancelled(job);
+        if (!outputs || !outputs.length) throw new Error('The requested result could not be created.');
 
-        if (!outputs || !outputs.length) {
-          throw new Error('The requested result could not be created in this version.');
-        }
-
+        job.outputs = window.OutputManager.register(job, normalizeOutputs(outputs, job));
+        job.progress = 100;
         job.status = 'completed';
         window.finishJob(job);
-        job.outputs = normalizeOutputs(outputs, job);
         this.onComplete(job);
         return job;
       } catch (error) {
-        job.status = 'failed';
+        if (job.cancelRequested || error.name === 'AbortError') {
+          job.status = 'cancelled';
+          error = new Error('The workflow was cancelled. No output was saved.');
+        } else {
+          job.status = 'failed';
+        }
+        window.finishJob(job);
         job.messages.push(error.message);
         this.onError(job, error);
         return job;
       }
     }
 
-    executeStep(index) {
-      return new Promise((resolve) => {
-        window.setTimeout(resolve, 450 + (index * 90));
+    executeStep(job) {
+      return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(resolve, 120);
+        job.abortController.signal.addEventListener('abort', () => {
+          window.clearTimeout(timer);
+          reject(new DOMException('Cancelled', 'AbortError'));
+        }, { once: true });
       });
     }
   }
 
+  function validateJob(job) {
+    if (!job.workflow || !job.capability || !job.capability.canRun) throw new Error('This workflow is blocked because no compatible provider is available.');
+    if (job.workflow.id === 'extract-audio') {
+      if (!(job.sourceFile instanceof File)) throw new Error('Extract Audio requires a local media file.');
+      if (!job.inspection || job.inspection.mediaType !== 'video' || !job.inspection.hasAudio) throw new Error('Choose a supported video file that contains an audio track.');
+    }
+  }
+
+  function throwIfCancelled(job) {
+    if (job.cancelRequested || (job.abortController && job.abortController.signal.aborted)) throw new DOMException('Cancelled', 'AbortError');
+  }
+
   function normalizeOutputs(outputs, job) {
-    return outputs.map((output) => ({
-      name: output.name,
-      type: output.type || 'File',
-      description: output.description || 'Your file is ready.',
-      providerId: job.provider ? job.provider.id : '',
-      status: 'Ready',
-      url: output.url || '',
-      mimeType: output.mimeType || '',
-      content: output.content || ''
-    }));
+    return outputs.map((output) => ({ ...output, providerId: job.provider ? job.provider.id : '', status: 'Ready' }));
   }
 
   window.WorkflowRunner = WorkflowRunner;

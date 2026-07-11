@@ -1,12 +1,20 @@
 {
   "id": "extract-audio",
   "name": "Extract audio",
-  "supportedMedia": ["video", "audio"],
-  "goal": "Create an audio-only file from a video or normalize an existing audio file.",
+  "supportedMedia": ["video"],
+  "goal": "Create an audio-only file from a supported local video.",
   "steps": [
-    "Read source media",
-    "Select audio track",
-    "Export MP3 or WAV copy"
+    "Validate the local video and audio track",
+    "Read the source media",
+    "Capture the audio track",
+    "Create a browser-compatible audio file",
+    "Register the output and update Shared Knowledge"
   ],
-  "status": "placeholder"
+  "outputs": [
+    {
+      "type": "Audio-only copy",
+      "formats": ["WebM Opus", "Ogg Opus"]
+    }
+  ],
+  "status": "production"
 }

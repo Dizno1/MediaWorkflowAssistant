@@ -520,3 +520,15 @@ button:disabled:hover {
 .recommendation-priority {
   margin-bottom: 0.35rem;
 }
+
+.processing-media {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.recommendation-card [data-state="in-progress"] {
+  font-weight: 700;
+}

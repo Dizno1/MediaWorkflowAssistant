@@ -43,6 +43,7 @@
       analysis: mergeObject(baseModel.analysis, storedModel.analysis),
       results: Array.isArray(storedModel.results) ? storedModel.results : [],
       history: Array.isArray(storedModel.history) ? storedModel.history : [],
+      activeJobs: [],
       updatedAt: storedModel.updatedAt || baseModel.analysis.createdAt
     };
   }
@@ -65,10 +66,15 @@
 
     const createdAt = new Date().toISOString();
     const artifacts = (job.outputs || []).map((output) => ({
+      id: output.id || '',
       name: output.name,
       type: output.type,
       mimeType: output.mimeType || '',
       description: output.description || '',
+      size: Number.isFinite(output.size) ? output.size : null,
+      durationSeconds: Number.isFinite(output.durationSeconds) ? output.durationSeconds : null,
+      sourceKey: sourceKey(updated.source),
+      sourceName: job.sourceFileName,
       workflowId: job.workflow.id,
       createdAt
     }));
@@ -78,6 +84,11 @@
       workflowId: job.workflow.id,
       title: job.intent.title,
       status: job.status,
+      jobId: job.id,
+      sourceKey: sourceKey(updated.source),
+      startedAt: job.startedAt ? job.startedAt.toISOString() : '',
+      completedAt: job.completedAt ? job.completedAt.toISOString() : createdAt,
+      durationMs: job.durationMs,
       createdAt,
       artifactNames: artifacts.map((artifact) => artifact.name)
     });
@@ -156,5 +167,5 @@
     };
   }
 
-  window.SharedKnowledge = { load, save, merge, recordJob, summarize };
+  window.SharedKnowledge = { load, save, merge, recordJob, summarize, sourceKey };
 })();

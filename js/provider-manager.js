@@ -102,14 +102,14 @@
     };
   }
 
-  async function execute(job) {
+  async function execute(job, onProgress) {
     const provider = job.provider;
 
     if (!provider || !provider.available || !provider.instance || typeof provider.instance.execute !== 'function') {
       return null;
     }
 
-    return provider.instance.execute(job);
+    return provider.instance.execute(job, onProgress);
   }
 
   function downloadArtifact(artifact) {
