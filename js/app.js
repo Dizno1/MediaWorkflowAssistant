@@ -279,6 +279,8 @@
     const history = Array.isArray(active.history) ? active.history.slice().reverse() : [];
     projectHistory.innerHTML = history.length ? `<ol class="workspace-list">${history.map((entry) => `<li><h4>${escapeHtml(entry.title)}</h4><p>${escapeHtml(entry.sourceName || 'Source')} - ${escapeHtml(entry.status || 'completed')}</p><p class="muted">${escapeHtml(formatWorkspaceDate(entry.completedAt))}${entry.artifactNames && entry.artifactNames.length ? `. Created ${escapeHtml(entry.artifactNames.join(', '))}.` : ''}</p></li>`).join('')}</ol>` : '<p class="muted">No completed workflows are recorded for this project yet.</p>';
     archiveProjectButton.textContent = active.archived ? 'Restore project' : 'Archive project';
+    if (window.AccessibilityAdvisor) window.AccessibilityAdvisor.refresh();
+    document.dispatchEvent(new CustomEvent('publication-pipeline-refresh'));
   }
 
   function formatWorkspaceDate(value) {

@@ -899,3 +899,31 @@ button:disabled:hover {
 .job-card h3 { margin-top: 0; }
 #project-history-list ol { padding-inline-start: 1.5rem; }
 #project-history-list li { margin-block: .5rem; }
+
+/* Phase 28 Accessibility Advisor */
+.advisor-report {
+  border: 2px solid var(--border);
+  border-radius: .75rem;
+  margin-block: 1rem;
+  padding: 1rem;
+}
+.advisor-report:focus { outline: 3px solid currentColor; outline-offset: 3px; }
+.advisor-findings { padding-inline-start: 1.5rem; }
+.advisor-finding {
+  border-left: .4rem solid currentColor;
+  margin-block: 1rem;
+  padding: .75rem 1rem;
+}
+.advisor-finding h4 { margin-top: 0; }
+.severity-critical { border-left-width: .65rem; }
+.severity-major { border-left-style: double; }
+.advisor-stale {
+  border: 2px solid currentColor;
+  padding: .75rem;
+}
+.advisor-acceptance {
+  border-top: 2px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.advisor-acceptance textarea { width: min(100%, 48rem); }

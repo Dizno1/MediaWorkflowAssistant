@@ -65,6 +65,21 @@
       </div>
     </section>
 
+    <section id="accessibility-advisor-section" class="panel" aria-labelledby="accessibility-advisor-heading">
+      <h2 id="accessibility-advisor-heading">Accessibility Advisor</h2>
+      <p>Review completed project work through a consultant-style final assessment. The advisor identifies issues, recommends improvements, scores accessibility readiness, and records final acceptance before publication.</p>
+      <div class="next-actions"><button type="button" id="run-accessibility-advisor">Run accessibility review</button></div>
+      <div id="accessibility-advisor-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="accessibility-advisor-output"></div>
+      <form id="advisor-acceptance-form" class="advisor-acceptance" hidden>
+        <h3>Final review decision</h3>
+        <p id="advisor-acceptance-help">Record the person who completed the final accessibility review.</p>
+        <div class="form-field"><label for="advisor-reviewer">Reviewer name</label><input id="advisor-reviewer" name="reviewer" type="text" maxlength="100" required></div>
+        <div class="form-field"><label for="advisor-note">Decision note</label><textarea id="advisor-note" name="note" rows="3" maxlength="1000"></textarea></div>
+        <button type="submit">Accept advisor review for publication</button>
+      </form>
+    </section>
+
     <section id="publication-pipeline-section" class="panel" aria-labelledby="publication-pipeline-heading">
       <h2 id="publication-pipeline-heading">Publication pipeline</h2>
       <p>Validate the active project, choose an export profile and delivery target, then create a publication package.</p>
@@ -469,6 +484,7 @@
   <script src="js/ad-drafting.js"></script>
   <script src="js/local-assist-provider.js"></script>
   <script src="js/advanced-analysis.js"></script>
+  <script src="js/accessibility-advisor.js"></script>
   <script src="js/connected-ai-provider.js"></script>
   <script src="js/openai-provider.js"></script>
   <script src="js/browser-provider.js"></script>

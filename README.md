@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 27 of the executable accessibility workflow roadmap is complete.
+Phase 28 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -43,6 +43,7 @@ The application now includes:
 - Advanced accessibility analysis that scores scene understanding, speaker recognition, caption quality, audio-description quality, visual accessibility, and narration optimization; reports measurable reading-speed and cue-density indicators; refreshes after completed work; and optionally performs deeper provider analysis after privacy and cost confirmation.
 - A complete Publication Pipeline with selectable export profiles, project-wide readiness validation, delivery targets, accessible blocking reports, portable ZIP packaging, source and workflow inventories, review records, deployment instructions, available runtime artifacts, and SHA-256 checksums.
 - Persistent resumable jobs with centralized state transitions, checkpoints, recoverable errors, retry limits, startup crash recovery, accessible resume controls, batch records and controls, chronological project event history, and duplicate-worker protection for browser-background execution.
+- A project-level Accessibility Advisor that reviews completed work like an accessibility consultant, identifies critical, major, and minor risks, recommends improvements, scores six readiness categories, assigns an overall accessibility-readiness score, detects stale reviews, records final reviewer acceptance, and blocks publication until the current review is accepted.
 
 
 ## Design Principle
@@ -361,12 +362,29 @@ New and modified files:
 
 See `docs/Phase 27 Production Features.md`.
 
+## Phase 28 - Accessibility Advisor - Completed
+
+Phase 28 adds a persistent, project-level Accessibility Advisor that evaluates the evidence produced by the existing orchestration, analysis, review, production, and publication systems. The Advisor identifies accessibility issues by severity, explains remaining risks, recommends specific improvements, records completed strengths, calculates category scores, and assigns an overall accessibility-readiness score.
+
+A final reviewer can accept a current Advisor report for publication when no critical issues remain. Reports are fingerprinted against source snapshots, workflow history, human-review records, and publication records so later project changes make an earlier report visibly stale. The Publication Pipeline now blocks export until a current Advisor review has been accepted and includes the Advisor report in both JSON and plain-text formats inside the final package.
+
+New and modified files:
+
+- `js/accessibility-advisor.js` provides project evaluation, severity-based findings, recommendations, category scoring, overall readiness scoring, report persistence, staleness detection, final reviewer acceptance, accessible rendering, and plain-text report export.
+- `index.html` adds the Accessibility Advisor review and decision interface.
+- `css/styles.css` adds accessible report, severity, stale-state, and decision presentation.
+- `js/app.js` refreshes Advisor and publication state when project evidence changes.
+- `js/publication-pipeline.js` requires a current accepted Advisor review and includes Advisor records in publication packages.
+- `docs/Phase 28 Accessibility Advisor.md` documents architecture, behavior, accessibility, testing, storage, and limitations.
+
+See `docs/Phase 28 Accessibility Advisor.md`.
+
 ## Remaining Roadmap
 
-### Phase 28 - Accessibility Advisor
+### Phase 29 - Automated Playback Quality Assurance
 
-Review completed work like an experienced accessibility consultant, identify issues, recommend improvements, and assign an overall accessibility-readiness score before publication.
+Inspect completed media playback, caption timing, track availability, audio-description placement, packaging integrity, and delivery behavior with repeatable diagnostics before release.
 
 ## Next Development Phase
 
-Phase 28 - Accessibility Advisor.
+Phase 29 - Automated Playback Quality Assurance.

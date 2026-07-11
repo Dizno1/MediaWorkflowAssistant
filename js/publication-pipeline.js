@@ -115,6 +115,13 @@
     if (sources.length) passed.push(`${sources.length} source${sources.length === 1 ? '' : 's'} included in the publication inventory.`);
     if ((project.history || []).length) passed.push('Workflow history is available for the publication record.');
     else warnings.push('No workflow history is available.');
+    if (window.AccessibilityAdvisor) {
+      const advisor = window.AccessibilityAdvisor.publicationStatus(project);
+      if (!advisor.ready) blockers.push(advisor.reason);
+      else passed.push(advisor.reason);
+    } else {
+      blockers.push('The Accessibility Advisor is unavailable.');
+    }
     const score = Math.max(0, Math.min(100, 100 - blockers.length * 18 - warnings.length * 4));
     return { ready: blockers.length === 0, score, blockers, warnings, passed, checkedAt: new Date().toISOString(), profileId: selectedProfile.id };
   }
@@ -196,6 +203,7 @@
       sources: project.sources || [],
       workflows: project.history || [],
       reviews: project.reviews || [],
+      accessibilityAdvisor: project.accessibilityAdvisor || null,
       runtimeArtifacts: artifactRecords
     };
     const files = [
@@ -204,6 +212,8 @@
       textFile('source-inventory.txt', sourceInventory(project)),
       textFile('workflow-history.json', JSON.stringify(project.history || [], null, 2)),
       textFile('human-review-records.json', JSON.stringify(project.reviews || [], null, 2)),
+      textFile('accessibility-advisor-report.json', JSON.stringify(project.accessibilityAdvisor || {}, null, 2)),
+      textFile('accessibility-advisor-report.txt', advisorText(project)),
       textFile('DELIVERY-INSTRUCTIONS.txt', deliveryInstructions(title, selectedProfile, selectedTarget))
     ];
     for (const artifact of runtimeArtifacts) {
@@ -239,6 +249,12 @@
     (project.sources || []).forEach((source, index) => { lines.push(`${index + 1}. ${source.name}`, `   Media type: ${source.mediaType || 'unknown'}`, `   Source key: ${source.sourceKey}`, `   Updated: ${source.updatedAt || ''}`, ''); });
     return lines.join('\n');
   }
+
+  function advisorText(project) {
+    const report = window.AccessibilityAdvisor && window.AccessibilityAdvisor.latestReview(project);
+    return report ? window.AccessibilityAdvisor.reportText(report) : 'No Accessibility Advisor report was available.\n';
+  }
+
   function deliveryInstructions(title, selectedProfile, selectedTarget) {
     return [`Publication: ${title}`, `Export profile: ${selectedProfile.name}`, `Delivery target: ${selectedTarget.name}`, '', selectedTarget.description, '', 'Before release:', '1. Review publication-validation.txt.', '2. Confirm every human approval record is current.', '3. Play all media from beginning to end.', '4. Turn captions on and verify synchronization and reading speed.', '5. Confirm audio description does not cover essential dialogue or sound.', '6. Verify filenames, language labels, and public-facing titles.', '7. Retain publication-manifest.json and SHA256SUMS.txt with the delivered package.', ''].join('\n');
   }
