@@ -149,6 +149,23 @@
         <p class="help-text">Most people do not need to change these settings. Provider names and technical controls are kept here so the main workflow remains goal focused.</p>
         <nav class="provider-manager-nav" aria-label="Provider configuration shortcuts"><a href="#openai-provider-settings">OpenAI</a> <a href="#azure-provider-settings">Azure OpenAI</a> <a href="#gemini-provider-settings">Gemini</a> <a href="#anthropic-provider-settings">Anthropic</a> <a href="#local-provider-settings">Local services</a></nav>
         <div id="provider-manager-summary" class="provider-manager-summary" role="status" aria-live="polite">Checking saved provider configurations.</div>
+        <section class="shared-services-import" aria-labelledby="shared-services-import-heading">
+          <h3 id="shared-services-import-heading">Import existing Open Door Design provider settings</h3>
+          <p id="shared-services-summary">No SharedServices provider configuration has been imported yet.</p>
+          <p class="help-text">Choose your SharedServices folder once. The application recognizes OpenAI, Gemini, Azure Speech, and Azure Vision files, imports the settings into encrypted browser storage, and leaves the original files unchanged. A browser cannot open a Windows folder without your action.</p>
+          <div class="next-actions">
+            <button type="button" id="choose-shared-services-folder">Choose SharedServices folder</button>
+            <label class="file-label" for="shared-services-files">Choose provider files instead</label>
+            <input id="shared-services-files" type="file" multiple accept=".json,.key,.region,.endpoint,text/plain,application/json" aria-describedby="shared-services-file-help">
+          </div>
+          <p id="shared-services-file-help" class="help-text">The file option is a fallback for browsers that do not support folder selection. Select openai.json, gemini.key, providers.json, azure_speech.key, azure_speech.region, azure_vision.key, azure_vision.region, and azure_vision.endpoint together.</p>
+          <div class="next-actions">
+            <button type="button" id="test-azure-speech-import">Test imported Azure Speech</button>
+            <button type="button" id="test-azure-vision-import">Test imported Azure Vision</button>
+            <button type="button" id="clear-shared-services-import">Clear imported Azure settings</button>
+          </div>
+          <div id="shared-services-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        </section>
         <form id="ai-provider-form">
           <fieldset>
             <legend>Selection method</legend>
@@ -552,6 +569,8 @@
   <script src="js/local-service-provider.js"></script>
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
+  <script src="js/shared-services.js"></script>
+  <script src="js/shared-services-ui.js"></script>
   <script src="js/provider-manager-ui.js"></script>
   <script src="js/intent-engine.js"></script>
   <script src="js/production-features.js"></script>

@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 30 of the executable accessibility workflow roadmap is complete.
+Phase 31 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -46,6 +46,7 @@ The application now includes:
 - A project-level Accessibility Advisor that reviews completed work like an accessibility consultant, identifies critical, major, and minor risks, recommends improvements, scores six readiness categories, assigns an overall accessibility-readiness score, detects stale reviews, records final reviewer acceptance, and blocks publication until the current review is accepted.
 - A secure Provider Manager with copy-and-paste configuration for OpenAI, Azure OpenAI, and Google Gemini; encrypted browser-profile storage; connection testing; clear controls; automatic capability-based selection; and no credential storage in repositories or project exports.
 - A complete Provider Manager workspace with show-or-hide key controls, configured and last-tested status, multiple named Azure resources, Anthropic support, optional local Ollama and Whisper detection, and automatic migration of existing Phase 29 Azure settings.
+- Shared Services integration that imports existing Open Door Design OpenAI, Gemini, Azure Speech, and Azure Vision configuration through one accessible folder or file selection, preserves the original files, encrypts the imported copy in the browser profile, and registers Azure Speech transcription plus Azure Vision image analysis and OCR with automatic provider selection.
 
 
 ## Phase 30 Provider Manager
@@ -53,6 +54,12 @@ The application now includes:
 Phase 30 makes provider setup directly discoverable inside Advanced assistance settings. Users can paste credentials into protected fields, reveal a key only while editing, save it to encrypted browser-profile storage, test the connection, and clear it without touching repository files. Azure OpenAI supports multiple named resource profiles. Anthropic, local Ollama, and local Whisper are now registered with the capability-selection layer.
 
 The normal workflow remains provider-neutral. Automatic selection asks which configured method can perform the required task and continues to require privacy and possible-cost confirmation before external processing. See `docs/Phase 30 Provider Manager.md` for implementation details, migration behavior, accessibility notes, and local-service limitations.
+
+## Phase 31 Shared Services Integration
+
+Phase 31 adds an accessible one-step import for existing Open Door Design provider files. Choose the SharedServices folder, or select the known files together when folder selection is unavailable. OpenAI and Gemini are imported into their existing encrypted provider records. Azure Speech and Azure Vision are stored in a dedicated encrypted record and become available to the existing capability-selection engine.
+
+The browser requires an explicit folder or file choice and cannot silently search a Windows path. The importer leaves every original file unchanged. See `docs/Phase 31 Shared Services Integration.md` for supported filenames, security boundaries, provider capabilities, accessibility behavior, testing, and limitations.
 
 
 ## Design Principle
@@ -423,12 +430,28 @@ New and modified files:
 
 See `docs/Phase 30 Provider Manager.md`.
 
+## Phase 31 - Shared Services Integration - Completed
+
+Phase 31 adds one-step import of existing Open Door Design provider settings. Users can choose a SharedServices folder or select the recognized provider files together. The application imports OpenAI, Gemini, Azure Speech, and Azure Vision settings into the existing encrypted browser credential store without modifying the original files.
+
+Azure Speech and Azure Vision now register directly with the existing AI Provider Layer. Azure Speech can create transcription drafts, while Azure Vision can create image-description and OCR results. A provider-neutral `ODDSharedServices` facade gives future Open Door Design applications a common entry point for transcription, image description, and OCR.
+
+New and modified files:
+
+- `js/shared-services.js` provides SharedServices import, parsing, encrypted persistence, Azure Speech and Azure Vision adapters, connection tests, and the provider-neutral facade.
+- `js/shared-services-ui.js` provides the accessible folder/file import workflow, status reporting, and Azure connection-test controls.
+- `index.html` adds the SharedServices import workspace and loads the new modules.
+- `css/styles.css` adds the SharedServices import presentation.
+- `docs/Phase 31 Shared Services Integration.md` documents architecture, security boundaries, accessibility, testing, and limitations.
+
+See `docs/Phase 31 Shared Services Integration.md`.
+
 ## Remaining Roadmap
 
-### Phase 31 - Automated Playback Quality Assurance
+### Phase 32 - Automated Playback Quality Assurance
 
 Inspect completed media playback, caption timing, track availability, audio-description placement, packaging integrity, and delivery behavior with repeatable diagnostics before release.
 
 ## Next Development Phase
 
-Phase 31 - Automated Playback Quality Assurance.
+Phase 32 - Automated Playback Quality Assurance.

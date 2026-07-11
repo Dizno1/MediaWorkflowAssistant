@@ -934,3 +934,12 @@ button:disabled:hover {
 .provider-manager-summary, .configuration-status { border-left: .35rem solid currentColor; padding: .65rem .8rem; }
 #ai-provider-form fieldset { margin-block: 1.25rem; }
 #ai-provider-form fieldset:target { outline: 3px solid currentColor; outline-offset: 3px; }
+
+.shared-services-import {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px solid currentColor;
+  border-radius: .5rem;
+}
+.shared-services-import h3 { margin-top: 0; }
+.shared-services-import input[type="file"] { max-width: 100%; }
