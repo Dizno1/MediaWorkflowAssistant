@@ -91,6 +91,9 @@
   const projectFacts = document.getElementById('project-facts');
   const projectSources = document.getElementById('project-sources');
   const projectHistory = document.getElementById('project-history');
+  const projectIntelligenceSummary = document.getElementById('project-intelligence-summary');
+  const projectIntelligenceFacts = document.getElementById('project-intelligence-facts');
+  const projectIntelligenceActions = document.getElementById('project-intelligence-actions');
   const renameProjectButton = document.getElementById('rename-project');
   const archiveProjectButton = document.getElementById('archive-project');
   const deleteProjectButton = document.getElementById('delete-project');
@@ -152,13 +155,24 @@
     const summary = window.ProjectWorkspace.summary(active);
     projectDashboard.hidden = false;
     projectWorkspaceSummary.textContent = `${active.name} is ${summary.status.toLowerCase()}. It contains ${summary.sourceCount} source${summary.sourceCount === 1 ? '' : 's'} and ${summary.artifactCount} recorded artifact${summary.artifactCount === 1 ? '' : 's'}.`;
+    const intelligence = window.ProjectAccessibilityIntelligence.analyze(active);
     projectFacts.innerHTML = [
-      ['Project status', summary.status],
+      ['Project status', intelligence.status],
       ['Sources', String(summary.sourceCount)],
       ['Recorded artifacts', String(summary.artifactCount)],
       ['Completed workflows', String(summary.workflowCount)],
       ['Last updated', formatWorkspaceDate(active.updatedAt)]
     ].map(([label, value]) => fact(label, value)).join('');
+
+    projectIntelligenceSummary.textContent = intelligence.summary;
+    projectIntelligenceFacts.innerHTML = [
+      ['Accessibility completion', `${intelligence.percentComplete}%`],
+      ['Remaining actions', String(intelligence.recommendations.length)],
+      ['Out-of-date packages', String(intelligence.stalePackages)]
+    ].map(([label, value]) => fact(label, value)).join('');
+    projectIntelligenceActions.innerHTML = intelligence.recommendations.length
+      ? `<ol class="workspace-list intelligence-action-list">${intelligence.recommendations.map((item) => `<li><h5>${escapeHtml(item.title)} - ${escapeHtml(item.sourceName)}</h5><p><strong>${escapeHtml(titleCase(item.state))}</strong></p><p>${escapeHtml(item.reason)}</p></li>`).join('')}</ol>`
+      : '<p>There are no remaining project-wide accessibility actions.</p>';
 
     const sources = Array.isArray(active.sources) ? active.sources : [];
     projectSources.innerHTML = sources.length ? `<ul class="workspace-list">${sources.map((source) => {

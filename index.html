@@ -45,6 +45,13 @@
           <button type="button" id="archive-project">Archive project</button>
           <button type="button" id="delete-project">Delete project</button>
         </div>
+        <section class="project-intelligence" aria-labelledby="project-intelligence-heading">
+          <h3 id="project-intelligence-heading">Project accessibility intelligence</h3>
+          <p id="project-intelligence-summary">Project-wide guidance will appear here.</p>
+          <div id="project-intelligence-facts" class="inspection-grid" aria-label="Project accessibility progress"></div>
+          <h4>Prioritized next actions</h4>
+          <div id="project-intelligence-actions"></div>
+        </section>
         <h3>Sources in this project</h3>
         <div id="project-sources"></div>
         <h3>Project workflow history</h3>
@@ -301,6 +308,7 @@
   <script src="js/shared-knowledge.js"></script>
   <script src="js/project-workspace.js"></script>
   <script src="js/accessibility-intelligence.js"></script>
+  <script src="js/project-accessibility-intelligence.js"></script>
   <script src="js/accessibility-assessment.js"></script>
   <script src="js/accessibility-plan.js"></script>
   <script src="js/recommendation-engine.js"></script>

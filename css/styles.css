@@ -802,3 +802,17 @@ button:disabled:hover {
     padding-top: 1rem;
   }
 }
+
+
+/* Phase 15 project accessibility intelligence */
+.project-intelligence {
+  border-block: 2px solid var(--border);
+  margin-block: 1.5rem;
+  padding-block: 1rem;
+}
+.project-intelligence h4 { margin-bottom: 0.5rem; }
+.intelligence-action-list h5 {
+  font-size: 1.05rem;
+  margin: 0 0 0.35rem;
+}
+.intelligence-action-list li:first-child { border-width: 3px; }

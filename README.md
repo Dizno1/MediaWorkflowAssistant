@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 14 of the Accessibility Intelligence roadmap is complete.
+Phase 15 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -25,6 +25,7 @@ The application now includes:
 - An outcome-based Workflow Chain coordinator that orders dependent accessibility work, skips completed actions, preserves human review checkpoints, continues automatically after successful steps, and pauses safely on failure or cancellation.
 - An AI Provider Layer with capability discovery, preferred-provider selection, a private on-device assistance provider, and an optional connected JSON provider for transcription, caption, visual-analysis, and audio-description drafting.
 - An accessible Project Workspace that organizes multiple related sources, source-level Shared Knowledge summaries, generated artifact counts, workflow history, and project readiness status under one persistent project.
+- Project-aware Accessibility Intelligence that evaluates every source, calculates completion, detects missing or blocked work, identifies stale accessibility packages, and prioritizes the best next actions across the active project.
 
 ## Design Principle
 
@@ -191,6 +192,10 @@ Interchangeable assistance providers now register standard capabilities without 
 
 The application now supports persistent projects containing multiple related media sources. Users can create and select projects, rename or archive them, and review project-level source counts, recorded artifact counts, completed workflow counts, and readiness status. Every inspected source is added automatically to the active project, while its detailed Shared Knowledge remains source-specific. Completed jobs are recorded in project workflow history with their source and created artifact names. The workspace recognizes Incomplete, In Progress, Review Required, Ready to Publish, and Archived states and restores the active project on later visits.
 
+### Phase 15 - Project Accessibility Intelligence - Completed
+
+The active workspace now receives project-wide accessibility guidance. Every source is evaluated against media-appropriate deliverables, with completion percentages calculated at source and project level. The intelligence layer distinguishes missing, blocked, in-progress, complete, and stale work; prioritizes dependencies such as transcript before captions; and detects when an accessibility package must be regenerated because newer transcript, caption, or audio-description work was completed. The Project Workspace presents an accessible summary, progress facts, and an ordered list of next actions that recalculates automatically as work changes.
+
 ## Next Development Step
 
-Phase 15 will add project-aware Accessibility Intelligence. It will evaluate every source in the active workspace, identify missing or stale deliverables, prioritize the best next actions across the project, and explain when an accessibility package must be regenerated after upstream work changes.
+Phase 16 will add Human Review and Collaboration. It will record review assignments, approval states, comments, and project-wide review readiness without replacing the existing workflow execution or Shared Knowledge architecture.
