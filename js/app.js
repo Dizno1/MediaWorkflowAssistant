@@ -887,6 +887,7 @@
     }
     const workflowId = /transcrib|speech.*text|audio.*text/.test(text) ? 'create-transcript'
       : /describe|alt text|image description|picture/.test(text) ? 'generate-alt-text'
+      : /publish|publication|render.*accessible|final.*video/.test(text) ? 'render-accessible-video'
       : /caption|subtitle/.test(text) ? 'create-captions'
       : /audio description|describe.*video|narration/.test(text) ? 'audio-description'
       : /extract.*audio|save.*audio/.test(text) ? 'extract-audio'
@@ -1117,6 +1118,7 @@
     activeJob.imageDescriptionOptions = intent.workflowId === 'generate-alt-text' ? (exportOptions || null) : null;
     activeJob.captionOptions = intent.workflowId === 'create-captions' ? (exportOptions || null) : null;
     activeJob.audioDescriptionOptions = intent.workflowId === 'audio-description' ? (exportOptions || null) : null;
+    activeJob.publicationOptions = intent.workflowId === 'render-accessible-video' ? (exportOptions || { preset: 'web-standard', language: 'en', captionLabel: 'English', title: `Accessible video: ${currentFile ? currentFile.name : currentInspection.name}`, videoBitrate: 4000000, audioBitrate: 128000 }) : null;
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
     activeJob.accessibilityPlan = currentPlan;

@@ -98,6 +98,15 @@
     }
 
 
+    if (job.workflow.id === 'render-accessible-video') {
+      if (!(job.sourceFile instanceof File)) throw new Error('Accessible video rendering requires the original local video file.');
+      const artifacts = window.OutputManager.listForSource(job.knowledgeModel.source);
+      const hasCaptions = artifacts.some((artifact) => artifact.mimeType === 'text/vtt' && String(artifact.content || '').trim());
+      const hasDescribedAudio = artifacts.some((artifact) => artifact.mimeType === 'audio/wav' && artifact.url);
+      if (!hasCaptions) throw new Error('Create and review captions before rendering the accessible video.');
+      if (!hasDescribedAudio) throw new Error('Create synthesized narration and the described-audio mix before rendering the accessible video.');
+    }
+
   }
 
   function throwIfCancelled(job) {

@@ -122,7 +122,7 @@
   function inferCapabilities(mediaType) {
     const shared = ['prepare-for-ai', 'accessibility-package'];
     const map = {
-      video: ['create-captions', 'create-transcript', 'audio-description', 'compress-video', 'extract-audio', ...shared],
+      video: ['create-captions', 'create-transcript', 'audio-description', 'render-accessible-video', 'compress-video', 'extract-audio', ...shared],
       audio: ['create-transcript', 'compress-audio', 'normalize-audio', ...shared],
       image: ['generate-alt-text', 'ocr-image', 'compress-image', 'resize-image', ...shared],
       document: ['ocr-document', 'extract-document-text', ...shared],

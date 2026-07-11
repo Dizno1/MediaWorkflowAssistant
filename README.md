@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 22 of the executable accessibility workflow roadmap is complete.
+Phase 23 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -38,6 +38,7 @@ The application now includes:
 - Automatic timed audio-description drafting from locally sampled video frames and available transcript context, with all narration returned to the existing mandatory review workspace.
 - Reviewed narration synthesis through the built-in OpenAI adapter, with voice and speed controls, explicit cost and privacy confirmation, and a no-cost manual-recording alternative.
 - Local browser-based audio mixing that ducks the original soundtrack during narration cues and exports a described-audio WAV file while preserving the reviewed script and review record.
+- Local accessible-video rendering that combines the original picture with the approved described-audio soundtrack, then creates a publication ZIP containing the rendered WebM, selectable WebVTT captions, an accessible HTML player, a manifest, and a final validation checklist.
 
 
 ## Design Principle
@@ -63,7 +64,7 @@ No build step or package installation is required for the application itself.
 
 ## Local Processing Requirements
 
-Extract Audio requires a supported local video containing an audio track and a browser that supports `MediaRecorder` and media stream capture. Described-audio mixing requires `AudioContext`, `OfflineAudioContext`, and browser support for decoding the selected source audio. The described-audio result is exported as WAV. Final video rendering with selectable captions and a mixed narration track remains a later phase.
+Extract Audio requires a supported local video containing an audio track and a browser that supports `MediaRecorder` and media stream capture. Described-audio mixing requires `AudioContext`, `OfflineAudioContext`, and browser support for decoding the selected source audio. The described-audio result is exported as WAV. Accessible-video rendering requires `MediaRecorder`, video `captureStream`, Web Audio routing, and WebM encoding support. Rendering runs in real time. Selectable captions are delivered through the included accessible HTML player and external WebVTT track because browser MediaRecorder does not reliably embed selectable captions or create MP4 files.
 
 ## Architecture
 
@@ -275,11 +276,26 @@ See `docs/Phase 22 Narration Generation and Accessible Audio Mixing.md`.
 
 ## Remaining Roadmap
 
+- Add resilient large-file processing, resumable rendering, and provider-specific size-limit guidance.
 - Add narration preview, per-cue regeneration, pronunciation overrides, and cue-specific gain controls.
-- Render a final accessible video containing the original picture, mixed described audio, and selectable captions.
-- Add resilient large-file processing, resumable jobs, and provider-specific size-limit guidance.
-- Add export presets for web publication and common media platforms.
+- Add additional publication presets and optional server-side MP4/HLS export adapters.
+- Add automated playback inspection and caption synchronization diagnostics.
+
+### Phase 23 - Accessible Video Rendering and Publication Export - Completed
+
+Phase 23 adds a production Render Accessible Video workflow for local video sources. The workflow validates that reviewed WebVTT captions and a described-audio WAV are available in the current browser session, combines the original picture with the approved described soundtrack, and records a new WebM locally. It then creates a publication ZIP containing the rendered video, selectable WebVTT captions, an accessible native HTML video player, a machine-readable publication manifest, and a readable final validation checklist.
+
+The workflow reports real-time progress, supports cancellation, registers outputs through the Output Manager, records completion in Shared Knowledge and project history, and keeps all rendering local to the browser.
+
+New files and subsystems:
+
+- `js/publication-renderer.js` performs synchronized local picture and described-audio rendering and builds the publication package.
+- `workflows/render-accessible-video.json` defines the production workflow contract.
+- `docs/Phase 23 Accessible Video Rendering and Publication Export.md` documents behavior, accessibility, browser requirements, and limitations.
+- `js/media-inspector.js`, `js/workflow-registry.js`, `js/intent-engine.js`, `js/browser-provider.js`, `js/workflow-runner.js`, and `js/app.js` expose, validate, execute, and track the new goal.
+
+See `docs/Phase 23 Accessible Video Rendering and Publication Export.md`.
 
 ## Next Development Phase
 
-Phase 23 - Accessible Video Rendering and Publication Export. Render the original picture with the approved described-audio mix and selectable captions, then provide publication-ready export controls and validation.
+Phase 24 - Resilient Processing and Narration Refinement. Add large-file guidance, resumable rendering checkpoints, narration preview, per-cue regeneration, pronunciation overrides, and cue-specific gain controls.

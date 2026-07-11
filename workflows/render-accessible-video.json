@@ -1,0 +1,20 @@
+{
+  "id": "render-accessible-video",
+  "name": "Render accessible video",
+  "supportedMedia": ["video"],
+  "goal": "Create a publication-ready video using the original picture, approved described audio, and selectable captions.",
+  "steps": [
+    "Validate reviewed captions and described audio",
+    "Render the original picture with the described soundtrack",
+    "Add selectable WebVTT captions to the publication player",
+    "Create the publication manifest and validation checklist",
+    "Build the publication-ready ZIP package",
+    "Register the rendered video and package"
+  ],
+  "outputs": [
+    { "type": "Accessible video", "formats": ["WebM"] },
+    { "type": "Publication package", "formats": ["ZIP"] },
+    { "type": "Validation checklist", "formats": ["Plain text"] }
+  ],
+  "status": "production"
+}

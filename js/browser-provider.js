@@ -3,7 +3,7 @@
     constructor() {
       this.id = 'browser';
       this.name = 'Browser Provider';
-      this.supportedWorkflows = ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description', 'generate-alt-text'];
+      this.supportedWorkflows = ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description', 'render-accessible-video', 'generate-alt-text'];
     }
 
     initialize() {
@@ -47,6 +47,10 @@
 
       if (job.workflow.id === 'audio-description') {
         return this.createDescriptionWorkspace(job, onProgress);
+      }
+
+      if (job.workflow.id === 'render-accessible-video') {
+        return this.createPublicationExport(job, onProgress);
       }
 
       if (job.workflow.id === 'generate-alt-text') {
@@ -216,6 +220,25 @@
         });
       }
       return artifacts;
+    }
+
+    async createPublicationExport(job, onProgress) {
+      const artifacts = window.OutputManager.listForSource(job.knowledgeModel.source);
+      const options = job.publicationOptions || {
+        preset: 'web-standard',
+        language: 'en',
+        captionLabel: 'English',
+        title: `Accessible video: ${job.sourceFileName}`,
+        videoBitrate: 4000000,
+        audioBitrate: 128000
+      };
+      return window.PublicationRenderer.render(
+        job.sourceFile,
+        artifacts,
+        options,
+        job.abortController && job.abortController.signal,
+        onProgress
+      );
     }
 
     async createAccessibilityPackage(job, onProgress) {

@@ -22,6 +22,13 @@
       actionLabel: 'Create audio description'
     },
     {
+      id: 'render-accessible-video',
+      workflowId: 'render-accessible-video',
+      title: 'Render accessible video',
+      description: 'Create a publication-ready video with described audio and selectable captions.',
+      actionLabel: 'Render accessible video'
+    },
+    {
       id: 'compress-video',
       workflowId: 'compress-video',
       title: 'Make the video smaller',
@@ -119,6 +126,7 @@
     'create-captions': ['Listen to the speech', 'Create timed text', 'Prepare the caption file'],
     'create-transcript': ['Listen to the speech', 'Turn the speech into text', 'Prepare the transcript'],
     'audio-description': ['Review the video and existing audio', 'Write timed description cues', 'Validate narration placement', 'Export the reviewed script'],
+    'render-accessible-video': ['Check reviewed captions and described audio', 'Render the accessible video', 'Create the publication package'],
     'compress-video': ['Check the video', 'Reduce the file size', 'Prepare the smaller copy'],
     'compress-audio': ['Check the audio', 'Reduce the file size', 'Prepare the smaller copy'],
     'normalize-audio': ['Check the volume', 'Even out the sound', 'Prepare the improved copy'],

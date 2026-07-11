@@ -34,6 +34,17 @@
       steps: ['Review video and existing audio', 'Edit timed description cues', 'Validate narration placement', 'Export reviewed audio description script']
     },
     {
+      id: 'render-accessible-video',
+      name: 'Render accessible video',
+      category: 'Accessibility',
+      priority: 7,
+      description: 'Create a publication-ready video with the original picture, approved described audio, and selectable captions.',
+      mediaTypes: ['video'],
+      requirements: ['hasVideo'],
+      outputs: ['accessible WebM video', 'publication-ready ZIP package', 'validation checklist'],
+      steps: ['Validate reviewed accessibility assets', 'Render accessible video', 'Add selectable captions', 'Build publication package', 'Register outputs']
+    },
+    {
       id: 'compress-video',
       name: 'Compress video',
       category: 'Sharing',
