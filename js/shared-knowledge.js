@@ -140,6 +140,10 @@
     if (workflowId === 'prepare-for-ai') {
       model.analysis.fileInformation = { status: 'complete', artifacts };
     }
+
+    if (workflowId === 'accessibility-package') {
+      model.analysis.accessibilityPackage = { status: 'complete', artifacts, createdAt: new Date().toISOString() };
+    }
   }
 
   function refreshAnalysisLists(model) {
@@ -151,6 +155,7 @@
     if (model.accessibility.audioDescription.present) completed.add('audio-description-workspace');
     if (model.audio.extractedCopy && model.audio.extractedCopy.status === 'complete') completed.add('extracted-audio');
     if (model.source.smallerCopy && model.source.smallerCopy.status === 'complete') completed.add('smaller-video-copy');
+    if (model.analysis.accessibilityPackage && model.analysis.accessibilityPackage.status === 'complete') completed.add('accessibility-package');
 
     model.analysis.completed = Array.from(completed);
     model.analysis.pending = Array.from(pending);

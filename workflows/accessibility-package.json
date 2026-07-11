@@ -1,0 +1,36 @@
+{
+  "id": "accessibility-package",
+  "name": "Create accessibility package",
+  "supportedMedia": [
+    "video",
+    "audio",
+    "image",
+    "document",
+    "archive",
+    "unknown"
+  ],
+  "goal": "Bundle Shared Knowledge, generated outputs, completed work, remaining gaps, workflow history, and follow-up actions into one portable package.",
+  "steps": [
+    "Collect Shared Knowledge and workflow history",
+    "Collect available generated files",
+    "Create readable and machine-readable manifests",
+    "Build the accessibility package ZIP",
+    "Register the package and update Shared Knowledge"
+  ],
+  "outputs": [
+    {
+      "type": "Accessibility package",
+      "formats": [
+        "ZIP"
+      ]
+    },
+    {
+      "type": "Readable manifest",
+      "formats": [
+        "Markdown",
+        "JSON"
+      ]
+    }
+  ],
+  "status": "production"
+}

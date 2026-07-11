@@ -23,8 +23,10 @@
         }
 
         const outputs = await window.ProviderManager.execute(job, (providerProgress) => {
-          job.progress = Math.min(99, Math.max(job.progress, 85 + Math.round(providerProgress * 0.14)));
-          this.onUpdate(job, { message: 'Creating the output file.', stepIndex: Math.max(0, steps.length - 1) });
+          const value = typeof providerProgress === 'number' ? providerProgress : Number(providerProgress && providerProgress.progress);
+          const message = providerProgress && providerProgress.message ? providerProgress.message : 'Creating the output file.';
+          if (Number.isFinite(value)) job.progress = Math.min(99, Math.max(job.progress, 85 + Math.round(value * 0.14)));
+          this.onUpdate(job, { message, stepIndex: Math.max(0, steps.length - 1) });
         });
         throwIfCancelled(job);
         if (!outputs || !outputs.length) throw new Error('The requested result could not be created.');

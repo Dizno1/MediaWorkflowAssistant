@@ -155,6 +155,17 @@
       steps: ['Read archive metadata', 'List file types', 'Recommend next actions']
     },
     {
+      id: 'accessibility-package',
+      name: 'Create accessibility package',
+      category: 'Accessibility',
+      priority: 5,
+      description: 'Bundle completed outputs, project knowledge, remaining gaps, workflow history, and follow-up actions into one portable ZIP file.',
+      mediaTypes: ['video', 'audio', 'image', 'document', 'archive', 'unknown'],
+      requirements: [],
+      outputs: ['accessibility package ZIP', 'readable manifest'],
+      steps: ['Collect Shared Knowledge', 'Collect available outputs', 'Write the package manifest', 'Create the ZIP package', 'Register the package']
+    },
+    {
       id: 'prepare-for-ai',
       name: 'Prepare for AI',
       category: 'AI preparation',

@@ -99,6 +99,13 @@
       actionLabel: 'Show what is inside'
     },
     {
+      id: 'accessibility-package',
+      workflowId: 'accessibility-package',
+      title: 'Create an accessibility package',
+      description: 'Bundle the available results, completed work, remaining gaps, history, and next actions into one ZIP file.',
+      actionLabel: 'Create an accessibility package'
+    },
+    {
       id: 'save-file-information',
       workflowId: 'prepare-for-ai',
       title: 'Save information about this file',
@@ -123,7 +130,8 @@
     'ocr-document': ['Check the document', 'Find the text', 'Prepare a readable copy'],
     'extract-document-text': ['Read the document', 'Collect the text', 'Prepare the text file'],
     'inspect-archive': ['Open the archive', 'List its contents', 'Prepare the file list'],
-    'prepare-for-ai': ['Read the file details', 'Collect the useful information', 'Create the information file']
+    'prepare-for-ai': ['Read the file details', 'Collect the useful information', 'Create the information file'],
+    'accessibility-package': ['Collect project knowledge', 'Collect available files', 'Create the manifest', 'Build the package']
   };
 
   function getIntents(inspection) {

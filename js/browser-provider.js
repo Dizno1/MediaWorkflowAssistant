@@ -3,7 +3,7 @@
     constructor() {
       this.id = 'browser';
       this.name = 'Browser Provider';
-      this.supportedWorkflows = ['prepare-for-ai', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description'];
+      this.supportedWorkflows = ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description'];
     }
 
     initialize() {
@@ -15,13 +15,18 @@
         job &&
         job.workflow &&
         this.supportedWorkflows.includes(job.workflow.id) &&
-        (job.workflow.id === 'prepare-for-ai' || isLocalFile(job.sourceFile))
+        (['prepare-for-ai', 'accessibility-package'].includes(job.workflow.id) || isLocalFile(job.sourceFile))
       );
     }
 
     async execute(job, onProgress) {
       if (!this.canRun(job)) {
         throw new Error('This action needs a file from your device. Web addresses cannot be processed yet.');
+      }
+
+
+      if (job.workflow.id === 'accessibility-package') {
+        return this.createAccessibilityPackage(job, onProgress);
       }
 
       if (job.workflow.id === 'compress-video') {
@@ -180,6 +185,104 @@
       return [createTextArtifact(`${baseName}-audio-description-workspace.md`, 'Audio description worksheet', 'A timestamped worksheet for planning and reviewing audio description.', worksheet, 'text/markdown')];
     }
 
+    async createAccessibilityPackage(job, onProgress) {
+      const model = job.knowledgeModel || {};
+      const source = model.source || {};
+      const sourceName = job.sourceFileName || source.name || 'media-source';
+      const baseName = stripExtension(sourceName).replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'media-source';
+      const runtimeArtifacts = window.OutputManager
+        .listForSource(source)
+        .filter((artifact) => artifact.workflowId !== 'accessibility-package');
+      const persistentArtifacts = Array.isArray(model.results)
+        ? model.results.filter((artifact) => artifact.workflowId !== 'accessibility-package')
+        : [];
+      const history = Array.isArray(model.history) ? model.history : [];
+      const completedHistory = history.filter((entry) => entry.status === 'completed' && entry.workflowId !== 'accessibility-package');
+      const planSteps = job.accessibilityPlan && Array.isArray(job.accessibilityPlan.steps) ? job.accessibilityPlan.steps : [];
+      const remainingGaps = planSteps.filter((step) => step.status !== 'complete').map((step) => ({
+        title: step.title,
+        purpose: step.purpose,
+        status: step.status,
+        availability: step.availability
+      }));
+      const followUpActions = remainingGaps.map((gap) => `${gap.title}: ${gap.availability}`);
+      const availableNames = new Set(runtimeArtifacts.map((artifact) => artifact.name));
+      const unavailableArtifacts = persistentArtifacts.filter((artifact) => !availableNames.has(artifact.name));
+      const generatedAt = new Date().toISOString();
+
+      if (onProgress) onProgress({ progress: 15, message: 'Collected Shared Knowledge and workflow history.' });
+
+      const manifest = {
+        packageVersion: 1,
+        generatedAt,
+        source: {
+          name: sourceName,
+          type: source.type || source.sourceType || 'file',
+          mediaType: source.mediaType || job.inspection.mediaType || 'unknown',
+          mimeType: source.mimeType || job.inspection.mimeType || '',
+          size: Number.isFinite(source.size) ? source.size : null,
+          durationSeconds: Number.isFinite(source.durationSeconds) ? source.durationSeconds : null
+        },
+        completedAccessibilityWork: completedHistory.map((entry) => ({
+          workflowId: entry.workflowId,
+          title: entry.title,
+          completedAt: entry.completedAt,
+          artifactNames: entry.artifactNames || []
+        })),
+        includedFiles: runtimeArtifacts.map((artifact) => ({
+          name: artifact.name,
+          type: artifact.type,
+          mimeType: artifact.mimeType,
+          workflowId: artifact.workflowId,
+          createdAt: artifact.createdAt
+        })),
+        recordedButUnavailableFiles: unavailableArtifacts.map((artifact) => ({
+          name: artifact.name,
+          type: artifact.type,
+          workflowId: artifact.workflowId,
+          createdAt: artifact.createdAt,
+          reason: 'The browser remembers this output, but its temporary file data is no longer available in this session.'
+        })),
+        remainingGaps,
+        workflowHistory: history,
+        recommendedFollowUpActions: followUpActions
+      };
+
+      const markdown = buildAccessibilityManifest(manifest);
+      const entries = [
+        { name: 'manifest.md', data: new TextEncoder().encode(markdown) },
+        { name: 'manifest.json', data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) }
+      ];
+
+      if (onProgress) onProgress({ progress: 35, message: 'Created the readable package manifest.' });
+
+      for (let index = 0; index < runtimeArtifacts.length; index += 1) {
+        if (job.abortController && job.abortController.signal.aborted) throw new DOMException('The workflow was cancelled.', 'AbortError');
+        const artifact = runtimeArtifacts[index];
+        const data = await artifactBytes(artifact);
+        if (data) entries.push({ name: `files/${safePackageName(artifact.name)}`, data });
+        if (onProgress) {
+          const progress = 40 + Math.round(((index + 1) / Math.max(runtimeArtifacts.length, 1)) * 35);
+          onProgress({ progress, message: `Collected ${index + 1} of ${runtimeArtifacts.length} available file${runtimeArtifacts.length === 1 ? '' : 's'}.` });
+        }
+      }
+
+      const zipBytes = window.ZipBuilder.create(entries);
+      const blob = new Blob([zipBytes], { type: 'application/zip' });
+      if (onProgress) onProgress({ progress: 90, message: 'Built the accessibility package ZIP.' });
+
+      return [{
+        name: `${baseName}-accessibility-package.zip`,
+        type: 'Accessibility package',
+        description: `A portable ZIP containing a readable manifest, project history, remaining gaps, follow-up actions, and ${runtimeArtifacts.length} available output file${runtimeArtifacts.length === 1 ? '' : 's'}.`,
+        provider: this.name,
+        status: 'Created',
+        url: URL.createObjectURL(blob),
+        mimeType: 'application/zip',
+        size: blob.size
+      }];
+    }
+
     downloadArtifact(artifact) {
       if (!artifact || !artifact.url) {
         throw new Error('This file is not available for download.');
@@ -254,6 +357,87 @@
     }
   }
 
+
+  async function artifactBytes(artifact) {
+    if (artifact.content) return new TextEncoder().encode(artifact.content);
+    if (!artifact.url) return null;
+    try {
+      const response = await fetch(artifact.url);
+      if (!response.ok) return null;
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function safePackageName(name) {
+    return String(name || 'output-file').replace(/[\\/:*?"<>|]+/g, '-');
+  }
+
+  function buildAccessibilityManifest(manifest) {
+    const lines = [
+      '# Accessibility Package Manifest',
+      '',
+      `Generated: ${manifest.generatedAt}`,
+      '',
+      '## Source',
+      '',
+      `- Name: ${manifest.source.name}`,
+      `- Media type: ${manifest.source.mediaType}`,
+      `- MIME type: ${manifest.source.mimeType || 'Unknown'}`,
+      `- Size: ${manifest.source.size === null ? 'Unknown' : formatBytes(manifest.source.size)}`,
+      `- Duration: ${manifest.source.durationSeconds === null ? 'Unknown' : formatTimestamp(manifest.source.durationSeconds)}`,
+      '',
+      '## Completed Accessibility Work',
+      ''
+    ];
+
+    if (manifest.completedAccessibilityWork.length) {
+      manifest.completedAccessibilityWork.forEach((item) => {
+        lines.push(`- ${item.title} (${item.workflowId}), completed ${item.completedAt || 'date unknown'}`);
+      });
+    } else {
+      lines.push('- No completed accessibility workflows are recorded yet.');
+    }
+
+    lines.push('', '## Included Files', '');
+    if (manifest.includedFiles.length) {
+      manifest.includedFiles.forEach((item) => lines.push(`- files/${item.name}: ${item.type}`));
+    } else {
+      lines.push('- No generated output files were available in this browser session.');
+    }
+
+    lines.push('', '## Recorded Files Not Available in This Session', '');
+    if (manifest.recordedButUnavailableFiles.length) {
+      manifest.recordedButUnavailableFiles.forEach((item) => lines.push(`- ${item.name}: ${item.reason}`));
+    } else {
+      lines.push('- None.');
+    }
+
+    lines.push('', '## Remaining Gaps', '');
+    if (manifest.remainingGaps.length) {
+      manifest.remainingGaps.forEach((gap) => lines.push(`- ${gap.title}: ${gap.purpose} Status: ${gap.availability}`));
+    } else {
+      lines.push('- No remaining gaps are identified by the current accessibility plan.');
+    }
+
+    lines.push('', '## Workflow History', '');
+    if (manifest.workflowHistory.length) {
+      manifest.workflowHistory.forEach((entry) => lines.push(`- ${entry.title || entry.workflowId}: ${entry.status}, ${entry.completedAt || entry.createdAt || 'date unknown'}`));
+    } else {
+      lines.push('- No workflow history is recorded.');
+    }
+
+    lines.push('', '## Recommended Follow-up Actions', '');
+    if (manifest.recommendedFollowUpActions.length) {
+      manifest.recommendedFollowUpActions.forEach((action) => lines.push(`- ${action}`));
+    } else {
+      lines.push('- No follow-up actions are currently recommended.');
+    }
+
+    lines.push('', '## Package Notes', '', 'The original source file is not included automatically. Generated files are included only when their browser-session data is still available. The JSON manifest contains the same package record in a machine-readable format.', '');
+    return lines.join('\n');
+  }
 
   function createTextArtifact(name, type, description, content, mimeType) {
     const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });

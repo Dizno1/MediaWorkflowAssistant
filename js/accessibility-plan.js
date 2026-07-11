@@ -123,7 +123,8 @@
     return ({
       'create-transcript': 'create-transcript',
       'create-captions': 'create-captions',
-      'create-audio-description': 'audio-description'
+      'create-audio-description': 'audio-description',
+      'accessibility-package': 'accessibility-package'
     })[id] || null;
   }
 
@@ -143,6 +144,7 @@
     if (id === 'create-transcript') return model.accessibility.transcript.present;
     if (id === 'create-captions') return model.accessibility.captions.present;
     if (id === 'create-audio-description') return model.accessibility.audioDescription.present;
+    if (id === 'accessibility-package') return Boolean(model.analysis.accessibilityPackage && model.analysis.accessibilityPackage.status === 'complete');
     return false;
   }
 

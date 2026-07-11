@@ -14,6 +14,7 @@
     'compress-image': 30,
     'resize-image': 25,
     'inspect-archive': 25,
+    'accessibility-package': 40,
     'save-file-information': 15
   };
 
@@ -38,7 +39,7 @@
     const recommendations = (intents || []).map((intent) => {
       const assessmentItem = assessmentByIntent.get(intent.id);
       const planStep = planByIntent.get(intent.id);
-      const completed = completedWorkflows.has(intent.workflowId) || isPresent(model, intent.workflowId);
+      const completed = workflowIsComplete(model, intent.workflowId, completedWorkflows);
       const inProgress = activeJobs.some((entry) => entry.workflowId === intent.workflowId && ['queued', 'running'].includes(entry.status));
       const available = Boolean(intent.capability && intent.capability.canRun);
       const dependencyState = dependencyStatus(planStep, plan);
@@ -79,6 +80,21 @@
       summary: buildSummary(recommendations.length, ready.length, completed),
       createdAt: new Date().toISOString()
     };
+  }
+
+  function workflowIsComplete(model, workflowId, completedWorkflows) {
+    if (workflowId !== 'accessibility-package') {
+      return completedWorkflows.has(workflowId) || isPresent(model, workflowId);
+    }
+
+    const packageRecord = model.analysis && model.analysis.accessibilityPackage;
+    if (!packageRecord || packageRecord.status !== 'complete' || !packageRecord.createdAt) return false;
+    const packageTime = Date.parse(packageRecord.createdAt) || 0;
+    const laterWork = (model.history || []).some((entry) => {
+      if (entry.workflowId === 'accessibility-package' || entry.status !== 'completed') return false;
+      return (Date.parse(entry.completedAt || entry.createdAt) || 0) > packageTime;
+    });
+    return !laterWork;
   }
 
   function calculateScore(intent, assessmentItem, planStep, completed, available, dependencyState) {

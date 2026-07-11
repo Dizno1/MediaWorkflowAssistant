@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 6 of the Accessibility Intelligence roadmap is complete.
+Phase 7 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -17,6 +17,7 @@ The application now includes:
 - A Workflow Execution Engine with a queue, step execution, progress, errors, cancellation, and completion notifications.
 - An Output Manager that registers generated artifacts, associates them with their source and workflow, and exposes runtime outputs to later workflows.
 - The first complete production workflow: Extract Audio.
+- A production Accessibility Package workflow that creates a portable ZIP from Shared Knowledge, workflow history, and available outputs.
 
 ## Design Principle
 
@@ -88,6 +89,20 @@ The production Extract Audio workflow:
 8. Records workflow history and output metadata in Shared Knowledge.
 9. Updates recommendations so Extract Audio becomes Completed.
 
+### Accessibility Package pipeline
+
+The production Accessibility Package workflow:
+
+1. Collects Shared Knowledge and workflow history for the current source.
+2. Identifies completed accessibility work, remaining gaps, and recommended follow-up actions.
+3. Collects generated files whose runtime data is still available in the browser session.
+4. Creates a readable `manifest.md` and machine-readable `manifest.json`.
+5. Builds a portable ZIP locally without a network request or third-party dependency.
+6. Registers the ZIP with the Output Manager and records completion in Shared Knowledge.
+7. Becomes available again automatically when later workflow work makes the existing package stale.
+
+The original source is not included automatically. Persisted output records whose temporary browser file data is unavailable are listed clearly in the manifest.
+
 ## Accessibility
 
 New execution controls use native buttons, labeled status messages, a programmatic progress bar, keyboard-operable cancellation, focus management, and polite live-region announcements. Existing screen-reader and keyboard behavior is preserved.
@@ -118,14 +133,18 @@ Recommendations use Shared Knowledge, dependencies, completed work, and provider
 
 The execution queue, cancellation, progress pipeline, Output Manager, automatic knowledge updates, state-aware recommendations, and production Extract Audio workflow are implemented.
 
-### Phase 7 - Accessibility Package - Planned
+### Phase 7 - Accessibility Package - Completed
 
-Create an Accessibility Package from Shared Knowledge and completed outputs. The package should include a readable manifest, created files, completed accessibility work, remaining gaps, workflow history, and recommended follow-up actions.
+The application creates a portable ZIP containing readable and machine-readable manifests, available generated files, completed accessibility work, remaining gaps, workflow history, and recommended follow-up actions.
 
 ## Development Progress Rule
 
 Every development cycle must begin by reading this README and the full repository. Update this README before returning the project ZIP so it records the completion state and identifies the next phase.
 
+### Phase 8 - Package Review and Export Controls - Planned
+
+Add a pre-export review that lets users inspect package contents, choose which available artifacts to include, rename the package, and confirm privacy-sensitive inclusions before creation.
+
 ## Next Development Step
 
-Phase 7 will implement the Accessibility Package workflow and package manifest using artifacts already registered by the Output Manager and knowledge already stored in Shared Knowledge.
+Phase 8 will add accessible package review and export controls while preserving the Phase 7 package builder and Output Manager pipeline.
