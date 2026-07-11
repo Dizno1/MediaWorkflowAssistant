@@ -82,6 +82,18 @@
   const cancelWorkflowChainButton = document.getElementById('cancel-workflow-chain');
   const resultsSection = document.getElementById('results-section');
   const resultsOutput = document.getElementById('results-output');
+  const projectWorkspaceSummary = document.getElementById('project-workspace-summary');
+  const projectSelect = document.getElementById('project-select');
+  const createProjectForm = document.getElementById('create-project-form');
+  const newProjectName = document.getElementById('new-project-name');
+  const projectWorkspaceStatus = document.getElementById('project-workspace-status');
+  const projectDashboard = document.getElementById('project-dashboard');
+  const projectFacts = document.getElementById('project-facts');
+  const projectSources = document.getElementById('project-sources');
+  const projectHistory = document.getElementById('project-history');
+  const renameProjectButton = document.getElementById('rename-project');
+  const archiveProjectButton = document.getElementById('archive-project');
+  const deleteProjectButton = document.getElementById('delete-project');
 
   let currentFile = null;
   let currentSource = null;
@@ -109,6 +121,66 @@
 
   function setStatus(message) {
     statusRegion.textContent = message;
+  }
+
+
+  function activeProject() {
+    return window.ProjectWorkspace.getActive();
+  }
+
+  function syncCurrentSourceToProject() {
+    const project = activeProject();
+    if (!project || !currentSource || !currentKnowledgeModel) return;
+    window.ProjectWorkspace.addOrUpdateSource(project.id, currentSource, currentKnowledgeModel);
+    renderProjectWorkspace();
+  }
+
+  function renderProjectWorkspace(message) {
+    const projects = window.ProjectWorkspace.list();
+    const active = activeProject();
+    projectSelect.innerHTML = '<option value="">No active project</option>' + projects.map((project) =>
+      `<option value="${escapeHtml(project.id)}" ${active && active.id === project.id ? 'selected' : ''}>${escapeHtml(project.name)}${project.archived ? ' (Archived)' : ''}</option>`
+    ).join('');
+
+    if (message) projectWorkspaceStatus.textContent = message;
+    if (!active) {
+      projectDashboard.hidden = true;
+      projectWorkspaceSummary.textContent = 'Create or select a project to organize related sources, workflow history, and generated artifacts.';
+      return;
+    }
+
+    const summary = window.ProjectWorkspace.summary(active);
+    projectDashboard.hidden = false;
+    projectWorkspaceSummary.textContent = `${active.name} is ${summary.status.toLowerCase()}. It contains ${summary.sourceCount} source${summary.sourceCount === 1 ? '' : 's'} and ${summary.artifactCount} recorded artifact${summary.artifactCount === 1 ? '' : 's'}.`;
+    projectFacts.innerHTML = [
+      ['Project status', summary.status],
+      ['Sources', String(summary.sourceCount)],
+      ['Recorded artifacts', String(summary.artifactCount)],
+      ['Completed workflows', String(summary.workflowCount)],
+      ['Last updated', formatWorkspaceDate(active.updatedAt)]
+    ].map(([label, value]) => fact(label, value)).join('');
+
+    const sources = Array.isArray(active.sources) ? active.sources : [];
+    projectSources.innerHTML = sources.length ? `<ul class="workspace-list">${sources.map((source) => {
+      const knowledge = source.knowledge || {};
+      const completed = [
+        knowledge.transcriptComplete ? 'Transcript' : '',
+        knowledge.captionsComplete ? 'Captions' : '',
+        knowledge.audioDescriptionComplete ? 'Audio description' : '',
+        knowledge.packageComplete ? 'Accessibility package' : ''
+      ].filter(Boolean);
+      return `<li><h4>${escapeHtml(source.name)}</h4><p><strong>${escapeHtml(titleCase(source.mediaType || source.type || 'source'))}</strong></p><p>${completed.length ? `Completed: ${escapeHtml(completed.join(', '))}.` : 'No completed accessibility workflows recorded yet.'}</p><p class="muted">${Number(knowledge.resultCount || 0)} artifact${Number(knowledge.resultCount || 0) === 1 ? '' : 's'} recorded. Updated ${escapeHtml(formatWorkspaceDate(source.updatedAt))}.</p></li>`;
+    }).join('')}</ul>` : '<p class="muted">No sources have been added. The next source you open will be added automatically.</p>';
+
+    const history = Array.isArray(active.history) ? active.history.slice().reverse() : [];
+    projectHistory.innerHTML = history.length ? `<ol class="workspace-list">${history.map((entry) => `<li><h4>${escapeHtml(entry.title)}</h4><p>${escapeHtml(entry.sourceName || 'Source')} - ${escapeHtml(entry.status || 'completed')}</p><p class="muted">${escapeHtml(formatWorkspaceDate(entry.completedAt))}${entry.artifactNames && entry.artifactNames.length ? `. Created ${escapeHtml(entry.artifactNames.join(', '))}.` : ''}</p></li>`).join('')}</ol>` : '<p class="muted">No completed workflows are recorded for this project yet.</p>';
+    archiveProjectButton.textContent = active.archived ? 'Restore project' : 'Archive project';
+  }
+
+  function formatWorkspaceDate(value) {
+    if (!value) return 'Unknown';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString();
   }
 
   function renderAIProviders() {
@@ -223,6 +295,7 @@
       renderPlan(currentInspection);
       renderRecommendations(currentInspection);
       renderKnowledge();
+      syncCurrentSourceToProject();
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -281,6 +354,7 @@
       renderPlan(currentInspection);
       renderRecommendations(currentInspection);
       renderKnowledge();
+      syncCurrentSourceToProject();
       await renderViewer(currentSource, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -854,6 +928,7 @@
     window.SharedKnowledge.save(currentKnowledgeModel);
     renderProgress(activeJob);
     refreshAfterJobStateChange();
+    syncCurrentSourceToProject();
     progressSection.hidden = false;
     progressSection.focus();
     executionEngine.enqueue(activeJob);
@@ -1234,6 +1309,9 @@
     removeActiveJob(job.id);
     currentKnowledgeModel = window.SharedKnowledge.recordJob(currentKnowledgeModel, job);
     job.knowledgeModel = currentKnowledgeModel;
+    const project = activeProject();
+    if (project) window.ProjectWorkspace.recordWorkflow(project.id, currentSource, job, currentKnowledgeModel);
+    renderProjectWorkspace();
     currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
     currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, window.IntentEngine.getIntents(currentInspection));
     renderAssessment(currentInspection);
@@ -1285,6 +1363,7 @@
     const entry = (currentKnowledgeModel.activeJobs || []).find((item) => item.jobId === job.id);
     if (entry) entry.status = status;
     window.SharedKnowledge.save(currentKnowledgeModel);
+    syncCurrentSourceToProject();
     renderRecommendations(currentInspection);
     renderGoals(currentInspection);
   }
@@ -1292,6 +1371,7 @@
   function removeActiveJob(jobId) {
     currentKnowledgeModel.activeJobs = (currentKnowledgeModel.activeJobs || []).filter((item) => item.jobId !== jobId);
     window.SharedKnowledge.save(currentKnowledgeModel);
+    syncCurrentSourceToProject();
   }
 
   function refreshAfterJobStateChange() {
@@ -1494,6 +1574,57 @@
   cancelJobButton.addEventListener('click', () => {
     if (activeJob) executionEngine.cancel(activeJob.id);
   });
+
+  createProjectForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    try {
+      const project = window.ProjectWorkspace.create(newProjectName.value);
+      newProjectName.value = '';
+      if (currentSource && currentKnowledgeModel) window.ProjectWorkspace.addOrUpdateSource(project.id, currentSource, currentKnowledgeModel);
+      renderProjectWorkspace(`${project.name} created and selected.`);
+      projectSelect.focus();
+    } catch (error) {
+      projectWorkspaceStatus.textContent = error.message;
+      newProjectName.focus();
+    }
+  });
+
+  projectSelect.addEventListener('change', () => {
+    window.ProjectWorkspace.select(projectSelect.value);
+    syncCurrentSourceToProject();
+    renderProjectWorkspace(projectSelect.value ? 'Active project changed.' : 'No project is active.');
+  });
+
+  renameProjectButton.addEventListener('click', () => {
+    const project = activeProject();
+    if (!project) return;
+    const name = window.prompt('Enter a new project name.', project.name);
+    if (name === null) return;
+    try {
+      const updated = window.ProjectWorkspace.rename(project.id, name);
+      renderProjectWorkspace(`${updated.name} renamed.`);
+    } catch (error) {
+      projectWorkspaceStatus.textContent = error.message;
+    }
+  });
+
+  archiveProjectButton.addEventListener('click', () => {
+    const project = activeProject();
+    if (!project) return;
+    const updated = window.ProjectWorkspace.setArchived(project.id, !project.archived);
+    renderProjectWorkspace(updated.archived ? `${updated.name} archived.` : `${updated.name} restored.`);
+  });
+
+  deleteProjectButton.addEventListener('click', () => {
+    const project = activeProject();
+    if (!project) return;
+    if (!window.confirm(`Delete ${project.name} from this browser? Source files and generated downloads are not deleted.`)) return;
+    window.ProjectWorkspace.remove(project.id);
+    renderProjectWorkspace(`${project.name} deleted from the workspace.`);
+    projectSelect.focus();
+  });
+
+  renderProjectWorkspace();
 
   urlForm.addEventListener('submit', (event) => {
     event.preventDefault();

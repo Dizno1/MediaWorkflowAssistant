@@ -736,3 +736,69 @@ button:disabled:hover {
 #transcript-review-status,
 #caption-review-status,
 #audio-description-review-status { min-height: 1.5rem; margin-block: 0.75rem; }
+
+/* Phase 14 project workspace */
+.workspace-controls {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.workspace-create-form {
+  border-left: 1px solid var(--border);
+  padding-left: 1rem;
+}
+
+.form-field select,
+.form-field input[type="url"],
+.form-field input[type="password"],
+.form-field input[type="text"] {
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: 0.55rem;
+  color: var(--text);
+  display: block;
+  font: inherit;
+  margin-top: 0.4rem;
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+  width: min(100%, 38rem);
+}
+
+#project-workspace-status:not(:empty) {
+  border-left: 0.35rem solid currentColor;
+  font-weight: 700;
+  margin: 1rem 0;
+  padding: 0.75rem;
+}
+
+.workspace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.workspace-list li {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  margin: 0.75rem 0;
+  padding: 1rem;
+}
+
+.workspace-list h4 {
+  font-size: 1.1rem;
+  margin: 0 0 0.35rem;
+}
+
+.workspace-list p {
+  margin: 0.3rem 0;
+}
+
+@media (max-width: 42rem) {
+  .workspace-create-form {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 1rem;
+  }
+}

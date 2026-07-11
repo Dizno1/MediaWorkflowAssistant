@@ -18,6 +18,40 @@
   </header>
 
   <main id="main" class="wrap" tabindex="-1">
+
+    <section id="project-workspace-section" class="panel" aria-labelledby="project-workspace-heading">
+      <h2 id="project-workspace-heading">Project workspace</h2>
+      <p id="project-workspace-summary">Create or select a project to organize related sources, workflow history, and generated artifacts.</p>
+      <div class="workspace-controls">
+        <div class="form-field">
+          <label for="project-select">Active project</label>
+          <select id="project-select" aria-describedby="project-workspace-status">
+            <option value="">No active project</option>
+          </select>
+        </div>
+        <form id="create-project-form" class="workspace-create-form">
+          <div class="form-field">
+            <label for="new-project-name">New project name</label>
+            <input id="new-project-name" type="text" maxlength="100" required>
+          </div>
+          <button type="submit">Create project</button>
+        </form>
+      </div>
+      <div id="project-workspace-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="project-dashboard" hidden>
+        <div id="project-facts" class="inspection-grid" aria-label="Project summary"></div>
+        <div class="next-actions">
+          <button type="button" id="rename-project">Rename project</button>
+          <button type="button" id="archive-project">Archive project</button>
+          <button type="button" id="delete-project">Delete project</button>
+        </div>
+        <h3>Sources in this project</h3>
+        <div id="project-sources"></div>
+        <h3>Project workflow history</h3>
+        <div id="project-history"></div>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="start-heading">
       <h2 id="start-heading">Start with a file</h2>
       <p>Add an audio, video, image, document, or archive file.</p>
@@ -265,6 +299,7 @@
   <script src="js/workflow-registry.js"></script>
   <script src="js/media-inspector.js"></script>
   <script src="js/shared-knowledge.js"></script>
+  <script src="js/project-workspace.js"></script>
   <script src="js/accessibility-intelligence.js"></script>
   <script src="js/accessibility-assessment.js"></script>
   <script src="js/accessibility-plan.js"></script>

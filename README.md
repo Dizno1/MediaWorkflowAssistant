@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 13 of the Accessibility Intelligence roadmap is complete.
+Phase 14 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -24,6 +24,7 @@ The application now includes:
 - A complete Audio Description workflow with an accessible timed narration editor, placement and timing validation, reviewed script and review-record exports, Output Manager registration, Shared Knowledge updates, and recommendation completion tracking.
 - An outcome-based Workflow Chain coordinator that orders dependent accessibility work, skips completed actions, preserves human review checkpoints, continues automatically after successful steps, and pauses safely on failure or cancellation.
 - An AI Provider Layer with capability discovery, preferred-provider selection, a private on-device assistance provider, and an optional connected JSON provider for transcription, caption, visual-analysis, and audio-description drafting.
+- An accessible Project Workspace that organizes multiple related sources, source-level Shared Knowledge summaries, generated artifact counts, workflow history, and project readiness status under one persistent project.
 
 ## Design Principle
 
@@ -80,6 +81,20 @@ Completed workflows are removed from unfinished recommendations automatically.
 - Runtime URL or readable content.
 
 Persistent output metadata and workflow history are stored in Shared Knowledge. Runtime file URLs remain available during the current browser session.
+
+
+### Project Workspace
+
+`project-workspace.js` provides a persistent project layer above individual source records. It:
+
+- Creates, selects, renames, archives, restores, and deletes projects stored in the browser.
+- Adds the current source to the active project automatically after inspection.
+- Keeps separate Shared Knowledge for each source while exposing project-level summaries.
+- Records completed workflows and their artifact names in project history.
+- Reports project state as Incomplete, In Progress, Review Required, Ready to Publish, or Archived.
+- Preserves project membership and history across browser visits without storing the original media file.
+
+The workspace uses native form controls, headings, lists, status regions, and keyboard-operable actions. Selecting a project never changes or deletes the source currently open in the application.
 
 ### Extract Audio pipeline
 
@@ -171,6 +186,11 @@ Users can now choose the complete "Prepare media for accessibility" outcome inst
 
 Interchangeable assistance providers now register standard capabilities without changing workflow definitions. Users can choose a preferred provider, review privacy information, configure an optional HTTPS JSON endpoint, and request editable transcript, caption, visual-analysis, or audio-description drafts. A local on-device provider creates caption drafts and audio-description review checkpoints from existing Shared Knowledge. Connected credentials remain in session storage only. All generated material remains a draft and must pass the existing accessible human-review controls before the Workflow Execution Engine records completion.
 
+
+### Phase 14 - Intelligent Project Workspace - Completed
+
+The application now supports persistent projects containing multiple related media sources. Users can create and select projects, rename or archive them, and review project-level source counts, recorded artifact counts, completed workflow counts, and readiness status. Every inspected source is added automatically to the active project, while its detailed Shared Knowledge remains source-specific. Completed jobs are recorded in project workflow history with their source and created artifact names. The workspace recognizes Incomplete, In Progress, Review Required, Ready to Publish, and Archived states and restores the active project on later visits.
+
 ## Next Development Step
 
-Phase 14 will add a Project Workspace for organizing multiple related media sources, their Shared Knowledge, generated artifacts, workflow history, and accessibility packages under one accessible project.
+Phase 15 will add project-aware Accessibility Intelligence. It will evaluate every source in the active workspace, identify missing or stale deliverables, prioritize the best next actions across the project, and explain when an accessibility package must be regenerated after upstream work changes.
