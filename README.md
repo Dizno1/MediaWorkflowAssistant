@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 28 of the executable accessibility workflow roadmap is complete.
+Phase 29 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -44,6 +44,7 @@ The application now includes:
 - A complete Publication Pipeline with selectable export profiles, project-wide readiness validation, delivery targets, accessible blocking reports, portable ZIP packaging, source and workflow inventories, review records, deployment instructions, available runtime artifacts, and SHA-256 checksums.
 - Persistent resumable jobs with centralized state transitions, checkpoints, recoverable errors, retry limits, startup crash recovery, accessible resume controls, batch records and controls, chronological project event history, and duplicate-worker protection for browser-background execution.
 - A project-level Accessibility Advisor that reviews completed work like an accessibility consultant, identifies critical, major, and minor risks, recommends improvements, scores six readiness categories, assigns an overall accessibility-readiness score, detects stale reviews, records final reviewer acceptance, and blocks publication until the current review is accepted.
+- A secure Provider Manager with copy-and-paste configuration for OpenAI, Azure OpenAI, and Google Gemini; encrypted browser-profile storage; connection testing; clear controls; automatic capability-based selection; and no credential storage in repositories or project exports.
 
 
 ## Design Principle
@@ -59,7 +60,7 @@ Implementation details such as media tracks, codecs, containers, browser recordi
 3. Start a simple local web server from the project folder. Python users can run `python -m http.server 8000`. Node users can run `npx serve .`. A local server is recommended because browser security restrictions can block media, module, and file features when `index.html` is opened directly.
 4. Open the address reported by the server, commonly `http://localhost:8000`.
 5. Choose a local media file. The original file remains on the device unless a connected assistance feature is explicitly confirmed.
-6. To use transcription, automatic caption drafting, image description, audio-description drafting, or synthesized narration, open Advanced assistance settings and add an OpenAI API key. The key is stored only in browser session storage and is removed when the browser session ends or when the configuration is cleared.
+6. To use connected AI assistance, open Advanced assistance settings and paste an OpenAI, Azure OpenAI, or Google Gemini credential. Credentials are encrypted in this browser profile on this computer and are never written into project source or exported packages. Use each provider's Test connection button before starting paid work.
 7. Leave provider selection on Automatic, recommended. The application chooses the available provider and displays privacy and possible-cost confirmation before external processing.
 8. Enter a plain-language goal such as `Make this video accessible`, then review each required human checkpoint.
 9. Keep the browser tab open while long media jobs run. Generated runtime files remain available only for the current browser session, so download important outputs before closing the tab.
@@ -379,12 +380,30 @@ New and modified files:
 
 See `docs/Phase 28 Accessibility Advisor.md`.
 
+## Phase 29 - Secure Provider Manager - Completed
+
+Phase 29 adds an accessible Advanced assistance settings interface for copying and pasting OpenAI, Azure OpenAI, and Google Gemini credentials. Provider settings are encrypted with a non-exportable AES-GCM key and saved in IndexedDB for the current browser profile. Password fields clear after saving, existing credentials are preserved when non-secret settings change, and each provider includes Save, Test connection, and Clear controls.
+
+Provider selection remains automatic during normal workflows. The AI Provider Layer can use configured capabilities while preserving the existing privacy and possible-cost confirmation. Credentials never enter project files, Shared Knowledge, workflow history, publication packages, or returned ZIP archives.
+
+New and modified files:
+
+- `js/secure-credential-store.js` provides encrypted IndexedDB credential storage using the Web Crypto API.
+- `js/azure-openai-provider.js` adds a built-in Azure OpenAI adapter and connection test.
+- `js/gemini-provider.js` adds a built-in Gemini adapter and connection test.
+- `js/openai-provider.js` now persists its credential through the secure store and includes connection testing.
+- `index.html` adds labeled OpenAI, Azure OpenAI, and Gemini provider controls.
+- `js/app.js` coordinates save, test, clear, status announcements, and restored provider availability.
+- `docs/Phase 29 Secure Provider Manager.md` documents security, behavior, accessibility, testing, and limitations.
+
+See `docs/Phase 29 Secure Provider Manager.md`.
+
 ## Remaining Roadmap
 
-### Phase 29 - Automated Playback Quality Assurance
+### Phase 30 - Automated Playback Quality Assurance
 
 Inspect completed media playback, caption timing, track availability, audio-description placement, packaging integrity, and delivery behavior with repeatable diagnostics before release.
 
 ## Next Development Phase
 
-Phase 29 - Automated Playback Quality Assurance.
+Phase 30 - Automated Playback Quality Assurance.

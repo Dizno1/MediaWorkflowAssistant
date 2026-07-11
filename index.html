@@ -154,17 +154,40 @@
           </fieldset>
           <fieldset>
             <legend>Built-in OpenAI service</legend>
-            <p class="help-text">Optional. The key is kept only in this browser tab. OpenAI usage may incur charges. The application asks for confirmation before sending a source.</p>
+            <p class="help-text">Optional. The key is encrypted and stored only in this browser profile on this computer. OpenAI usage may incur charges. The application asks for confirmation before sending a source.</p>
             <div class="form-field"><label for="openai-api-key">OpenAI API key</label><input id="openai-api-key" type="password" autocomplete="off" aria-describedby="openai-key-help"></div>
             <p id="openai-key-help" class="help-text">The key is never written into project files. Leave this field blank after saving unless you are replacing the key.</p>
             <div class="form-field"><label for="openai-transcription-model">Transcription model</label><input id="openai-transcription-model" type="text" value="gpt-4o-mini-transcribe"></div>
             <div class="form-field"><label for="openai-vision-model">Image description model</label><input id="openai-vision-model" type="text" value="gpt-4.1-mini"></div>
             <button type="button" id="save-openai-provider">Save OpenAI service</button>
+            <button type="button" id="test-openai-provider">Test OpenAI connection</button>
             <button type="button" id="clear-openai-provider">Clear OpenAI service</button>
+          </fieldset>
+
+          <fieldset>
+            <legend>Azure OpenAI service</legend>
+            <p class="help-text">Paste the Azure resource endpoint, deployment name, and key. The key is encrypted and stored only in this browser profile on this computer.</p>
+            <div class="form-field"><label for="azure-openai-endpoint">Azure resource endpoint</label><input id="azure-openai-endpoint" type="url" placeholder="https://your-resource.openai.azure.com"></div>
+            <div class="form-field"><label for="azure-openai-deployment">Deployment name</label><input id="azure-openai-deployment" type="text" autocomplete="off"></div>
+            <div class="form-field"><label for="azure-openai-key">Azure API key</label><input id="azure-openai-key" type="password" autocomplete="off" aria-describedby="azure-key-help"></div>
+            <p id="azure-key-help" class="help-text">Leave the key field blank after saving unless you are replacing it.</p>
+            <button type="button" id="save-azure-provider">Save Azure OpenAI service</button>
+            <button type="button" id="test-azure-provider">Test Azure connection</button>
+            <button type="button" id="clear-azure-provider">Clear Azure OpenAI service</button>
+          </fieldset>
+          <fieldset>
+            <legend>Google Gemini service</legend>
+            <p class="help-text">Paste a Gemini API key. The key is encrypted and stored only in this browser profile on this computer.</p>
+            <div class="form-field"><label for="gemini-api-key">Gemini API key</label><input id="gemini-api-key" type="password" autocomplete="off" aria-describedby="gemini-key-help"></div>
+            <p id="gemini-key-help" class="help-text">Leave the key field blank after saving unless you are replacing it.</p>
+            <div class="form-field"><label for="gemini-model">Gemini model</label><input id="gemini-model" type="text" value="gemini-2.5-flash"></div>
+            <button type="button" id="save-gemini-provider">Save Gemini service</button>
+            <button type="button" id="test-gemini-provider">Test Gemini connection</button>
+            <button type="button" id="clear-gemini-provider">Clear Gemini service</button>
           </fieldset>
           <fieldset>
             <legend>Custom connected service</legend>
-            <p class="help-text">A connected service may receive source-derived text and metadata. The API key is kept only in this browser tab and is never written into the project files.</p>
+            <p class="help-text">A connected service may receive source-derived text and metadata. The API key is encrypted and stored only in this browser profile on this computer. It is never written into project files.</p>
             <div class="form-field"><label for="connected-provider-name">Service name</label><input id="connected-provider-name" type="text" placeholder="Connected service"></div>
             <div class="form-field"><label for="connected-provider-endpoint">HTTPS endpoint</label><input id="connected-provider-endpoint" type="url" placeholder="https://example.com/accessibility-assist"></div>
             <div class="form-field"><label for="connected-provider-model">Model name, optional</label><input id="connected-provider-model" type="text"></div>
@@ -480,6 +503,7 @@
   <script src="js/recommendation-engine.js"></script>
   <script src="js/zip-builder.js"></script>
   <script src="js/ai-provider-layer.js"></script>
+  <script src="js/secure-credential-store.js"></script>
   <script src="js/caption-drafting.js"></script>
   <script src="js/ad-drafting.js"></script>
   <script src="js/local-assist-provider.js"></script>
@@ -487,6 +511,8 @@
   <script src="js/accessibility-advisor.js"></script>
   <script src="js/connected-ai-provider.js"></script>
   <script src="js/openai-provider.js"></script>
+  <script src="js/azure-openai-provider.js"></script>
+  <script src="js/gemini-provider.js"></script>
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
   <script src="js/intent-engine.js"></script>

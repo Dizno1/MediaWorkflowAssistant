@@ -79,6 +79,11 @@
   const openaiApiKey = document.getElementById('openai-api-key');
   const openaiTranscriptionModel = document.getElementById('openai-transcription-model');
   const openaiVisionModel = document.getElementById('openai-vision-model');
+  const azureOpenAIEndpoint = document.getElementById('azure-openai-endpoint');
+  const azureOpenAIDeployment = document.getElementById('azure-openai-deployment');
+  const azureOpenAIKey = document.getElementById('azure-openai-key');
+  const geminiApiKey = document.getElementById('gemini-api-key');
+  const geminiModel = document.getElementById('gemini-model');
   const connectedProviderName = document.getElementById('connected-provider-name');
   const connectedProviderEndpoint = document.getElementById('connected-provider-endpoint');
   const connectedProviderModel = document.getElementById('connected-provider-model');
@@ -310,6 +315,11 @@
     const openaiConfig = window.OpenAIProvider.getConfiguration();
     openaiTranscriptionModel.value = openaiConfig.transcriptionModel;
     openaiVisionModel.value = openaiConfig.visionModel;
+    const azureConfig = window.AzureOpenAIProvider.getConfiguration();
+    azureOpenAIEndpoint.value = azureConfig.endpoint;
+    azureOpenAIDeployment.value = azureConfig.deployment;
+    const geminiConfig = window.GeminiProvider.getConfiguration();
+    geminiModel.value = geminiConfig.model;
     const config = window.ConnectedAIProvider.getConfiguration();
     connectedProviderName.value = config.serviceName;
     connectedProviderEndpoint.value = config.endpoint;
@@ -1853,21 +1863,63 @@
   workflowChainForm.addEventListener('submit', submitWorkflowChain);
   cancelWorkflowChainButton.addEventListener('click', () => cancelWorkflowChain());
   directGoalForm.addEventListener('submit', submitDirectGoal);
-  document.getElementById('save-openai-provider').addEventListener('click', () => {
+  document.getElementById('save-openai-provider').addEventListener('click', async () => {
     try {
-      window.OpenAIProvider.configure({ apiKey: openaiApiKey.value, transcriptionModel: openaiTranscriptionModel.value, visionModel: openaiVisionModel.value });
+      await window.OpenAIProvider.configure({ apiKey: openaiApiKey.value, transcriptionModel: openaiTranscriptionModel.value, visionModel: openaiVisionModel.value });
       openaiApiKey.value = '';
-      aiProviderStatus.textContent = 'OpenAI service saved for this browser tab. Automatic selection can now use it for transcription and image description.';
+      aiProviderStatus.textContent = 'OpenAI service saved securely in this browser profile. Automatic selection can now use it for transcription and image description.';
       renderAIProviders();
       if (currentInspection) renderGoals(currentInspection);
     } catch (error) { aiProviderStatus.textContent = error.message; }
   });
-  document.getElementById('clear-openai-provider').addEventListener('click', () => {
-    window.OpenAIProvider.clear(); openaiApiKey.value = '';
+  document.getElementById('clear-openai-provider').addEventListener('click', async () => {
+    await window.OpenAIProvider.clear(); openaiApiKey.value = '';
     if (window.AIProviderLayer.getSelectionMode() === 'openai-direct') window.AIProviderLayer.select('automatic');
     aiProviderStatus.textContent = 'OpenAI service configuration cleared.'; renderAIProviders();
     if (currentInspection) renderGoals(currentInspection);
   });
+  document.getElementById('test-openai-provider').addEventListener('click', async () => {
+    aiProviderStatus.textContent = 'Testing OpenAI connection.';
+    try { const result = await window.OpenAIProvider.testConnection(); aiProviderStatus.textContent = `${result.message} No workflow was started.`; }
+    catch (error) { aiProviderStatus.textContent = error.message; }
+  });
+  document.getElementById('save-azure-provider').addEventListener('click', async () => {
+    try {
+      await window.AzureOpenAIProvider.configure({ endpoint: azureOpenAIEndpoint.value, deployment: azureOpenAIDeployment.value, apiKey: azureOpenAIKey.value });
+      azureOpenAIKey.value = '';
+      aiProviderStatus.textContent = 'Azure OpenAI settings saved securely in this browser profile.';
+      renderAIProviders();
+    } catch (error) { aiProviderStatus.textContent = error.message; azureOpenAIEndpoint.focus(); }
+  });
+  document.getElementById('test-azure-provider').addEventListener('click', async () => {
+    aiProviderStatus.textContent = 'Testing Azure OpenAI connection.';
+    try { const result = await window.AzureOpenAIProvider.testConnection(); aiProviderStatus.textContent = `${result.message} No workflow was started.`; }
+    catch (error) { aiProviderStatus.textContent = error.message; }
+  });
+  document.getElementById('clear-azure-provider').addEventListener('click', async () => {
+    await window.AzureOpenAIProvider.clear(); azureOpenAIEndpoint.value = ''; azureOpenAIDeployment.value = ''; azureOpenAIKey.value = '';
+    if (window.AIProviderLayer.getSelectionMode() === 'azure-openai-direct') window.AIProviderLayer.select('automatic');
+    aiProviderStatus.textContent = 'Azure OpenAI configuration cleared.'; renderAIProviders();
+  });
+  document.getElementById('save-gemini-provider').addEventListener('click', async () => {
+    try {
+      await window.GeminiProvider.configure({ apiKey: geminiApiKey.value, model: geminiModel.value });
+      geminiApiKey.value = '';
+      aiProviderStatus.textContent = 'Gemini settings saved securely in this browser profile.';
+      renderAIProviders();
+    } catch (error) { aiProviderStatus.textContent = error.message; }
+  });
+  document.getElementById('test-gemini-provider').addEventListener('click', async () => {
+    aiProviderStatus.textContent = 'Testing Gemini connection.';
+    try { const result = await window.GeminiProvider.testConnection(); aiProviderStatus.textContent = `${result.message} No workflow was started.`; }
+    catch (error) { aiProviderStatus.textContent = error.message; }
+  });
+  document.getElementById('clear-gemini-provider').addEventListener('click', async () => {
+    await window.GeminiProvider.clear(); geminiApiKey.value = ''; geminiModel.value = 'gemini-2.5-flash';
+    if (window.AIProviderLayer.getSelectionMode() === 'gemini-direct') window.AIProviderLayer.select('automatic');
+    aiProviderStatus.textContent = 'Gemini configuration cleared.'; renderAIProviders();
+  });
+  document.addEventListener('provider-credentials-ready', () => { renderAIProviders(); if (currentInspection) renderGoals(currentInspection); });
   document.getElementById('save-connected-provider').addEventListener('click', () => {
     try {
       window.ConnectedAIProvider.configure({ serviceName: connectedProviderName.value, endpoint: connectedProviderEndpoint.value, model: connectedProviderModel.value, apiKey: connectedProviderKey.value, costCategory: connectedProviderCost.value });

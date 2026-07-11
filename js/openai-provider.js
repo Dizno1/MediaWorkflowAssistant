@@ -1,6 +1,7 @@
 (function () {
-  const STORAGE_KEY = 'media-workflow-assistant-openai-provider';
-  let configuration = load();
+  const STORE_ID = 'openai-provider';
+  let configuration = {};
+  let ready = false;
 
   const provider = {
     id: 'openai-direct',
@@ -14,7 +15,7 @@
     requiresConfirmation: true,
     quality: { 'transcription-draft': 96, 'caption-draft': 98, 'visual-analysis': 96, 'audio-description-draft': 94, 'narration-audio': 96, 'advanced-accessibility-analysis': 95 },
     preferredCapabilities: ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio', 'advanced-accessibility-analysis'],
-    isAvailable: () => Boolean(configuration.apiKey),
+    isAvailable: () => ready && Boolean(configuration.apiKey),
     getCapabilities: () => ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio', 'advanced-accessibility-analysis'],
     async run(capability, context, options) {
       if (!configuration.apiKey) throw new Error('Add an OpenAI API key in Advanced assistance settings first.');
@@ -212,19 +213,31 @@
     return new Blob([bytes], { type: mimeType });
   }
 
-  function configure(next) {
+  async function configure(next) {
     configuration = {
       apiKey: String(next.apiKey || '').trim() || configuration.apiKey || '',
       transcriptionModel: String(next.transcriptionModel || '').trim() || 'gpt-4o-mini-transcribe',
       visionModel: String(next.visionModel || '').trim() || 'gpt-4.1-mini'
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(configuration));
+    await window.SecureCredentialStore.save(STORE_ID, configuration);
+    ready = true;
     return getConfiguration();
   }
-  function getConfiguration() { return { hasApiKey: Boolean(configuration.apiKey), transcriptionModel: configuration.transcriptionModel || 'gpt-4o-mini-transcribe', visionModel: configuration.visionModel || 'gpt-4.1-mini' }; }
-  function clear() { configuration = {}; sessionStorage.removeItem(STORAGE_KEY); }
-  function load() { try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (error) { return {}; } }
+  function getConfiguration() { return { hasApiKey: Boolean(configuration.apiKey), transcriptionModel: configuration.transcriptionModel || 'gpt-4o-mini-transcribe', visionModel: configuration.visionModel || 'gpt-4.1-mini', ready }; }
+  async function clear() { configuration = {}; ready = true; await window.SecureCredentialStore.remove(STORE_ID); }
+  async function testConnection(signal) {
+    if (!configuration.apiKey) throw new Error('Save an OpenAI API key before testing.');
+    const response = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${configuration.apiKey}` }, signal });
+    if (!response.ok) throw new Error(`OpenAI connection test returned HTTP ${response.status}.`);
+    return { message: 'OpenAI responded successfully.' };
+  }
+  async function initialize() {
+    configuration = await window.SecureCredentialStore.load(STORE_ID) || {};
+    ready = true;
+    document.dispatchEvent(new CustomEvent('provider-credentials-ready'));
+  }
 
-  window.OpenAIProvider = { configure, getConfiguration, clear };
+  window.OpenAIProvider = { configure, getConfiguration, clear, testConnection, initialize };
   window.AIProviderLayer.register(provider);
+  initialize();
 })();
