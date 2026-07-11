@@ -151,6 +151,27 @@
     onCancel: cancelProgress
   });
 
+
+  window.ProductionFeatures.init({
+    engine: executionEngine,
+    announce: setStatus,
+    contextProvider: (snapshot) => {
+      if (!currentInspection || !currentSource) return null;
+      const sourceName = currentFile ? currentFile.name : (currentSource.name || currentInspection.name || '');
+      const expectedName = snapshot.inputReferences && snapshot.inputReferences[0] ? snapshot.inputReferences[0].name : '';
+      if (expectedName && sourceName !== expectedName) return null;
+      const intent = window.IntentEngine.getIntents(currentInspection).find((item) => item.workflowId === snapshot.workflowId);
+      if (!intent) return null;
+      const job = window.createJob(intent, currentFile || currentSource, currentInspection);
+      job.id = snapshot.id;
+      job.projectId = snapshot.projectId || (activeProject() ? activeProject().id : '');
+      job.knowledgeModel = currentKnowledgeModel;
+      job.assessment = currentAssessment;
+      job.accessibilityPlan = currentPlan;
+      return job;
+    }
+  });
+
   function setStatus(message) {
     statusRegion.textContent = message;
   }
@@ -1555,6 +1576,7 @@
   }
 
   function queuedProgress(job, position) {
+    if (window.ProductionFeatures) window.ProductionFeatures.saveJob(job);
     jobStatus.textContent = position > 1 ? `${job.intent.title} is queued at position ${position}.` : `${job.intent.title} is queued and ready to start.`;
   }
 
@@ -1572,6 +1594,7 @@
   }
 
   function updateProgress(job, detail) {
+    if (window.ProductionFeatures) window.ProductionFeatures.saveJob(job);
     jobStatus.textContent = detail.message;
     updateActiveJobStatus(job, job.status);
     progressBar.style.width = `${job.progress}%`;
@@ -1596,6 +1619,7 @@
   }
 
   function completeProgress(job) {
+    if (window.ProductionFeatures) { window.ProductionFeatures.saveJob(job); window.ProductionFeatures.recordHistory(job, 'Job completed'); }
     removeActiveJob(job.id);
     currentKnowledgeModel = window.SharedKnowledge.recordJob(currentKnowledgeModel, job);
     job.knowledgeModel = currentKnowledgeModel;
@@ -1635,6 +1659,7 @@
   }
 
   function failProgress(job, error) {
+    if (window.ProductionFeatures) { window.ProductionFeatures.saveJob(job); window.ProductionFeatures.recordHistory(job, job.status === 'paused' ? 'Job paused' : 'Error encountered', error.message); }
     removeActiveJob(job.id);
     refreshAfterJobStateChange();
     cancelJobButton.disabled = true;
@@ -1646,6 +1671,7 @@
   }
 
   function cancelProgress(job) {
+    if (window.ProductionFeatures) { window.ProductionFeatures.saveJob(job); window.ProductionFeatures.recordHistory(job, 'Job cancelled'); }
     removeActiveJob(job.id);
     refreshAfterJobStateChange();
     cancelJobButton.disabled = true;

@@ -419,6 +419,15 @@
       </form>
     </section>
 
+
+    <section id="production-features-section" class="panel" aria-labelledby="production-features-heading">
+      <h2 id="production-features-heading">Jobs, batches, and project history</h2>
+      <p>Long-running work is checkpointed in this browser. Keep this browser open while processing. After an interruption, incomplete jobs are paused and offered for recovery. Paid, destructive, and publication actions are never restarted automatically.</p>
+      <section aria-labelledby="saved-jobs-heading"><h3 id="saved-jobs-heading">Saved jobs</h3><div id="production-jobs"></div></section>
+      <section aria-labelledby="batches-heading"><h3 id="batches-heading">Batches</h3><div id="production-batches"></div></section>
+      <section aria-labelledby="project-history-heading"><h3 id="project-history-heading">Project history</h3><div id="project-history-list"></div></section>
+    </section>
+
     <section id="progress-section" class="panel" aria-labelledby="progress-heading" tabindex="-1" hidden>
       <h2 id="progress-heading">Working</h2>
       <div id="job-status" role="status" aria-live="polite" aria-atomic="true">Nothing is running.</div>
@@ -465,6 +474,7 @@
   <script src="js/browser-provider.js"></script>
   <script src="js/provider-manager.js"></script>
   <script src="js/intent-engine.js"></script>
+  <script src="js/production-features.js"></script>
   <script src="js/job.js"></script>
   <script src="js/output-manager.js"></script>
   <script src="js/transcript-review.js"></script>

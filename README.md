@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 26 of the executable accessibility workflow roadmap is complete.
+Phase 27 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -42,6 +42,7 @@ The application now includes:
 - A complete Make This Accessible orchestrator that builds a media-specific plan, skips completed work, runs automatic steps, pauses only for required human review, resumes after approval, refreshes dependencies after every result, renders the accessible video when possible, and creates the final accessibility package.
 - Advanced accessibility analysis that scores scene understanding, speaker recognition, caption quality, audio-description quality, visual accessibility, and narration optimization; reports measurable reading-speed and cue-density indicators; refreshes after completed work; and optionally performs deeper provider analysis after privacy and cost confirmation.
 - A complete Publication Pipeline with selectable export profiles, project-wide readiness validation, delivery targets, accessible blocking reports, portable ZIP packaging, source and workflow inventories, review records, deployment instructions, available runtime artifacts, and SHA-256 checksums.
+- Persistent resumable jobs with centralized state transitions, checkpoints, recoverable errors, retry limits, startup crash recovery, accessible resume controls, batch records and controls, chronological project event history, and duplicate-worker protection for browser-background execution.
 
 
 ## Design Principle
@@ -342,16 +343,25 @@ New files and subsystems:
 
 See `docs/Phase 26 Publication Pipeline.md`.
 
+## Phase 27 - Production Features - Completed
+
+Phase 27 extends the existing execution engine and Project Workspace with durable browser-based production state. Jobs now use a centralized state model, persistent checkpoints, completed and pending step tracking, recoverable errors, retry limits, resume controls, startup interruption detection, batch records, aggregate progress, accessible batch actions, and chronological project event history. Duplicate execution is prevented by the existing single queue plus job-ID checks. Processing may continue while users navigate elsewhere in the open application, but the browser must remain open. Paid, destructive, and publication operations never restart silently.
+
+Storage changes are additive and versioned. Existing Phase 26 projects and settings remain intact. Because browsers cannot safely persist local `File` objects, a fully restarted browser may require the original source to be chosen again before resume.
+
+New and modified files:
+
+- `js/production-features.js` adds job persistence, state transitions, checkpoints, recovery, batches, history, retries, and accessible rendering.
+- `js/job.js` creates production-ready job records and initial checkpoints.
+- `js/execution-engine.js` adds duplicate protection, pause, resume-safe queue behavior, and batch updates.
+- `js/workflow-runner.js` skips completed steps and writes execution-boundary checkpoints.
+- `js/project-workspace.js` adds persistent project event history.
+- `index.html`, `css/styles.css`, and `js/app.js` integrate accessible controls, announcements, resume context, and lifecycle persistence.
+- `docs/Phase 27 Production Features.md` documents architecture, migration, testing, accessibility, and limitations.
+
+See `docs/Phase 27 Production Features.md`.
+
 ## Remaining Roadmap
-
-### Phase 27 - Production Features
-
-- Resumable jobs
-- Batch processing
-- Crash recovery
-- Checkpointing
-- Project history
-- Background processing
 
 ### Phase 28 - Accessibility Advisor
 
@@ -359,4 +369,4 @@ Review completed work like an experienced accessibility consultant, identify iss
 
 ## Next Development Phase
 
-Phase 27 - Production Features.
+Phase 28 - Accessibility Advisor.

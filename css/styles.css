@@ -893,3 +893,9 @@ button:disabled:hover {
   font-weight: 700;
 }
 .button-link:focus { outline: 3px solid currentColor; outline-offset: 3px; }
+
+/* Phase 27 production jobs, batches, and history */
+.job-card { border: 1px solid currentColor; border-radius: .5rem; padding: 1rem; margin-block: .75rem; }
+.job-card h3 { margin-top: 0; }
+#project-history-list ol { padding-inline-start: 1.5rem; }
+#project-history-list li { margin-block: .5rem; }

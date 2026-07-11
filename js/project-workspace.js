@@ -58,6 +58,7 @@
       updatedAt: createdAt,
       sources: [],
       history: [],
+      eventHistory: [{ id: `event-${Date.now()}`, event: 'Project created', detail: '', timestamp: createdAt }],
       reviews: []
     };
     projects.push(project);
@@ -156,6 +157,23 @@
     });
   }
 
+
+  function recordEvent(projectId, event) {
+    if (!projectId || !event) return null;
+    return update(projectId, (project) => {
+      project.eventHistory = Array.isArray(project.eventHistory) ? project.eventHistory : [];
+      project.eventHistory.push({
+        id: event.id || `event-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        jobId: event.jobId || '',
+        sourceName: event.sourceName || '',
+        workflowId: event.workflowId || '',
+        event: event.event || 'Project updated',
+        detail: event.detail || '',
+        timestamp: event.timestamp || new Date().toISOString()
+      });
+    });
+  }
+
   function calculateStatus(project) {
     const sources = Array.isArray(project.sources) ? project.sources : [];
     if (!sources.length) return 'Incomplete';
@@ -190,6 +208,6 @@
 
   window.ProjectWorkspace = {
     list, get, getActive, select, create, rename, setArchived, remove,
-    addOrUpdateSource, recordWorkflow, summary, update
+    addOrUpdateSource, recordWorkflow, recordEvent, summary, update
   };
 })();

@@ -11,15 +11,26 @@
       job.abortController = new AbortController();
       try {
         validateJob(job);
-        job.status = 'running';
+        job.startedAt = job.startedAt || new Date();
+        if (window.ProductionFeatures) {
+          if (job.status === 'queued') window.ProductionFeatures.transition(job, 'preparing');
+          window.ProductionFeatures.checkpoint(job, 'before-workflow-start');
+          window.ProductionFeatures.transition(job, 'running');
+        } else job.status = 'running';
         this.onUpdate(job, { message: `${job.intent.title} started.`, stepIndex: -1 });
 
+        const resumeIndex = Math.max(0, Number(job.currentStepIndex || -1));
         for (let index = 0; index < steps.length; index += 1) {
+          if ((job.completedSteps || []).includes(steps[index]) || index < resumeIndex) continue;
           throwIfCancelled(job);
           job.currentStepIndex = index;
           job.progress = Math.max(job.progress, Math.round((index / Math.max(steps.length, 1)) * 85));
+          if (window.ProductionFeatures) window.ProductionFeatures.checkpoint(job, 'before-step', { step: steps[index], stepIndex: index });
           this.onUpdate(job, { message: `${steps[index]} started.`, stepIndex: index });
           await this.executeStep(job, index);
+          job.completedSteps = Array.isArray(job.completedSteps) ? job.completedSteps : [];
+          if (!job.completedSteps.includes(steps[index])) job.completedSteps.push(steps[index]);
+          if (window.ProductionFeatures) window.ProductionFeatures.checkpoint(job, 'after-step', { step: steps[index], stepIndex: index });
         }
 
         const outputs = await window.ProviderManager.execute(job, (providerProgress) => {
@@ -33,19 +44,29 @@
 
         job.outputs = window.OutputManager.register(job, normalizeOutputs(outputs, job));
         job.progress = 100;
-        job.status = 'completed';
+        if (window.ProductionFeatures) window.ProductionFeatures.transition(job, 'completed'); else job.status = 'completed';
         window.finishJob(job);
+        if (window.ProductionFeatures) window.ProductionFeatures.checkpoint(job, 'job-completed');
         this.onComplete(job);
         return job;
       } catch (error) {
-        if (job.cancelRequested || error.name === 'AbortError') {
-          job.status = 'cancelled';
-          error = new Error('The workflow was cancelled. No output was saved.');
+        if (job.pauseRequested && error.name === 'AbortError') {
+          if (window.ProductionFeatures) window.ProductionFeatures.transition(job, 'paused'); else job.status = 'paused';
+          error = new Error('The workflow was paused. Completed steps were preserved.');
+          if (window.ProductionFeatures) window.ProductionFeatures.checkpoint(job, 'job-paused');
+        } else if (job.cancelRequested || error.name === 'AbortError') {
+          if (window.ProductionFeatures) window.ProductionFeatures.transition(job, 'cancelled'); else job.status = 'cancelled';
+          error = new Error('The workflow was cancelled. No new output was saved.');
         } else {
-          job.status = 'failed';
+          if (window.ProductionFeatures) window.ProductionFeatures.transition(job, 'failed', { error, recoverable: true }); else job.status = 'failed';
+          job.failedSteps = Array.isArray(job.failedSteps) ? job.failedSteps : [];
+          const step = steps[job.currentStepIndex]; if (step && !job.failedSteps.includes(step)) job.failedSteps.push(step);
+          job.errorDetails = { message: error.message, at: new Date().toISOString(), recoverable: true };
+          if (window.ProductionFeatures) window.ProductionFeatures.checkpoint(job, 'recoverable-error', { message: error.message });
         }
         window.finishJob(job);
         job.messages.push(error.message);
+        if (window.ProductionFeatures) window.ProductionFeatures.saveJob(job);
         this.onError(job, error);
         return job;
       }
