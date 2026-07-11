@@ -4,7 +4,7 @@ An accessibility-first media workflow application that automatically analyzes me
 
 ## Current Milestone
 
-This repository now contains the Sprint 2 Media Inspector shell.
+This repository now contains Phase 2 of the Accessibility Intelligence roadmap.
 
 The application can:
 
@@ -17,6 +17,10 @@ The application can:
 - Announce status changes through a polite live region.
 - Recommend possible goal-oriented workflows from registry rules.
 - Preview placeholder workflow steps and expected outputs.
+- Build one shared media knowledge model from the source inspection.
+- Present an initial accessibility assessment with reasons and confidence statements.
+- Distinguish technical inspection from deeper analysis that has not yet been performed.
+- Pass shared knowledge and assessment data into later workflow jobs.
 
 ## Design Principle
 
@@ -99,3 +103,50 @@ Local video files can now be made smaller and their audio can be saved as a sepa
 ## Sprint 5 Part 5
 
 Video choices now include working local workspaces for transcripts, captions, and audio description. The audio-only action is labeled "Extract the audio" to make its purpose clear.
+
+
+## Accessibility Intelligence Engine Roadmap
+
+This README is the governing architecture document for the project. Review it before implementing future changes.
+
+### Vision
+
+Analyze media once. Build a shared knowledge model. Reuse that knowledge for every accessibility task.
+
+### Phase 1 - Accessibility Intelligence Engine - Completed
+
+Create a single media analysis that records:
+- Media summary
+- Speech
+- Speakers
+- Language
+- Music and sound
+- Silence
+- Scene changes
+- On-screen text
+- Existing accessibility features
+- Confidence
+
+All future features should consume this shared model instead of repeating analysis.
+
+### Phase 2 - Accessibility Assessment - Completed
+
+The application now converts the shared knowledge model into plain-language recommendations with reasons and confidence. It clearly identifies where deeper speech or visual analysis is still required.
+
+### Planned Phases
+
+3. Accessibility Plan
+4. Shared Knowledge
+5. Recommendation Engine
+6. Accessibility Package
+
+Future development should extend the shared model rather than create isolated workflows.
+
+
+## Development Progress Rule
+
+Every development cycle must begin by reading this README and must update it before the project ZIP is returned. This file is the governing architecture and progress record for the application.
+
+## Next Development Step
+
+Phase 3 will create an Accessibility Plan that orders the recommended work, explains dependencies, and prepares the future single action to make the media accessible.

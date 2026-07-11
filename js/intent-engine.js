@@ -3,23 +3,23 @@
     {
       id: 'create-captions',
       workflowId: 'create-captions',
-      title: 'Start captions',
+      title: 'Create a caption template',
       description: 'Create a timed caption workspace and a WebVTT file you can edit.',
-      actionLabel: 'Start captions'
+      actionLabel: 'Create a caption template'
     },
     {
       id: 'create-transcript',
       workflowId: 'create-transcript',
-      title: 'Start a transcript',
+      title: 'Create a transcript worksheet',
       description: 'Create an editable worksheet for typing and reviewing the spoken words.',
-      actionLabel: 'Start a transcript'
+      actionLabel: 'Create a transcript worksheet'
     },
     {
       id: 'audio-description',
       workflowId: 'audio-description',
-      title: 'Plan audio description',
+      title: 'Create an audio description worksheet',
       description: 'Create a timestamped workspace for writing important visual details.',
-      actionLabel: 'Plan audio description'
+      actionLabel: 'Create an audio description worksheet'
     },
     {
       id: 'compress-video',

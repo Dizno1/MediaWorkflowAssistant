@@ -7,6 +7,9 @@
   const urlHelp = document.getElementById('url-help');
   const statusRegion = document.getElementById('status-region');
   const inspectionOutput = document.getElementById('inspection-output');
+  const assessmentSection = document.getElementById('assessment-section');
+  const assessmentSummary = document.getElementById('assessment-summary');
+  const assessmentOutput = document.getElementById('assessment-output');
   const viewerSection = document.getElementById('viewer-section');
   const viewerOutput = document.getElementById('viewer-output');
   const goalsSection = document.getElementById('goals-section');
@@ -23,6 +26,8 @@
   let currentSource = null;
   let currentInspection = null;
   let activeJob = null;
+  let currentKnowledgeModel = null;
+  let currentAssessment = null;
 
   function setStatus(message) {
     statusRegion.textContent = message;
@@ -34,10 +39,13 @@
     currentFile = file;
     currentSource = { type: 'file', name: file.name, file };
     currentInspection = null;
+    currentKnowledgeModel = null;
+    currentAssessment = null;
     activeJob = null;
     urlInput.value = '';
     urlHelp.textContent = 'Paste a link to media or a page containing media.';
     resetViewer();
+    resetAssessment();
     resetProgress();
     resetResults();
 
@@ -52,6 +60,7 @@
     try {
       currentInspection = await window.MediaInspector.inspect(file);
       renderInspection(currentInspection);
+      renderAssessment(currentInspection);
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -69,8 +78,11 @@
     currentFile = null;
     currentSource = null;
     currentInspection = null;
+    currentKnowledgeModel = null;
+    currentAssessment = null;
     activeJob = null;
     resetViewer();
+    resetAssessment();
     resetProgress();
     resetResults();
 
@@ -93,6 +105,7 @@
       dropZone.querySelector('span').textContent = 'or press Enter to choose a file';
 
       renderInspection(currentInspection);
+      renderAssessment(currentInspection);
       await renderViewer(currentSource, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -132,6 +145,39 @@
     return `<div class="fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
+
+  function renderAssessment(inspection) {
+    currentKnowledgeModel = window.AccessibilityIntelligence.buildKnowledgeModel(inspection);
+    currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
+    assessmentSection.hidden = false;
+    assessmentSummary.textContent = currentAssessment.summary;
+
+    if (!currentAssessment.items.length) {
+      assessmentOutput.innerHTML = '<p>No assessment items are available for this source yet.</p>';
+      return;
+    }
+
+    assessmentOutput.innerHTML = `
+      <p class="muted">This first assessment uses the source type and technical details already available. Deeper speech and visual analysis will improve future recommendations.</p>
+      <ul class="assessment-list">
+        ${currentAssessment.items.map((entry) => `
+          <li>
+            <h3>${escapeHtml(entry.title)}</h3>
+            <p><strong>${escapeHtml(entry.status)}</strong></p>
+            <p>${escapeHtml(entry.reason)}</p>
+            <p class="muted">${escapeHtml(entry.confidence)}</p>
+          </li>
+        `).join('')}
+      </ul>
+      <p class="analysis-status">Initial analysis completed. ${currentAssessment.pendingAnalysis} deeper analysis area${currentAssessment.pendingAnalysis === 1 ? '' : 's'} remain.</p>
+    `;
+  }
+
+  function resetAssessment() {
+    assessmentSection.hidden = true;
+    assessmentSummary.textContent = 'The assessment will appear after the source is checked.';
+    assessmentOutput.innerHTML = '';
+  }
 
   async function renderViewer(source, inspection) {
     viewerSection.hidden = false;
@@ -341,7 +387,11 @@
   async function runIntent(intent) {
     if (!currentSource || !currentInspection || !intent.capability.canRun) return;
 
+    resetProgress();
+    resetResults();
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
+    activeJob.knowledgeModel = currentKnowledgeModel;
+    activeJob.assessment = currentAssessment;
     renderProgress(activeJob);
 
     const runner = new window.WorkflowRunner({

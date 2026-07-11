@@ -459,3 +459,25 @@ button:disabled:hover {
   border: 1px solid var(--border);
   width: 100%;
 }
+
+.assessment-list {
+  display: grid;
+  gap: 1rem;
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+}
+
+.assessment-list li {
+  border: 1px solid var(--border, #8a8a8a);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.assessment-list h3 {
+  margin-top: 0;
+}
+
+.analysis-status {
+  font-weight: 700;
+}
