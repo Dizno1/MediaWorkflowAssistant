@@ -481,3 +481,21 @@ button:disabled:hover {
 .analysis-status {
   font-weight: 700;
 }
+
+
+.accessibility-plan-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.accessibility-plan-list li {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.accessibility-plan-list h3 {
+  margin-top: 0;
+}

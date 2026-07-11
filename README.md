@@ -4,7 +4,7 @@ An accessibility-first media workflow application that automatically analyzes me
 
 ## Current Milestone
 
-This repository now contains Phase 2 of the Accessibility Intelligence roadmap.
+This repository now contains Phase 3 of the Accessibility Intelligence roadmap.
 
 The application can:
 
@@ -20,7 +20,9 @@ The application can:
 - Build one shared media knowledge model from the source inspection.
 - Present an initial accessibility assessment with reasons and confidence statements.
 - Distinguish technical inspection from deeper analysis that has not yet been performed.
-- Pass shared knowledge and assessment data into later workflow jobs.
+- Pass shared knowledge, assessment data, and the ordered accessibility plan into later workflow jobs.
+- Build a dependency-aware accessibility plan from the assessment.
+- Show which plan steps are complete, available now, preparation-only, or waiting for deeper processing.
 
 ## Design Principle
 
@@ -133,9 +135,12 @@ All future features should consume this shared model instead of repeating analys
 
 The application now converts the shared knowledge model into plain-language recommendations with reasons and confidence. It clearly identifies where deeper speech or visual analysis is still required.
 
+### Phase 3 - Accessibility Plan - Completed
+
+The application now turns the assessment into an ordered, dependency-aware plan. The plan explains what should happen first, what later work reuses, and which steps are currently available or still waiting for deeper processing.
+
 ### Planned Phases
 
-3. Accessibility Plan
 4. Shared Knowledge
 5. Recommendation Engine
 6. Accessibility Package
@@ -149,4 +154,4 @@ Every development cycle must begin by reading this README and must update it bef
 
 ## Next Development Step
 
-Phase 3 will create an Accessibility Plan that orders the recommended work, explains dependencies, and prepares the future single action to make the media accessible.
+Phase 4 will persist completed analysis and created results back into the shared knowledge model so later actions can reuse them without starting over.

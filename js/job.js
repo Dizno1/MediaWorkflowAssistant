@@ -16,7 +16,10 @@
       currentStepIndex: -1,
       progress: 0,
       outputs: [],
-      messages: []
+      messages: [],
+      knowledgeModel: null,
+      assessment: null,
+      accessibilityPlan: null
     };
   }
 

@@ -10,6 +10,9 @@
   const assessmentSection = document.getElementById('assessment-section');
   const assessmentSummary = document.getElementById('assessment-summary');
   const assessmentOutput = document.getElementById('assessment-output');
+  const planSection = document.getElementById('plan-section');
+  const planSummary = document.getElementById('plan-summary');
+  const planOutput = document.getElementById('plan-output');
   const viewerSection = document.getElementById('viewer-section');
   const viewerOutput = document.getElementById('viewer-output');
   const goalsSection = document.getElementById('goals-section');
@@ -28,6 +31,7 @@
   let activeJob = null;
   let currentKnowledgeModel = null;
   let currentAssessment = null;
+  let currentPlan = null;
 
   function setStatus(message) {
     statusRegion.textContent = message;
@@ -41,11 +45,13 @@
     currentInspection = null;
     currentKnowledgeModel = null;
     currentAssessment = null;
+    currentPlan = null;
     activeJob = null;
     urlInput.value = '';
     urlHelp.textContent = 'Paste a link to media or a page containing media.';
     resetViewer();
     resetAssessment();
+    resetPlan();
     resetProgress();
     resetResults();
 
@@ -61,6 +67,7 @@
       currentInspection = await window.MediaInspector.inspect(file);
       renderInspection(currentInspection);
       renderAssessment(currentInspection);
+      renderPlan(currentInspection);
       await renderViewer(file, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -80,9 +87,11 @@
     currentInspection = null;
     currentKnowledgeModel = null;
     currentAssessment = null;
+    currentPlan = null;
     activeJob = null;
     resetViewer();
     resetAssessment();
+    resetPlan();
     resetProgress();
     resetResults();
 
@@ -106,6 +115,7 @@
 
       renderInspection(currentInspection);
       renderAssessment(currentInspection);
+      renderPlan(currentInspection);
       await renderViewer(currentSource, currentInspection);
       renderGoals(currentInspection);
       setStatus(`${currentInspection.recommendedSummary} Choices are available.`);
@@ -178,6 +188,56 @@
     assessmentSummary.textContent = 'The assessment will appear after the source is checked.';
     assessmentOutput.innerHTML = '';
   }
+
+  function renderPlan(inspection) {
+    const intents = window.IntentEngine.getIntents(inspection);
+    currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, intents);
+    planSection.hidden = false;
+    planSummary.textContent = currentPlan.summary;
+
+    if (!currentPlan.steps.length) {
+      planOutput.innerHTML = '<p>No accessibility plan is available for this source yet.</p>';
+      return;
+    }
+
+    planOutput.innerHTML = `
+      <p class="muted">The assistant ordered this work so later steps can reuse earlier analysis instead of starting over.</p>
+      <ol class="accessibility-plan-list">
+        ${currentPlan.steps.map((step) => `
+          <li>
+            <h3>${escapeHtml(step.title)}</h3>
+            <p>${escapeHtml(step.purpose)}</p>
+            <p><strong>Status:</strong> ${escapeHtml(planStatusLabel(step.status))}</p>
+            <p class="muted">${escapeHtml(step.availability)}</p>
+            ${step.dependencies.length ? `<p class="muted"><strong>Uses:</strong> ${escapeHtml(step.dependencies.map((dependency) => planStepTitle(dependency)).join(', '))}</p>` : ''}
+          </li>
+        `).join('')}
+      </ol>
+      <p class="analysis-status">The future single action will be called "${escapeHtml(currentPlan.recommendedAction)}." It will run only the work that is needed and available.</p>
+    `;
+  }
+
+  function resetPlan() {
+    currentPlan = null;
+    planSection.hidden = true;
+    planSummary.textContent = 'The plan will appear after the source is checked.';
+    planOutput.innerHTML = '';
+  }
+
+  function planStatusLabel(status) {
+    return ({
+      complete: 'Complete',
+      ready: 'Available now',
+      'template-only': 'Preparation only',
+      planned: 'Planned'
+    })[status] || 'Planned';
+  }
+
+  function planStepTitle(id) {
+    const definition = window.AccessibilityPlan.taskDefinitions[id];
+    return definition ? definition.title : id;
+  }
+
 
   async function renderViewer(source, inspection) {
     viewerSection.hidden = false;
@@ -392,6 +452,7 @@
     activeJob = window.createJob(intent, currentFile || currentSource, currentInspection);
     activeJob.knowledgeModel = currentKnowledgeModel;
     activeJob.assessment = currentAssessment;
+    activeJob.accessibilityPlan = currentPlan;
     renderProgress(activeJob);
 
     const runner = new window.WorkflowRunner({
