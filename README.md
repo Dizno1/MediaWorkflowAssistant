@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 17 of the Accessibility Intelligence roadmap is complete.
+Phase 18 of the Accessibility Intelligence roadmap is complete.
 
 The application now includes:
 
@@ -28,6 +28,8 @@ The application now includes:
 - Project-aware Accessibility Intelligence that evaluates every source, calculates completion, detects missing or blocked work, identifies stale accessibility packages, and prioritizes the best next actions across the active project.
 - Automatic provider guidance that keeps provider selection under the hood, favors private and no-additional-cost methods, warns before external processing or possible charges, securely stores connected-service credentials for the browser session only, and preserves provider overrides inside Advanced assistance settings.
 - Project-aware Human Review and Approval that automatically creates review records for completed transcript, caption, audio-description, and package work; supports assignments, comments, approval, rejection, and revision history; and prevents publication readiness until required reviews are approved.
+- Publication Readiness validation that combines workflow completion, accessibility intelligence, human approvals, and package freshness into a single project readiness score with clear blocking reasons and plain-language next steps.
+
 
 ## Design Principle
 
@@ -213,3 +215,14 @@ Completed transcript, caption, audio-description, and accessibility-package work
 ### Phase 18 - Dependency and Version Management - Planned
 
 Track source and artifact versions, identify downstream work made stale by changes, preserve prior approved versions, explain exactly what must be reviewed or regenerated, and update recommendations without forcing users to understand the dependency graph.
+
+
+## Latest Phase
+
+### Phase 18 - Publication Readiness Dashboard
+
+Added a publication readiness subsystem that aggregates workflow completion, required approvals, artifact freshness, and accessibility package status into a single readiness evaluation exposed in plain language. This phase introduces project-level validation logic while preserving the existing architecture.
+
+### Next Phase
+
+Phase 19 - Intelligent publication export and delivery.
