@@ -356,7 +356,7 @@
     try {
       const approval = confirmAssistanceUse('caption-draft', captionReviewStatus);
       if (!approval) return;
-      const result = await window.AIProviderLayer.run('caption-draft', await aiContext(false), { confirmed: approval.confirmed });
+      const result = await window.AIProviderLayer.run('caption-draft', await aiContext(true), { confirmed: approval.confirmed });
       captionCueCounter = 0; captionCues.innerHTML = '';
       result.cues.forEach((cue) => addCaptionCue(cue));
       captionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter cues created.'} Human timing and text review is required.`;

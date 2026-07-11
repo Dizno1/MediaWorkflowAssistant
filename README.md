@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 20 of the executable accessibility workflow roadmap is complete.
+Phase 21 of the executable accessibility workflow roadmap is complete.
 
 The application now includes:
 
@@ -34,6 +34,8 @@ The application now includes:
 - A built-in OpenAI service adapter, configured only in Advanced assistance settings, that performs direct audio and video transcription and image analysis without requiring a custom intermediary endpoint.
 - Plain-language direct goal execution after source inspection, including Transcribe This, Describe This Picture, Create Captions, Create Audio Description, Extract Audio, Create an Accessibility Package, and Make This Accessible.
 - Automatic provider selection that can choose the built-in adapter while preserving privacy and possible-cost confirmation before any source leaves the browser.
+- Automatic timed caption drafting from provider speech timestamps, with readable cue segmentation and a transcript-based fallback when exact timing is unavailable.
+- Automatic timed audio-description drafting from locally sampled video frames and available transcript context, with all narration returned to the existing mandatory review workspace.
 
 
 ## Design Principle
@@ -224,8 +226,6 @@ Connected transcription now receives the actual selected audio or video source, 
 ## Remaining Roadmap
 
 - Add built-in adapters for supported transcription and vision services so users do not need to provide a custom endpoint contract.
-- Convert timed transcription results directly into caption cues.
-- Sample video frames and audio context for genuine audio-description drafting.
 - Generate or record narration and combine it with the source media.
 - Render and export a final accessible video package.
 
@@ -239,6 +239,17 @@ New files and subsystems:
 - The direct goal form in `index.html` maps plain-language outcomes to existing intents and workflow chains.
 - `js/app.js` coordinates goal matching, provider configuration, disclosure, and accessible focus/status behavior.
 
+### Phase 21 - Automatic Caption and Audio Description Drafting - Completed
+
+The built-in provider adapter can now create timed caption drafts from speech segment timestamps and useful timed audio-description drafts from locally sampled video frames. Caption text is divided into readable cues without overlapping timing. When exact speech timing is unavailable, the application can create an explicitly identified transcript-based fallback draft. Audio-description drafting combines timestamped frame samples with available transcript context to reduce duplication of spoken information. Both workflows continue through the existing accessible human-review, validation, approval, export, Output Manager, Shared Knowledge, workflow-chain, and project-review systems.
+
+New files and subsystems:
+
+- `js/caption-drafting.js` normalizes provider speech segments, creates readable timed cues, and supplies the transcript-based fallback.
+- `js/ad-drafting.js` samples local video frames in the browser and normalizes timed narration drafts.
+- `js/openai-provider.js` now provides built-in `caption-draft` and `audio-description-draft` capabilities in addition to transcription and image analysis.
+- `js/app.js` now supplies the selected local source to timed caption drafting after the required privacy and cost confirmation.
+
 ## Next Development Phase
 
-Phase 21 - Automatic Caption and Audio Description Drafting. Extend built-in service adapters so a completed transcript can become accurately timed caption cues and video visual analysis can create useful timed audio-description drafts. Preserve mandatory human review, provider privacy and cost disclosure, and the single Make This Accessible outcome.
+Phase 22 - Narration Generation and Accessible Audio Mixing. Generate or record narration from an approved audio-description script, provide accessible voice and pronunciation review, mix narration with the original audio while preserving dialogue and important sounds, and prepare the result for final accessible video rendering.
