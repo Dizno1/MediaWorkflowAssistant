@@ -83,6 +83,7 @@
   }
 
   function workflowIsComplete(model, workflowId, completedWorkflows) {
+    if (['create-transcript', 'create-captions', 'audio-description'].includes(workflowId)) return isPresent(model, workflowId);
     if (workflowId !== 'accessibility-package') {
       return completedWorkflows.has(workflowId) || isPresent(model, workflowId);
     }
@@ -116,10 +117,23 @@
     }) ? 'clear' : 'waiting';
   }
 
+  function hasUsableArtifactText(record) {
+    return Boolean(record && record.present && Array.isArray(record.artifacts) && record.artifacts.some((artifact) => String(artifact && artifact.content || '').trim()));
+  }
+
   function isPresent(model, workflowId) {
-    if (workflowId === 'create-transcript') return Boolean(model.accessibility.transcript.present);
-    if (workflowId === 'create-captions') return Boolean(model.accessibility.captions.present);
-    if (workflowId === 'audio-description') return Boolean(model.accessibility.audioDescription.present);
+    if (workflowId === 'create-transcript') return hasUsableArtifactText(model.accessibility.transcript);
+    if (workflowId === 'create-captions') return hasUsableArtifactText(model.accessibility.captions);
+    if (workflowId === 'audio-description') {
+      // Presence alone is not completion: a restored or historical audio-description record with
+      // only one narration cue (an accidental cue, or a stale draft from before this quality gate
+      // existed) must not be treated as a finished audio description, the same way a freshly
+      // generated single-cue draft is already rejected before it's ever shown for review.
+      const record = model.accessibility.audioDescription;
+      if (!record.present) return false;
+      const cueCount = Number(record.cueCount);
+      return Number.isFinite(cueCount) && cueCount >= 2;
+    }
     return false;
   }
 

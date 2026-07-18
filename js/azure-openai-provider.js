@@ -51,13 +51,19 @@
 
   async function request(input, signal, profileOverride) {
     const profile = profileOverride || getActiveProfile();
-    if (!profile) throw new Error('No active Azure OpenAI profile is configured.');
+    if (!profile) throw new Error(window.AIProviderLayer.plainLanguageError('Azure OpenAI', null, 'config'));
     const base = profile.endpoint.replace(/\/+$/, '');
     const url = `${base}/openai/v1/responses`;
-    const response = await fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'api-key': profile.apiKey }, body: JSON.stringify({ model: profile.deployment, input }) });
+    let response;
+    try {
+      response = await fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'api-key': profile.apiKey }, body: JSON.stringify({ model: profile.deployment, input }) });
+    } catch (error) {
+      if (error && error.name === 'AbortError') throw error;
+      throw new Error(window.AIProviderLayer.plainLanguageError('Azure OpenAI', null, 'network'));
+    }
     let result = {};
     try { result = await response.json(); } catch (error) {}
-    if (!response.ok) throw new Error(result.error && result.error.message ? result.error.message : `Azure OpenAI returned HTTP ${response.status}.`);
+    if (!response.ok) throw new Error(window.AIProviderLayer.plainLanguageError('Azure OpenAI', response.status));
     return result;
   }
 

@@ -76,7 +76,16 @@
       sourceKey: sourceKey(updated.source),
       sourceName: job.sourceFileName,
       workflowId: job.workflow.id,
-      createdAt
+      createdAt,
+      // Text-based artifact content (captions VTT, transcript, AD script) is small and safe to
+      // persist directly, and is what makes restoring a prior session's captions/transcript
+      // actually usable for rendering, not just "present" as a status flag. Binary artifacts
+      // (the described-audio WAV mix, narration clips) use a blob URL instead of text content —
+      // a blob URL only lives as long as the browser tab that created it, so it is never included
+      // here; persisting real audio bytes safely would need a different, larger storage strategy
+      // (IndexedDB, not localStorage) and was not attempted this pass. That gap is real and is
+      // documented, not silently left for someone to rediscover the hard way.
+      content: output.content || ''
     }));
 
     updated.results.push(...artifacts);
@@ -141,15 +150,16 @@
     }
 
     if (workflowId === 'audio-description') {
+      const cueCount = job.audioDescriptionOptions ? job.audioDescriptionOptions.cueCount : null;
+      const sufficient = Number.isFinite(Number(cueCount)) && Number(cueCount) >= 2;
       model.accessibility.audioDescription.present = true;
-      model.accessibility.audioDescription.status = 'complete';
+      model.accessibility.audioDescription.status = sufficient ? 'complete' : 'needs review';
       model.accessibility.audioDescription.artifacts = artifacts;
-      model.accessibility.audioDescription.cueCount = job.audioDescriptionOptions ? job.audioDescriptionOptions.cueCount : null;
+      model.accessibility.audioDescription.cueCount = cueCount;
       model.accessibility.audioDescription.reviewedAt = job.audioDescriptionOptions ? job.audioDescriptionOptions.reviewedAt : null;
-      model.accessibility.audioDescription.confidence = {
-        level: 'high',
-        reason: 'A reviewed, timestamped audio description script was created and saved in this browser.'
-      };
+      model.accessibility.audioDescription.confidence = sufficient
+        ? { level: 'high', reason: 'A reviewed, timestamped audio description script was created and saved in this browser.' }
+        : { level: 'low', reason: `Only ${cueCount || 0} narration cue${cueCount === 1 ? '' : 's'} were saved, which is not enough coverage to be considered a complete audio description.` };
     }
 
     if (workflowId === 'extract-audio') {

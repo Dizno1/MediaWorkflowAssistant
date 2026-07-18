@@ -43,12 +43,11 @@
     const hours = Math.floor(whole / 3600);
     const minutes = Math.floor((whole % 3600) / 60);
     const remainingSeconds = whole % 60;
-
-    if (hours) {
-      return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-    }
-
-    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+    const parts = [];
+    if (hours) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+    if (minutes) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+    if (remainingSeconds || !parts.length) parts.push(`${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'}`);
+    return parts.join(' ');
   }
 
   function createBaseInspection(file) {
@@ -134,13 +133,9 @@
 
   function summarize(inspection) {
     const article = ['audio', 'image', 'archive', 'unknown'].includes(inspection.mediaType) ? 'an' : 'a';
-    const details = [];
-
-    if (inspection.durationSeconds) details.push(`duration ${inspection.durationLabel}`);
-    if (inspection.width && inspection.height) details.push(`dimensions ${inspection.dimensionsLabel}`);
-    if (inspection.sizeLabel) details.push(`size ${inspection.sizeLabel}`);
-
-    return `I found ${article} ${inspection.mediaType} file${details.length ? ` with ${details.join(', ')}` : ''}.`;
+    if (inspection.durationSeconds) return `I found ${article} ${inspection.mediaType} with duration ${inspection.durationLabel}.`;
+    if (inspection.sizeLabel && inspection.sizeLabel !== 'Unknown') return `I found ${article} ${inspection.mediaType}, size ${inspection.sizeLabel}.`;
+    return `I found ${article} ${inspection.mediaType}.`;
   }
 
   function nameFromUrl(url) {

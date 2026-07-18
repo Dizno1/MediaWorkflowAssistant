@@ -19,54 +19,309 @@
 
   <main id="main" class="wrap" tabindex="-1">
 
-    <section id="project-workspace-section" class="panel" aria-labelledby="project-workspace-heading">
-      <h2 id="project-workspace-heading">Project workspace</h2>
-      <p id="project-workspace-summary">Create or select a project to organize related sources, workflow history, and generated artifacts.</p>
-      <div class="workspace-controls">
-        <div class="form-field">
-          <label for="project-select">Active project</label>
-          <select id="project-select" aria-describedby="project-workspace-status">
-            <option value="">No active project</option>
-          </select>
+
+    <section id="direct-goal-section" class="panel" aria-labelledby="direct-goal-heading" tabindex="-1">
+      <h2 id="direct-goal-heading">What can I help you accomplish today?</h2>
+      <form id="direct-goal-form">
+        <label for="content-input">Add content: choose a file, drop a file, or type or paste a web address</label>
+        <div id="drop-zone" class="drop-zone">
+          <input id="content-input" type="text" inputmode="url" autocomplete="off" placeholder="Drop a file, or paste a web address" aria-describedby="content-help">
+          <input id="file-input" type="file" hidden aria-hidden="true" tabindex="-1">
+          <button type="button" id="choose-file-button">Choose a file</button>
         </div>
-        <form id="create-project-form" class="workspace-create-form">
-          <div class="form-field">
-            <label for="new-project-name">New project name</label>
-            <input id="new-project-name" type="text" maxlength="100" required>
-          </div>
-          <button type="submit">Create project</button>
-        </form>
-      </div>
-      <div id="project-workspace-status" role="status" aria-live="polite" aria-atomic="true"></div>
-      <div id="project-dashboard" hidden>
-        <div id="project-facts" class="inspection-grid" aria-label="Project summary"></div>
-        <div class="next-actions">
-          <button type="button" id="rename-project">Rename project</button>
-          <button type="button" id="archive-project">Archive project</button>
-          <button type="button" id="delete-project">Delete project</button>
-        </div>
-        <section class="project-intelligence" aria-labelledby="project-intelligence-heading">
-          <h3 id="project-intelligence-heading">Project accessibility intelligence</h3>
-          <p id="project-intelligence-summary">Project-wide guidance will appear here.</p>
-          <div id="project-intelligence-facts" class="inspection-grid" aria-label="Project accessibility progress"></div>
-          <h4>Prioritized next actions</h4>
-          <div id="project-intelligence-actions"></div>
-        </section>
-        <section class="project-reviews" aria-labelledby="project-reviews-heading">
-          <h3 id="project-reviews-heading">Human review and approval</h3>
-          <p id="project-review-summary">Completed accessibility work that needs approval will appear here.</p>
-          <div id="project-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
-          <div id="project-reviews"></div>
-        </section>
-        <h3>Sources in this project</h3>
-        <div id="project-sources"></div>
-        <h3>Project workflow history</h3>
-        <div id="project-history"></div>
+        <p id="content-help" class="help-text">Files stay on this device. A file copied in your file manager can be pasted here too. Web addresses are fetched directly.</p>
+
+        <label for="direct-goal-input">What can I help you accomplish today?</label>
+        <input id="direct-goal-input" type="text" list="direct-goal-suggestions" autocomplete="off" placeholder="Add content above, then tell me what you want, or type a request now" aria-describedby="direct-goal-help">
+        <datalist id="direct-goal-suggestions"></datalist>
+        <p id="direct-goal-help" class="help-text">Add content above. A suggested request will appear here once it has been checked — you can use it, choose another suggestion, or type your own request in plain language.</p>
+
+        <button type="submit">Start</button>
+        <div id="direct-goal-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      </form>
+    </section>
+
+    <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No content added yet.</div>
+    <div id="inspection-output" class="inspection-output" hidden></div>
+
+    <section id="viewer-section" class="panel" aria-labelledby="viewer-heading" hidden>
+      <h2 id="viewer-heading">Viewer</h2>
+      <div id="viewer-output"></div>
+    </section>
+
+    <section id="current-task-section" class="panel" aria-labelledby="current-task-heading" tabindex="-1" hidden>
+      <h2 id="current-task-heading">Current task</h2>
+      <div id="current-task-summary" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="next-actions">
+        <button type="button" id="current-task-next-button" hidden></button>
+        <button type="button" id="render-later-button" hidden>Render later</button>
+        <button type="button" id="start-final-rendering-button" hidden>Start final rendering</button>
       </div>
     </section>
 
+    <section id="workflow-chain-section" class="panel" aria-labelledby="workflow-chain-heading" tabindex="-1" hidden>
+      <h2 id="workflow-chain-heading">Make This Accessible</h2>
+      <p id="workflow-chain-summary">The application coordinates all required work and pauses only when your review is required.</p>
+      <form id="workflow-chain-form">
+        <fieldset>
+          <legend>Workflows in this accessibility plan</legend>
+          <p class="help-text">Completed work is skipped. Work that requires your judgment will pause at an accessible review checkpoint.</p>
+          <div id="workflow-chain-steps"></div>
+        </fieldset>
+        <div id="workflow-chain-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Start accessibility plan</button>
+          <button type="button" id="cancel-workflow-chain">Cancel plan</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="progress-section" class="panel" aria-labelledby="progress-heading" tabindex="-1" hidden>
+      <h2 id="progress-heading">Working</h2>
+      <div id="job-status" role="status" aria-live="polite" aria-atomic="true">Nothing is running.</div>
+      <div id="job-time-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="progress-meter" role="progressbar" aria-label="Workflow progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <button type="button" id="cancel-job">Cancel this workflow</button>
+      <ol id="progress-steps" class="progress-steps"></ol>
+    </section>
+
+    <section id="transcript-review-section" class="panel" aria-labelledby="transcript-review-heading" tabindex="-1" hidden>
+      <h2 id="transcript-review-heading">Create transcript</h2>
+      <p id="transcript-review-summary">Play the source in the viewer, then enter and review the spoken content.</p>
+      <form id="transcript-review-form">
+        <div class="form-field">
+          <label for="transcript-title">Transcript title</label>
+          <input id="transcript-title" name="transcriptTitle" type="text" aria-describedby="transcript-title-help" required>
+          <p id="transcript-title-help" class="help-text">This title appears at the top of the saved transcript.</p>
+        </div>
+        <div class="form-field">
+          <label for="transcript-text">Transcript text</label>
+          <textarea id="transcript-text" name="transcriptText" rows="18" aria-describedby="transcript-text-help transcript-review-status" required></textarea>
+          <p id="transcript-text-help" class="help-text">Include speaker names when useful and meaningful sounds in brackets, such as [music] or [door closes].</p>
+          <button type="button" id="draft-transcript">Request transcript draft</button>
+        </div>
+        <label class="confirmation-option">
+          <input id="transcript-reviewed" type="checkbox">
+          I reviewed this transcript for accuracy and completeness.
+        </label>
+        <div id="transcript-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save transcript</button>
+          <button type="button" id="cancel-transcript-review">Cancel transcript</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="image-description-review-section" class="panel" aria-labelledby="image-description-review-heading" tabindex="-1" hidden>
+      <h2 id="image-description-review-heading">Describe this picture</h2>
+      <p id="image-description-review-summary">Create and review a useful description of the selected image.</p>
+      <form id="image-description-review-form">
+        <div class="form-field">
+          <label for="image-description-title">Description title</label>
+          <input id="image-description-title" type="text" required>
+        </div>
+        <div class="form-field">
+          <label for="image-description-text">Image description</label>
+          <textarea id="image-description-text" rows="10" aria-describedby="image-description-help image-description-status" required></textarea>
+          <p id="image-description-help" class="help-text">Describe the image's purpose and essential visual information. Avoid guessing identity, emotion, or intent unless the image clearly supports it.</p>
+          <button type="button" id="draft-image-description">Request image description draft</button>
+        </div>
+        <label class="confirmation-option">
+          <input id="image-description-reviewed" type="checkbox">
+          I reviewed this description against the image for accuracy, usefulness, and unnecessary assumptions.
+        </label>
+        <div id="image-description-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save image description</button>
+          <button type="button" id="cancel-image-description">Cancel image description</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="caption-review-section" class="panel" aria-labelledby="caption-review-heading" tabindex="-1" hidden>
+      <h2 id="caption-review-heading">Create captions</h2>
+      <div id="caption-review-summary" tabindex="-1" role="status" aria-live="polite" aria-atomic="true">Review and edit timed caption cues, then save a completed WebVTT file.</div>
+      <form id="caption-review-form">
+        <div class="form-field">
+          <label for="caption-title">Caption title</label>
+          <input id="caption-title" name="captionTitle" type="text" aria-describedby="caption-title-help" required>
+          <p id="caption-title-help" class="help-text">This title is included as a note in the saved WebVTT file.</p>
+        </div>
+        <button type="button" id="draft-captions">Request timed caption draft</button>
+        <details id="caption-cue-editor">
+          <summary>Edit individual caption cues</summary>
+          <fieldset>
+            <legend>Timed caption cues</legend>
+            <p id="caption-cues-help" class="help-text">Enter start and end times in hours, minutes, seconds, and milliseconds. Cues must be in chronological order and may not overlap.</p>
+            <div id="caption-cues" aria-describedby="caption-cues-help"></div>
+            <button type="button" id="add-caption-cue">Add caption cue</button>
+          </fieldset>
+        </details>
+        <label class="confirmation-option">
+          <input id="captions-reviewed" type="checkbox">
+          I reviewed these captions for accuracy, timing, reading order, speaker identification, and meaningful sounds.
+        </label>
+        <div id="caption-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save captions</button>
+          <button type="button" id="cancel-caption-review">Cancel captions</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="audio-description-review-section" class="panel" aria-labelledby="audio-description-review-heading" tabindex="-1" hidden>
+      <h2 id="audio-description-review-heading">Create audio description</h2>
+      <div id="audio-description-review-summary" tabindex="-1" role="status" aria-live="polite" aria-atomic="true">Review the video and write timed narration for important visual information not conveyed by the existing audio.</div>
+      <form id="audio-description-review-form">
+        <div class="form-field">
+          <label for="audio-description-title">Script title</label>
+          <input id="audio-description-title" name="audioDescriptionTitle" type="text" required>
+        </div>
+        <div class="form-field">
+          <label for="audio-description-notes">Production notes</label>
+          <textarea id="audio-description-notes" rows="4" aria-describedby="audio-description-notes-help"></textarea>
+          <p id="audio-description-notes-help" class="help-text">Record voice, pronunciation, pacing, or extended-description notes that apply to the full script.</p>
+        </div>
+        <button type="button" id="draft-audio-description">Request audio-description draft</button>
+        <details id="audio-description-cue-editor">
+          <summary>Edit individual audio-description cues</summary>
+          <fieldset>
+            <legend>Timed description cues</legend>
+            <p id="audio-description-cues-help" class="help-text">Use 00:00:00.000 timestamps. Place narration in natural pauses whenever possible and avoid covering dialogue or essential sound.</p>
+            <div id="audio-description-cues" aria-describedby="audio-description-cues-help"></div>
+            <button type="button" id="add-audio-description-cue">Add description cue</button>
+          </fieldset>
+        </details>
+        <fieldset>
+          <legend>Narration production</legend>
+          <p class="help-text">You can save the reviewed script at no additional cost, or request synthesized narration and a described-audio mix. Connected narration may charge your service account. A no-cost alternative is to save the script and record narration manually.</p>
+          <label class="confirmation-option">
+            <input id="generate-narration-mix" type="checkbox">
+            Generate narration audio and mix it with the source audio after I save this reviewed script.
+          </label>
+          <div class="form-field">
+            <label for="narration-style">Narration style</label>
+            <select id="narration-style"></select>
+            <p id="narration-style-help" class="help-text">Automatic lets the assistant choose the best available voice for this content. Preview plays a short sample before you commit to a style.</p>
+          </div>
+          <div class="next-actions">
+            <button type="button" id="preview-narration-style">Preview</button>
+          </div>
+          <div id="narration-preview-status" role="status" aria-live="polite" aria-atomic="true"></div>
+          <details id="narration-style-details">
+            <summary>Voice details</summary>
+            <div id="narration-style-technical"></div>
+          </details>
+          <div class="form-field">
+            <label for="narration-speed">Narration speed</label>
+            <input id="narration-speed" type="number" min="0.75" max="1.25" step="0.05" value="1">
+          </div>
+          <div class="form-field">
+            <label for="narration-volume">Narration volume, percent</label>
+            <input id="narration-volume" type="number" min="10" max="100" step="5" value="100">
+          </div>
+          <div class="form-field">
+            <label for="source-ducking">Source audio level during narration, percent</label>
+            <input id="source-ducking" type="number" min="0" max="100" step="5" value="35">
+          </div>
+        </fieldset>
+        <label class="confirmation-option">
+          <input id="audio-description-reviewed" type="checkbox">
+          I reviewed this script against the video for accuracy, timing, essential sound, dialogue conflicts, and objective language.
+        </label>
+        <div id="audio-description-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit">Save audio description script</button>
+          <button type="button" id="cancel-audio-description-review">Cancel audio description</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="package-review-section" class="panel" aria-labelledby="package-review-heading" tabindex="-1" hidden>
+      <h2 id="package-review-heading">Review accessibility package</h2>
+      <p id="package-review-summary">Review the package before it is created.</p>
+      <form id="package-review-form">
+        <div class="form-field">
+          <label for="package-name">Package file name</label>
+          <input id="package-name" name="packageName" type="text" aria-describedby="package-name-help" required>
+          <p id="package-name-help" class="help-text">The .zip extension will be added automatically.</p>
+        </div>
+
+        <fieldset>
+          <legend>Generated files to include</legend>
+          <p id="package-artifact-help" class="help-text">Choose the generated files that should be copied into the package.</p>
+          <div id="package-artifact-options" aria-describedby="package-artifact-help"></div>
+        </fieldset>
+
+        <section class="privacy-review" aria-labelledby="package-privacy-heading">
+          <h3 id="package-privacy-heading">Privacy review</h3>
+          <div id="package-privacy-notices"></div>
+          <label class="confirmation-option">
+            <input id="package-privacy-confirm" type="checkbox">
+            I reviewed the selected files and understand that the package may contain source-derived or sensitive information.
+          </label>
+        </section>
+
+        <div id="package-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="next-actions">
+          <button type="submit" id="create-reviewed-package">Create this package</button>
+          <button type="button" id="cancel-package-review">Cancel package review</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="results-section" class="panel" aria-labelledby="results-heading" tabindex="-1" hidden>
+      <h2 id="results-heading">Your result</h2>
+      <div id="results-output">No result yet.</div>
+    </section>
+
+    <section id="more-details-section" class="panel" aria-labelledby="more-details-heading">
+      <details id="more-details-disclosure">
+      <summary><h2 id="more-details-heading">More details</h2></summary>
+      <p>Accessibility assessment, recommendations, the accessibility plan, shared knowledge, and advanced analysis all live here. None of it is required to complete the current task.</p>
+    <section id="assessment-section" class="panel" aria-labelledby="assessment-heading" tabindex="-1" hidden>
+      <h3 id="assessment-heading">Accessibility assessment</h3>
+      <p id="assessment-summary">The assessment will appear after the source is checked.</p>
+      <div id="assessment-output"></div>
+    </section>
+
+    <section id="recommendations-section" class="panel" aria-labelledby="recommendations-heading" tabindex="-1" hidden>
+      <h3 id="recommendations-heading">Smart recommendations</h3>
+      <p id="recommendations-summary">Prioritized recommendations will appear after the source is checked.</p>
+      <div id="recommendations-output"></div>
+    </section>
+
+    <section id="plan-section" class="panel" aria-labelledby="plan-heading" tabindex="-1" hidden>
+      <h3 id="plan-heading">Recommended accessibility plan</h3>
+      <p id="plan-summary">The plan will appear after the source is checked.</p>
+      <div id="plan-output"></div>
+    </section>
+
+    <section id="knowledge-section" class="panel" aria-labelledby="knowledge-heading" tabindex="-1" hidden>
+      <h3 id="knowledge-heading">Shared knowledge</h3>
+      <p id="knowledge-summary">Saved analysis and results will appear here.</p>
+      <div id="knowledge-output"></div>
+    </section>
+
+    <section id="advanced-analysis-section" class="panel" aria-labelledby="advanced-analysis-heading" tabindex="-1" hidden>
+      <h3 id="advanced-analysis-heading">Advanced accessibility analysis</h3>
+      <p id="advanced-analysis-summary">Quality analysis will appear after a source is checked.</p>
+      <div id="advanced-analysis-output"></div>
+      <div class="next-actions"><button type="button" id="run-deep-analysis">Run deeper AI analysis</button></div>
+      <div id="advanced-analysis-status" tabindex="-1" role="status" aria-live="polite" aria-atomic="true"></div>
+    </section>
+      </details>
+    </section>
+
+    <section id="more-options-section" class="panel" aria-labelledby="more-options-heading">
+      <details>
+      <summary><h2 id="more-options-heading">More options</h2></summary>
+      <p id="more-options-help">Project tools, publication, the Accessibility Advisor, assistance settings, and job history all live here. Nothing here is required for the primary task of adding content and describing what you want done.</p>
     <section id="accessibility-advisor-section" class="panel" aria-labelledby="accessibility-advisor-heading">
-      <h2 id="accessibility-advisor-heading">Accessibility Advisor</h2>
+      <details>
+      <summary><h3 id="accessibility-advisor-heading">Accessibility Advisor</h3></summary>
       <p>Review completed project work through a consultant-style final assessment. The advisor identifies issues, recommends improvements, scores accessibility readiness, and records final acceptance before publication.</p>
       <div class="next-actions"><button type="button" id="run-accessibility-advisor">Run accessibility review</button></div>
       <div id="accessibility-advisor-status" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -78,10 +333,22 @@
         <div class="form-field"><label for="advisor-note">Decision note</label><textarea id="advisor-note" name="note" rows="3" maxlength="1000"></textarea></div>
         <button type="submit">Accept advisor review for publication</button>
       </form>
+      </details>
     </section>
 
     <section id="publication-pipeline-section" class="panel" aria-labelledby="publication-pipeline-heading">
-      <h2 id="publication-pipeline-heading">Publication pipeline</h2>
+      <details>
+      <summary><h3 id="publication-pipeline-heading">Publication pipeline</h3></summary>
+      <section aria-labelledby="local-production-heading">
+        <h4 id="local-production-heading">Local production</h4>
+        <div id="local-production-status" role="status" aria-live="polite" aria-atomic="true">Checking for local video production...</div>
+        <details id="local-production-details">
+          <summary>Technical details</summary>
+          <div id="local-production-technical"></div>
+        </details>
+        <button type="button" id="locate-ffmpeg-button" hidden>Locate FFmpeg</button>
+        <button type="button" id="retest-local-production-button">Check again</button>
+      </section>
       <p>Validate the active project, choose an export profile and delivery target, then create a publication package.</p>
       <form id="publication-pipeline-form">
         <div class="publication-controls">
@@ -97,7 +364,7 @@
           </div>
           <div class="form-field">
             <label for="publication-title">Publication title</label>
-            <input id="publication-title" type="text" maxlength="160" required>
+            <input id="publication-title" type="text" maxlength="160">
           </div>
         </div>
         <div class="next-actions">
@@ -108,37 +375,12 @@
       <div id="publication-pipeline-status" role="status" aria-live="polite" aria-atomic="true">Select an active project to begin.</div>
       <div id="publication-validation-results" tabindex="-1"></div>
       <div id="publication-deliverables"></div>
+      </details>
     </section>
-
-    <section class="panel" aria-labelledby="start-heading">
-      <h2 id="start-heading">Start with a file</h2>
-      <p>Add an audio, video, image, document, or archive file.</p>
-
-      <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-describedby="drop-help">
-        <strong>Drop a file here</strong>
-        <span>or press Enter to choose a file</span>
-      </div>
-      <p id="drop-help" class="help-text">You can also use the file picker below.</p>
-
-      <label class="file-label" for="file-input">Choose a file</label>
-      <input id="file-input" type="file" aria-describedby="file-help">
-      <p id="file-help" class="help-text">The file stays on this device.</p>
-
-      <div class="source-divider" aria-hidden="true"><span>or</span></div>
-
-      <form id="url-form" class="url-form">
-        <label for="url-input">Use a web address</label>
-        <div class="url-controls">
-          <input id="url-input" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/media" aria-describedby="url-help" required>
-          <button type="submit">Use this address</button>
-        </div>
-        <p id="url-help" class="help-text">Paste a link to media or a page containing media.</p>
-      </form>
-    </section>
-
 
     <section id="ai-provider-section" class="panel" aria-labelledby="ai-provider-heading">
-      <h2 id="ai-provider-heading">Assistance settings</h2>
+      <details>
+      <summary><h3 id="ai-provider-heading">Assistance settings</h3></summary>
       <p id="ai-provider-summary">The application chooses the most appropriate available method for each task. It favors options that keep work on this device and avoid additional charges. You will be warned before information is sent to an outside service or a service may charge for use.</p>
       <div class="provider-summary" aria-labelledby="automatic-assistance-heading">
         <h3 id="automatic-assistance-heading">Automatic assistance</h3>
@@ -150,20 +392,43 @@
         <nav class="provider-manager-nav" aria-label="Provider configuration shortcuts"><a href="#openai-provider-settings">OpenAI</a> <a href="#azure-provider-settings">Azure OpenAI</a> <a href="#gemini-provider-settings">Gemini</a> <a href="#anthropic-provider-settings">Anthropic</a> <a href="#local-provider-settings">Local services</a></nav>
         <div id="provider-manager-summary" class="provider-manager-summary" role="status" aria-live="polite">Checking saved provider configurations.</div>
         <section class="shared-services-import" aria-labelledby="shared-services-import-heading">
-          <h3 id="shared-services-import-heading">Import existing Open Door Design provider settings</h3>
-          <p id="shared-services-summary">No SharedServices provider configuration has been imported yet.</p>
-          <p class="help-text">Choose your SharedServices folder once. The application recognizes OpenAI, Gemini, Azure Speech, and Azure Vision files, imports the settings into encrypted browser storage, and leaves the original files unchanged. A browser cannot open a Windows folder without your action.</p>
-          <div class="next-actions">
-            <button type="button" id="choose-shared-services-folder">Choose SharedServices folder</button>
-            <label class="file-label" for="shared-services-files">Choose provider files instead</label>
-            <input id="shared-services-files" type="file" multiple accept=".json,.key,.region,.endpoint,text/plain,application/json" aria-describedby="shared-services-file-help">
+          <h3 id="shared-services-import-heading">Set up AI services</h3>
+          <p id="shared-services-summary">Checking for saved provider configuration.</p>
+          <p id="shared-services-location" class="help-text">Checking for a remembered Apps folder.</p>
+
+          <div id="shared-services-setup">
+            <h4>Find an existing Open Door Design installation</h4>
+            <p>Select the folder that contains your Open Door Design applications, for example <code>Apps</code> in your user folder. The application will find <code>SharedServices</code> inside it and import the recognized provider settings.</p>
+            <p class="help-text">Chrome requires you to choose the folder once. The application cannot search your drive without that permission.</p>
+            <div class="next-actions">
+              <button type="button" id="choose-apps-folder">Find my Open Door Design applications</button>
+            </div>
+            <details>
+              <summary>Other setup choices</summary>
+              <p>Use the file option only when folder selection is unavailable or when provider files are stored somewhere else.</p>
+              <label class="file-label" for="shared-services-files">Choose provider files</label>
+              <input id="shared-services-files" type="file" multiple accept=".json,.key,.region,.endpoint,text/plain,application/json" aria-describedby="shared-services-file-help">
+              <p id="shared-services-file-help" class="help-text">Select openai.json, gemini.key, providers.json, azure_speech.key, azure_speech.region, azure_vision.key, azure_vision.region, and azure_vision.endpoint together.</p>
+            </details>
           </div>
-          <p id="shared-services-file-help" class="help-text">The file option is a fallback for browsers that do not support folder selection. Select openai.json, gemini.key, providers.json, azure_speech.key, azure_speech.region, azure_vision.key, azure_vision.region, and azure_vision.endpoint together.</p>
-          <div class="next-actions">
-            <button type="button" id="test-azure-speech-import">Test imported Azure Speech</button>
-            <button type="button" id="test-azure-vision-import">Test imported Azure Vision</button>
-            <button type="button" id="clear-shared-services-import">Clear imported Azure settings</button>
+
+          <div id="shared-services-maintenance" hidden>
+            <h4>Provider services are ready</h4>
+            <p>Normal workflows will choose an appropriate available service automatically. Open the technical provider configuration below only when you deliberately need to replace a key or change a model.</p>
+            <div class="next-actions">
+              <button type="button" id="retest-shared-services">Retest all configured services</button>
+              <button type="button" id="reconnect-shared-services-folder">Reconnect remembered Apps folder</button>
+            </div>
           </div>
+
+          <details class="technical-provider-tools">
+            <summary>Technical SharedServices controls</summary>
+            <div class="next-actions">
+              <button type="button" id="test-azure-speech-import">Test imported Azure Speech</button>
+              <button type="button" id="test-azure-vision-import">Test imported Azure Vision</button>
+              <button type="button" id="clear-shared-services-import">Clear imported settings and folder permission</button>
+            </div>
+          </details>
           <div id="shared-services-status" role="status" aria-live="polite" aria-atomic="true"></div>
         </section>
         <form id="ai-provider-form">
@@ -260,287 +525,69 @@
           <div id="ai-provider-status" role="status" aria-live="polite" aria-atomic="true"></div>
         </form>
       </details>
+      </details>
     </section>
-
-    <section class="panel" aria-labelledby="current-heading">
-      <h2 id="current-heading">Current source</h2>
-      <div id="status-region" role="status" aria-live="polite" aria-atomic="true">No file selected.</div>
-      <div id="inspection-output" class="inspection-output" hidden></div>
-    </section>
-
-
-    <section id="assessment-section" class="panel" aria-labelledby="assessment-heading" tabindex="-1" hidden>
-      <h2 id="assessment-heading">Accessibility assessment</h2>
-      <p id="assessment-summary">The assessment will appear after the source is checked.</p>
-      <div id="assessment-output"></div>
-    </section>
-
-    <section id="recommendations-section" class="panel" aria-labelledby="recommendations-heading" tabindex="-1" hidden>
-      <h2 id="recommendations-heading">Smart recommendations</h2>
-      <p id="recommendations-summary">Prioritized recommendations will appear after the source is checked.</p>
-      <div id="recommendations-output"></div>
-    </section>
-
-    <section id="plan-section" class="panel" aria-labelledby="plan-heading" tabindex="-1" hidden>
-      <h2 id="plan-heading">Recommended accessibility plan</h2>
-      <p id="plan-summary">The plan will appear after the source is checked.</p>
-      <div id="plan-output"></div>
-    </section>
-
-    <section id="knowledge-section" class="panel" aria-labelledby="knowledge-heading" tabindex="-1" hidden>
-      <h2 id="knowledge-heading">Shared knowledge</h2>
-      <p id="knowledge-summary">Saved analysis and results will appear here.</p>
-      <div id="knowledge-output"></div>
-    </section>
-
-    <section id="viewer-section" class="panel" aria-labelledby="viewer-heading" hidden>
-      <h2 id="viewer-heading">Viewer</h2>
-      <div id="viewer-output"></div>
-    </section>
-
-    <section id="direct-goal-section" class="panel" aria-labelledby="direct-goal-heading" tabindex="-1" hidden>
-      <h2 id="direct-goal-heading">Tell the assistant what to do</h2>
-      <form id="direct-goal-form">
-        <label for="direct-goal-input">Your goal</label>
-        <div class="url-controls">
-          <input id="direct-goal-input" type="text" autocomplete="off" placeholder="Transcribe this, describe this picture, or make this accessible" required aria-describedby="direct-goal-help">
-          <button type="submit">Start</button>
-        </div>
-        <p id="direct-goal-help" class="help-text">Use plain language. The assistant selects the workflow and available service automatically.</p>
-        <div id="direct-goal-status" role="status" aria-live="polite" aria-atomic="true"></div>
-      </form>
-    </section>
-
-    <section id="goals-section" class="panel" aria-labelledby="goals-heading" tabindex="-1" hidden>
-      <h2 id="goals-heading">What would you like to do?</h2>
-      <p id="goals-intro">Available choices will appear after the file is checked.</p>
-      <div id="goals" class="recommendations"></div>
-    </section>
-
-
-    <section id="workflow-chain-section" class="panel" aria-labelledby="workflow-chain-heading" tabindex="-1" hidden>
-      <h2 id="workflow-chain-heading">Make This Accessible</h2>
-      <p id="workflow-chain-summary">The application coordinates all required work and pauses only when your review is required.</p>
-      <form id="workflow-chain-form">
-        <fieldset>
-          <legend>Workflows in this accessibility plan</legend>
-          <p class="help-text">Completed work is skipped. Work that requires your judgment will pause at an accessible review checkpoint.</p>
-          <div id="workflow-chain-steps"></div>
-        </fieldset>
-        <div id="workflow-chain-status" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="next-actions">
-          <button type="submit">Start accessibility plan</button>
-          <button type="button" id="cancel-workflow-chain">Cancel plan</button>
-        </div>
-      </form>
-    </section>
-
-    <section id="transcript-review-section" class="panel" aria-labelledby="transcript-review-heading" tabindex="-1" hidden>
-      <h2 id="transcript-review-heading">Create transcript</h2>
-      <p id="transcript-review-summary">Play the source in the viewer, then enter and review the spoken content.</p>
-      <form id="transcript-review-form">
-        <div class="form-field">
-          <label for="transcript-title">Transcript title</label>
-          <input id="transcript-title" name="transcriptTitle" type="text" aria-describedby="transcript-title-help" required>
-          <p id="transcript-title-help" class="help-text">This title appears at the top of the saved transcript.</p>
-        </div>
-        <div class="form-field">
-          <label for="transcript-text">Transcript text</label>
-          <textarea id="transcript-text" name="transcriptText" rows="18" aria-describedby="transcript-text-help transcript-review-status" required></textarea>
-          <p id="transcript-text-help" class="help-text">Include speaker names when useful and meaningful sounds in brackets, such as [music] or [door closes].</p>
-          <button type="button" id="draft-transcript">Request transcript draft</button>
-        </div>
-        <label class="confirmation-option">
-          <input id="transcript-reviewed" type="checkbox">
-          I reviewed this transcript for accuracy and completeness.
-        </label>
-        <div id="transcript-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="next-actions">
-          <button type="submit">Save transcript</button>
-          <button type="button" id="cancel-transcript-review">Cancel transcript</button>
-        </div>
-      </form>
-    </section>
-
-
-    <section id="image-description-review-section" class="panel" aria-labelledby="image-description-review-heading" tabindex="-1" hidden>
-      <h2 id="image-description-review-heading">Describe this picture</h2>
-      <p id="image-description-review-summary">Create and review a useful description of the selected image.</p>
-      <form id="image-description-review-form">
-        <div class="form-field">
-          <label for="image-description-title">Description title</label>
-          <input id="image-description-title" type="text" required>
-        </div>
-        <div class="form-field">
-          <label for="image-description-text">Image description</label>
-          <textarea id="image-description-text" rows="10" aria-describedby="image-description-help image-description-status" required></textarea>
-          <p id="image-description-help" class="help-text">Describe the image's purpose and essential visual information. Avoid guessing identity, emotion, or intent unless the image clearly supports it.</p>
-          <button type="button" id="draft-image-description">Request image description draft</button>
-        </div>
-        <label class="confirmation-option">
-          <input id="image-description-reviewed" type="checkbox">
-          I reviewed this description against the image for accuracy, usefulness, and unnecessary assumptions.
-        </label>
-        <div id="image-description-status" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="next-actions">
-          <button type="submit">Save image description</button>
-          <button type="button" id="cancel-image-description">Cancel image description</button>
-        </div>
-      </form>
-    </section>
-
-    <section id="caption-review-section" class="panel" aria-labelledby="caption-review-heading" tabindex="-1" hidden>
-      <h2 id="caption-review-heading">Create captions</h2>
-      <p id="caption-review-summary">Review and edit timed caption cues, then save a completed WebVTT file.</p>
-      <form id="caption-review-form">
-        <div class="form-field">
-          <label for="caption-title">Caption title</label>
-          <input id="caption-title" name="captionTitle" type="text" aria-describedby="caption-title-help" required>
-          <p id="caption-title-help" class="help-text">This title is included as a note in the saved WebVTT file.</p>
-        </div>
-        <fieldset>
-          <legend>Timed caption cues</legend>
-          <p id="caption-cues-help" class="help-text">Enter start and end times in hours, minutes, seconds, and milliseconds. Cues must be in chronological order and may not overlap.</p>
-          <div id="caption-cues" aria-describedby="caption-cues-help"></div>
-          <button type="button" id="add-caption-cue">Add caption cue</button>
-          <button type="button" id="draft-captions">Request timed caption draft</button>
-        </fieldset>
-        <label class="confirmation-option">
-          <input id="captions-reviewed" type="checkbox">
-          I reviewed these captions for accuracy, timing, reading order, speaker identification, and meaningful sounds.
-        </label>
-        <div id="caption-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="next-actions">
-          <button type="submit">Save captions</button>
-          <button type="button" id="cancel-caption-review">Cancel captions</button>
-        </div>
-      </form>
-    </section>
-
-
-    <section id="audio-description-review-section" class="panel" aria-labelledby="audio-description-review-heading" tabindex="-1" hidden>
-      <h2 id="audio-description-review-heading">Create audio description</h2>
-      <p id="audio-description-review-summary">Review the video and write timed narration for important visual information not conveyed by the existing audio.</p>
-      <form id="audio-description-review-form">
-        <div class="form-field">
-          <label for="audio-description-title">Script title</label>
-          <input id="audio-description-title" name="audioDescriptionTitle" type="text" required>
-        </div>
-        <div class="form-field">
-          <label for="audio-description-notes">Production notes</label>
-          <textarea id="audio-description-notes" rows="4" aria-describedby="audio-description-notes-help"></textarea>
-          <p id="audio-description-notes-help" class="help-text">Record voice, pronunciation, pacing, or extended-description notes that apply to the full script.</p>
-        </div>
-        <fieldset>
-          <legend>Timed description cues</legend>
-          <p id="audio-description-cues-help" class="help-text">Use 00:00:00.000 timestamps. Place narration in natural pauses whenever possible and avoid covering dialogue or essential sound.</p>
-          <div id="audio-description-cues" aria-describedby="audio-description-cues-help"></div>
-          <button type="button" id="add-audio-description-cue">Add description cue</button>
-          <button type="button" id="draft-audio-description">Request audio-description draft</button>
-        </fieldset>
-        <fieldset>
-          <legend>Narration production</legend>
-          <p class="help-text">You can save the reviewed script at no additional cost, or request synthesized narration and a described-audio mix. Connected narration may charge your service account. A no-cost alternative is to save the script and record narration manually.</p>
-          <label class="confirmation-option">
-            <input id="generate-narration-mix" type="checkbox">
-            Generate narration audio and mix it with the source audio after I save this reviewed script.
-          </label>
-          <div class="form-field">
-            <label for="narration-voice">Narration voice</label>
-            <select id="narration-voice">
-              <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="coral">Coral</option><option value="echo">Echo</option><option value="fable">Fable</option><option value="nova">Nova</option><option value="onyx">Onyx</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="narration-speed">Narration speed</label>
-            <input id="narration-speed" type="number" min="0.75" max="1.25" step="0.05" value="1">
-          </div>
-          <div class="form-field">
-            <label for="narration-volume">Narration volume, percent</label>
-            <input id="narration-volume" type="number" min="10" max="100" step="5" value="100">
-          </div>
-          <div class="form-field">
-            <label for="source-ducking">Source audio level during narration, percent</label>
-            <input id="source-ducking" type="number" min="0" max="100" step="5" value="35">
-          </div>
-        </fieldset>
-        <label class="confirmation-option">
-          <input id="audio-description-reviewed" type="checkbox">
-          I reviewed this script against the video for accuracy, timing, essential sound, dialogue conflicts, and objective language.
-        </label>
-        <div id="audio-description-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="next-actions">
-          <button type="submit">Save audio description script</button>
-          <button type="button" id="cancel-audio-description-review">Cancel audio description</button>
-        </div>
-      </form>
-    </section>
-
-    <section id="package-review-section" class="panel" aria-labelledby="package-review-heading" tabindex="-1" hidden>
-      <h2 id="package-review-heading">Review accessibility package</h2>
-      <p id="package-review-summary">Review the package before it is created.</p>
-      <form id="package-review-form">
-        <div class="form-field">
-          <label for="package-name">Package file name</label>
-          <input id="package-name" name="packageName" type="text" aria-describedby="package-name-help" required>
-          <p id="package-name-help" class="help-text">The .zip extension will be added automatically.</p>
-        </div>
-
-        <fieldset>
-          <legend>Generated files to include</legend>
-          <p id="package-artifact-help" class="help-text">Choose the generated files that should be copied into the package.</p>
-          <div id="package-artifact-options" aria-describedby="package-artifact-help"></div>
-        </fieldset>
-
-        <section class="privacy-review" aria-labelledby="package-privacy-heading">
-          <h3 id="package-privacy-heading">Privacy review</h3>
-          <div id="package-privacy-notices"></div>
-          <label class="confirmation-option">
-            <input id="package-privacy-confirm" type="checkbox">
-            I reviewed the selected files and understand that the package may contain source-derived or sensitive information.
-          </label>
-        </section>
-
-        <div id="package-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="next-actions">
-          <button type="submit" id="create-reviewed-package">Create this package</button>
-          <button type="button" id="cancel-package-review">Cancel package review</button>
-        </div>
-      </form>
-    </section>
-
 
     <section id="production-features-section" class="panel" aria-labelledby="production-features-heading">
-      <h2 id="production-features-heading">Jobs, batches, and project history</h2>
+      <details>
+      <summary><h3 id="production-features-heading">Jobs, batches, and project history</h3></summary>
       <p>Long-running work is checkpointed in this browser. Keep this browser open while processing. After an interruption, incomplete jobs are paused and offered for recovery. Paid, destructive, and publication actions are never restarted automatically.</p>
       <section aria-labelledby="saved-jobs-heading"><h3 id="saved-jobs-heading">Saved jobs</h3><div id="production-jobs"></div></section>
       <section aria-labelledby="batches-heading"><h3 id="batches-heading">Batches</h3><div id="production-batches"></div></section>
       <section aria-labelledby="project-history-heading"><h3 id="project-history-heading">Project history</h3><div id="project-history-list"></div></section>
+      </details>
     </section>
 
-    <section id="progress-section" class="panel" aria-labelledby="progress-heading" tabindex="-1" hidden>
-      <h2 id="progress-heading">Working</h2>
-      <div id="job-status" role="status" aria-live="polite" aria-atomic="true">Nothing is running.</div>
-      <div class="progress-meter" role="progressbar" aria-label="Workflow progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div id="progress-bar" class="progress-bar"></div>
+    <section id="project-workspace-section" class="panel" aria-labelledby="project-workspace-heading">
+      <details>
+      <summary><h3 id="project-workspace-heading">Your work</h3></summary>
+      <p id="project-workspace-summary">Create or select a project to organize related sources, workflow history, and generated artifacts.</p>
+      <div class="workspace-controls">
+        <div class="form-field">
+          <label for="project-select">Active project</label>
+          <select id="project-select" aria-describedby="project-workspace-status">
+            <option value="">No active project</option>
+          </select>
+        </div>
+        <form id="create-project-form" class="workspace-create-form">
+          <div class="form-field">
+            <label for="new-project-name">New project name</label>
+            <input id="new-project-name" type="text" maxlength="100" required>
+          </div>
+          <button type="submit">Create project</button>
+        </form>
       </div>
-      <button type="button" id="cancel-job">Cancel this workflow</button>
-      <ol id="progress-steps" class="progress-steps"></ol>
+      <div id="project-workspace-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="project-dashboard" hidden>
+        <div id="project-facts" class="inspection-grid" aria-label="Project summary"></div>
+        <div class="next-actions">
+          <button type="button" id="rename-project">Rename project</button>
+          <button type="button" id="archive-project">Archive project</button>
+          <button type="button" id="delete-project">Delete project</button>
+        </div>
+        <section class="project-intelligence" aria-labelledby="project-intelligence-heading">
+          <h3 id="project-intelligence-heading">Project accessibility intelligence</h3>
+          <p id="project-intelligence-summary">Project-wide guidance will appear here.</p>
+          <div id="project-intelligence-facts" class="inspection-grid" aria-label="Project accessibility progress"></div>
+          <h4>Prioritized next actions</h4>
+          <div id="project-intelligence-actions"></div>
+        </section>
+        <section class="project-reviews" aria-labelledby="project-reviews-heading">
+          <h3 id="project-reviews-heading">Human review and approval</h3>
+          <p id="project-review-summary">Completed accessibility work that needs approval will appear here.</p>
+          <div id="project-review-status" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div id="project-reviews"></div>
+        </section>
+        <h3>Sources in this project</h3>
+        <div id="project-sources"></div>
+        <h3>Project workflow history</h3>
+        <div id="project-history"></div>
+      </div>
+      </details>
+    </section>
+      </details>
     </section>
 
-
-    <section id="advanced-analysis-section" class="panel" aria-labelledby="advanced-analysis-heading" tabindex="-1" hidden>
-      <h2 id="advanced-analysis-heading">Advanced accessibility analysis</h2>
-      <p id="advanced-analysis-summary">Quality analysis will appear after a source is checked.</p>
-      <div id="advanced-analysis-output"></div>
-      <div class="next-actions"><button type="button" id="run-deep-analysis">Run deeper AI analysis</button></div>
-      <div id="advanced-analysis-status" role="status" aria-live="polite" aria-atomic="true"></div>
-    </section>
-
-    <section id="results-section" class="panel" aria-labelledby="results-heading" tabindex="-1" hidden>
-      <h2 id="results-heading">Your result</h2>
-      <div id="results-output">No result yet.</div>
-    </section>
   </main>
 
   <script src="js/workflow-registry.js"></script>
@@ -580,6 +627,8 @@
   <script src="js/caption-review.js"></script>
   <script src="js/audio-description-review.js"></script>
   <script src="js/narration-mixer.js"></script>
+  <script src="js/local-production.js"></script>
+  <script src="js/narration-style.js"></script>
   <script src="js/publication-renderer.js"></script>
   <script src="js/package-review.js"></script>
   <script src="js/workflow-chain.js"></script>

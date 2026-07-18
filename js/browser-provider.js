@@ -153,7 +153,7 @@
       if (!transcriptText) throw new Error('Enter transcript text before running this workflow.');
       const baseName = stripExtension(job.sourceFileName);
       const title = String(options.title || `Transcript for ${job.sourceFileName}`).trim();
-      const text = [title, '', `Source: ${job.sourceFileName}`, `Created: ${new Date().toLocaleString()}`, `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`, '', description, ''].join('\n');
+      const text = [title, '', `Source: ${job.sourceFileName}`, `Created: ${new Date().toLocaleString()}`, `Reviewed: ${options.reviewed ? 'Yes' : 'No'}`, `Provider: ${options.provider || 'Not recorded'}`, '', transcriptText, ''].join('\n');
       return [createTextArtifact(`${baseName}-transcript.txt`, 'Completed transcript', `A reviewed plain-text transcript containing ${Number(options.wordCount) || transcriptText.split(/\s+/).length} words.`, text, 'text/plain')];
     }
 
@@ -223,6 +223,16 @@
     }
 
     async createPublicationExport(job, onProgress) {
+      const model = job.knowledgeModel || {};
+      const accessibility = model.accessibility || {};
+      const missing = [];
+      if (!accessibility.transcript || !accessibility.transcript.present) missing.push('a completed transcript');
+      if (!accessibility.captions || !accessibility.captions.present) missing.push('reviewed captions');
+      const adCueCount = accessibility.audioDescription ? Number(accessibility.audioDescription.cueCount) : NaN;
+      if (!accessibility.audioDescription || !accessibility.audioDescription.present || !Number.isFinite(adCueCount) || adCueCount < 2) {
+        missing.push('a reviewed audio description with enough narration cues to provide real coverage');
+      }
+      if (missing.length) throw new Error(`This video is not ready to render yet. Still needed: ${missing.join(', ')}.`);
       const artifacts = window.OutputManager.listForSource(job.knowledgeModel.source);
       const options = job.publicationOptions || {
         preset: 'web-standard',

@@ -1,10 +1,9 @@
 (function () {
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
-  const fileHelp = document.getElementById('file-help');
-  const urlForm = document.getElementById('url-form');
-  const urlInput = document.getElementById('url-input');
-  const urlHelp = document.getElementById('url-help');
+  const chooseFileButton = document.getElementById('choose-file-button');
+  const contentInput = document.getElementById('content-input');
+  const contentHelp = document.getElementById('content-help');
   const statusRegion = document.getElementById('status-region');
   const inspectionOutput = document.getElementById('inspection-output');
   const assessmentSection = document.getElementById('assessment-section');
@@ -24,14 +23,63 @@
   const directGoalSection = document.getElementById('direct-goal-section');
   const directGoalForm = document.getElementById('direct-goal-form');
   const directGoalInput = document.getElementById('direct-goal-input');
+  const directGoalSuggestions = document.getElementById('direct-goal-suggestions');
+  const currentTaskSection = document.getElementById('current-task-section');
+  const currentTaskSummary = document.getElementById('current-task-summary');
+  const currentTaskNextButton = document.getElementById('current-task-next-button');
+  const renderLaterButton = document.getElementById('render-later-button');
+  const startFinalRenderingButton = document.getElementById('start-final-rendering-button');
+
+  // The single place a person should be able to find "what's next" without navigating through
+  // assessment, recommendations, or reports. Shows what's already done and offers exactly one
+  // button for the next available action, if any.
+  // Package creation must never be suggested ahead of rendering the actual accessible video —
+  // a package before the video exists is a utility action jumping the queue, not genuine
+  // progress. If a chain is actively running or paused, that step always wins over any other
+  // suggestion, since it's the thing already in progress.
+  function pickNextAction(remaining) {
+    if (activeWorkflowChain && ['running', 'review', 'paused'].includes(activeWorkflowChain.status)) {
+      const step = activeWorkflowChain.steps[activeWorkflowChain.currentIndex];
+      if (step && !step.completed) {
+        const match = remaining.find((item) => item.workflowId === step.intent.workflowId);
+        if (match) return match;
+      }
+    }
+    const renderStep = remaining.find((item) => item.workflowId === 'render-accessible-video' && item.capability && item.capability.canRun);
+    if (renderStep) return renderStep;
+    return remaining.find((item) => item.workflowId !== 'accessibility-package' && item.capability && item.capability.canRun)
+      || remaining.find((item) => item.capability && item.capability.canRun);
+  }
+
+  function renderCurrentTask() {
+    if (!currentInspection) { currentTaskSection.hidden = true; return; }
+    const intents = currentRecommendations ? currentRecommendations.recommendations : window.IntentEngine.getIntents(currentInspection);
+    const completed = intents.filter((item) => item.completed);
+    const remaining = intents.filter((item) => !item.completed);
+    const nextAvailable = pickNextAction(remaining);
+    if (!completed.length && !nextAvailable) { currentTaskSection.hidden = true; return; }
+    currentTaskSection.hidden = false;
+    const completedText = completed.length ? `Completed: ${completed.map((item) => `${item.title}`).join(', ')}.` : 'Nothing completed yet.';
+    if (nextAvailable) {
+      currentTaskSummary.textContent = `${completedText} Next recommended action: ${nextAvailable.title}.`;
+      currentTaskNextButton.hidden = false;
+      currentTaskNextButton.textContent = nextAvailable.actionLabel || nextAvailable.title;
+      currentTaskNextButton.onclick = () => runIntent(nextAvailable);
+    } else {
+      currentTaskSummary.textContent = remaining.length
+        ? `${completedText} The remaining work needs an assistance service configured in Advanced assistance settings.`
+        : `${completedText} All available work is complete.`;
+      currentTaskNextButton.hidden = true;
+    }
+  }
+
   const directGoalStatus = document.getElementById('direct-goal-status');
-  const goalsSection = document.getElementById('goals-section');
-  const goalsIntro = document.getElementById('goals-intro');
-  const goals = document.getElementById('goals');
   const progressSection = document.getElementById('progress-section');
   const jobStatus = document.getElementById('job-status');
+  const jobTimeStatus = document.getElementById('job-time-status');
   const progressBar = document.getElementById('progress-bar');
   const progressSteps = document.getElementById('progress-steps');
+  let progressTimer = null;
   const cancelJobButton = document.getElementById('cancel-job');
   const transcriptReviewSection = document.getElementById('transcript-review-section');
   const transcriptReviewForm = document.getElementById('transcript-review-form');
@@ -53,6 +101,7 @@
   const captionReviewSection = document.getElementById('caption-review-section');
   const captionReviewForm = document.getElementById('caption-review-form');
   const captionReviewSummary = document.getElementById('caption-review-summary');
+  const captionCueEditor = document.getElementById('caption-cue-editor');
   const captionTitleInput = document.getElementById('caption-title');
   const captionCues = document.getElementById('caption-cues');
   const addCaptionCueButton = document.getElementById('add-caption-cue');
@@ -62,6 +111,7 @@
   const audioDescriptionReviewSection = document.getElementById('audio-description-review-section');
   const audioDescriptionReviewForm = document.getElementById('audio-description-review-form');
   const audioDescriptionReviewSummary = document.getElementById('audio-description-review-summary');
+  const audioDescriptionCueEditor = document.getElementById('audio-description-cue-editor');
   const audioDescriptionTitleInput = document.getElementById('audio-description-title');
   const audioDescriptionNotesInput = document.getElementById('audio-description-notes');
   const audioDescriptionCues = document.getElementById('audio-description-cues');
@@ -69,7 +119,11 @@
   const audioDescriptionReviewedInput = document.getElementById('audio-description-reviewed');
   const audioDescriptionReviewStatus = document.getElementById('audio-description-review-status');
   const generateNarrationMixInput = document.getElementById('generate-narration-mix');
-  const narrationVoiceInput = document.getElementById('narration-voice');
+  const narrationStyleInput = document.getElementById('narration-style');
+  const narrationStyleDetails = document.getElementById('narration-style-details');
+  const narrationStyleTechnical = document.getElementById('narration-style-technical');
+  const previewNarrationStyleButton = document.getElementById('preview-narration-style');
+  const narrationPreviewStatus = document.getElementById('narration-preview-status');
   const narrationSpeedInput = document.getElementById('narration-speed');
   const narrationVolumeInput = document.getElementById('narration-volume');
   const sourceDuckingInput = document.getElementById('source-ducking');
@@ -136,6 +190,7 @@
   let currentInspection = null;
   let activeJob = null;
   let pendingTranscriptIntent = null;
+  let lastTranscriptProviderName = '';
   let pendingImageDescriptionIntent = null;
   let pendingCaptionIntent = null;
   let captionCueCounter = 0;
@@ -332,6 +387,14 @@
       : 'An advanced provider override is active. Return to Automatic, recommended to let the application choose for each task.';
   }
 
+  function describeAssistanceError(error) {
+    const base = error && error.message ? error.message : 'The request could not be completed.';
+    if (!error || !error.capability) return base;
+    const alternative = window.AIProviderLayer.getAlternative(error.capability, error.providerId);
+    if (!alternative) return `${base} No other configured method is currently available for this task.`;
+    return `${base} ${alternative.name} is also available for this task in Advanced assistance settings, if you would like to try it instead.`;
+  }
+
   function confirmAssistanceUse(capability, statusElement) {
     const notice = window.AIProviderLayer.getExecutionNotice(capability);
     if (!notice.canRun) {
@@ -374,48 +437,216 @@
     return { name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, base64: btoa(binary) };
   }
 
+  // A request completing without throwing does not mean it produced a usable transcript.
+  // Empty text, whitespace-only text, raw JSON, or a status/error-shaped string must not reach
+  // the transcript editor.
+  function isUsableTranscriptText(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return false;
+    if (/^[{[]/.test(trimmed)) return false; // looks like raw JSON
+    if (/^(error|failed|failure|http\s*\d{3})/i.test(trimmed)) return false; // looks like a status/error string
+    return true;
+  }
+
   async function requestTranscriptDraft() {
     const approval = confirmAssistanceUse('transcription-draft', transcriptReviewStatus);
     if (!approval) return;
     draftTranscriptButton.disabled = true;
     transcriptReviewStatus.textContent = 'Creating an editable transcript draft using the best available method.';
     try {
-      const result = await window.AIProviderLayer.run('transcription-draft', await aiContext(true), { confirmed: approval.confirmed });
-      transcriptTextInput.value = String(result.text || '').trim();
-      transcriptReviewStatus.textContent = `${result.providerName} returned a draft. Review every word before confirming completion.`;
-      transcriptTextInput.focus();
-    } catch (error) { transcriptReviewStatus.textContent = error.message; }
+      await attemptTranscriptDraft(approval.confirmed, null, []);
+    }
     finally { draftTranscriptButton.disabled = false; }
+  }
+
+  async function attemptTranscriptDraft(confirmed, forceProviderId, triedProviderIds) {
+    let result;
+    try {
+      const options = { confirmed };
+      if (forceProviderId) options.providerId = forceProviderId;
+      result = await window.AIProviderLayer.run('transcription-draft', await aiContext(true), options);
+    } catch (error) {
+      const attempted = forceProviderId || (error && error.providerId);
+      return handleTranscriptFailure(error, attempted ? triedProviderIds.concat(attempted) : triedProviderIds, confirmed);
+    }
+    const text = String(result.text || '').trim();
+    if (!isUsableTranscriptText(text)) {
+      const failure = new Error(`${result.providerName} did not produce a usable transcript.`);
+      failure.providerId = result.providerId;
+      return handleTranscriptFailure(failure, triedProviderIds.concat(result.providerId), confirmed);
+    }
+    transcriptTextInput.value = text;
+    lastTranscriptProviderName = result.providerName;
+    transcriptReviewStatus.textContent = `${result.providerName} returned a draft. Review every word before confirming completion.`;
+    transcriptTextInput.focus();
+  }
+
+  // Required fallback behavior: on failure or an unusable result, build a ranked list of healthy
+  // compatible providers and keep trying, with one concise confirmation per new external provider,
+  // until a usable result is produced or every healthy provider has been tried — not just one hop.
+  async function handleTranscriptFailure(error, triedProviderIds, confirmed) {
+    const message = (error && error.message) || 'That attempt did not produce a transcript.';
+    const alternative = window.AIProviderLayer.getAlternative('transcription-draft', triedProviderIds);
+    if (!alternative) {
+      transcriptReviewStatus.textContent = triedProviderIds.length > 1
+        ? `${message} Every available method has been tried. You can try again, enter the transcript manually, or open Advanced assistance settings.`
+        : describeAssistanceError(error);
+      return;
+    }
+    const costNote = alternative.external ? ' The audio will be sent to an outside service and charges may apply.' : ' This stays on this device.';
+    const proceed = window.confirm(`${message} ${alternative.name} can try next.${costNote}\n\nContinue?`);
+    if (!proceed) { transcriptReviewStatus.textContent = `${message} You can try again, or open Advanced assistance settings to choose a specific method.`; return; }
+    transcriptReviewStatus.textContent = `Trying ${alternative.name} next.`;
+    await attemptTranscriptDraft(true, alternative.id, triedProviderIds);
   }
 
   async function requestCaptionDraft() {
     draftCaptionsButton.disabled = true;
-    captionReviewStatus.textContent = 'Requesting editable caption cues.';
+    captionReviewStatus.textContent = 'Creating an editable caption draft using the best available method.';
     try {
-      const approval = confirmAssistanceUse('caption-draft', captionReviewStatus);
-      if (!approval) return;
-      const result = await window.AIProviderLayer.run('caption-draft', await aiContext(true), { confirmed: approval.confirmed });
-      captionCueCounter = 0; captionCues.innerHTML = '';
-      result.cues.forEach((cue) => addCaptionCue(cue));
-      captionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter cues created.'} Human timing and text review is required.`;
-      captionCues.querySelector('input, textarea').focus();
-    } catch (error) { captionReviewStatus.textContent = error.message; }
+      await attemptCaptionDraft(null, []);
+    }
     finally { draftCaptionsButton.disabled = false; }
+  }
+
+  async function attemptCaptionDraft(forceProviderId, triedProviderIds) {
+    const approval = confirmAssistanceUse('caption-draft', captionReviewStatus);
+    if (!approval) return;
+    let result;
+    try {
+      const options = { confirmed: approval.confirmed };
+      if (forceProviderId) options.providerId = forceProviderId;
+      result = await window.AIProviderLayer.run('caption-draft', await aiContext(true), options);
+    } catch (error) {
+      const attempted = forceProviderId || (error && error.providerId);
+      return handleCaptionFailure(error, attempted ? triedProviderIds.concat(attempted) : triedProviderIds);
+    }
+    const errors = window.CaptionReview.validate(result.cues || [], currentInspection.durationSeconds);
+    let cues = result.cues || [];
+    let repairNote = '';
+    if (errors.length) {
+      const repaired = window.CaptionReview.repair(cues, currentInspection.durationSeconds);
+      cues = repaired.cues;
+      repairNote = repaired.removedCount
+        ? ` Timing was automatically corrected; ${repaired.removedCount} cue${repaired.removedCount === 1 ? '' : 's'} without usable timing ${repaired.removedCount === 1 ? 'was' : 'were'} removed.`
+        : ' Timing was automatically corrected to fit the media duration.';
+    }
+    if (!cues.length) {
+      const failure = new Error(`${result.providerName} did not produce usable caption timing.`);
+      failure.providerId = result.providerId;
+      return handleCaptionFailure(failure, triedProviderIds.concat(result.providerId));
+    }
+    captionCueCounter = 0; captionCues.innerHTML = '';
+    cues.forEach((cue) => addCaptionCue(cue));
+    captionCueEditor.open = false;
+    const durationCovered = cues.length ? formatDuration((window.CaptionReview.timestampToSeconds(cues[cues.length - 1].end) || 0) * 1000) : '0 seconds';
+    captionReviewSummary.textContent = `Caption draft ready. ${cues.length} cue${cues.length === 1 ? '' : 's'}. Duration covered: ${durationCovered}. Timing validation ${errors.length ? 'repaired automatically' : 'passed'}.${repairNote} Review with the Viewer, then confirm and save, or use Edit individual caption cues for detailed changes.`;
+    captionReviewStatus.textContent = `${result.providerName} created the draft.`;
+    captionReviewSummary.focus();
+  }
+
+  // Required fallback behavior, matching the transcript pattern: keep trying healthy compatible
+  // providers, with one confirmation per new external provider, until a usable draft exists or
+  // every provider has failed. Manual cue authoring is only ever revealed as a last resort, never
+  // shown by default, and never silently.
+  async function handleCaptionFailure(error, triedProviderIds) {
+    const message = (error && error.message) || 'That attempt did not produce usable captions.';
+    const alternative = window.AIProviderLayer.getAlternative('caption-draft', triedProviderIds);
+    if (!alternative) {
+      captionReviewStatus.textContent = 'Automated generation could not produce a usable caption draft after trying every available method. Manual authoring is available as an advanced option below. You may need help from someone who can review the video to caption it manually.';
+      captionCueEditor.open = true;
+      if (!captionCues.children.length) addCaptionCue();
+      captionReviewSummary.focus();
+      return;
+    }
+    const costNote = alternative.external ? ' The video or audio will be sent to an outside service and charges may apply.' : ' This stays on this device.';
+    const proceed = window.confirm(`${message} ${alternative.name} can try next.${costNote}\n\nContinue?`);
+    if (!proceed) { captionReviewStatus.textContent = `${message} You can try again, or open Advanced assistance settings to choose a specific method.`; return; }
+    captionReviewStatus.textContent = `Trying ${alternative.name} next.`;
+    await attemptCaptionDraft(alternative.id, triedProviderIds);
   }
 
   async function requestAudioDescriptionDraft() {
     draftAudioDescriptionButton.disabled = true;
-    audioDescriptionReviewStatus.textContent = 'Requesting editable audio description checkpoints.';
+    audioDescriptionReviewSummary.textContent = 'Creating an audio-description draft using the best available method.';
     try {
-      const approval = confirmAssistanceUse('audio-description-draft', audioDescriptionReviewStatus);
-      if (!approval) return;
-      const result = await window.AIProviderLayer.run('audio-description-draft', await aiContext(true), { confirmed: approval.confirmed });
-      audioDescriptionCueCounter = 0; audioDescriptionCues.innerHTML = '';
-      result.cues.forEach((cue) => addAudioDescriptionCue(cue));
-      audioDescriptionReviewStatus.textContent = `${result.providerName}: ${result.summary || 'Starter checkpoints created.'} Review the video and replace prompts with accurate narration.`;
-      audioDescriptionCues.querySelector('input, textarea, select').focus();
-    } catch (error) { audioDescriptionReviewStatus.textContent = error.message; }
+      await attemptAudioDescriptionDraft(null, []);
+    }
     finally { draftAudioDescriptionButton.disabled = false; }
+  }
+
+  async function attemptAudioDescriptionDraft(forceProviderId, triedProviderIds) {
+    const approval = confirmAssistanceUse('audio-description-draft', audioDescriptionReviewStatus);
+    if (!approval) return;
+    let result;
+    try {
+      const options = { confirmed: approval.confirmed };
+      if (forceProviderId) options.providerId = forceProviderId;
+      result = await window.AIProviderLayer.run('audio-description-draft', await aiContext(true), options);
+    } catch (error) {
+      const attempted = forceProviderId || (error && error.providerId);
+      return handleAudioDescriptionFailure(error, attempted ? triedProviderIds.concat(attempted) : triedProviderIds);
+    }
+    let cues = Array.isArray(result.cues) ? result.cues.filter((cue) => String(cue.text || '').trim()) : [];
+    // Quality gate: a multi-minute, visually active video with only one narration cue is
+    // suspicious, not a complete draft — most likely a placeholder or a truncated response.
+    // Require another attempt rather than presenting it as finished.
+    const suspiciouslyThin = Number(currentInspection.durationSeconds) > 120 && cues.length <= 1;
+    if (!cues.length || suspiciouslyThin) {
+      const failure = new Error(cues.length
+        ? `${result.providerName} returned only ${cues.length} narration cue for a longer video, which is not enough coverage to be a complete draft.`
+        : `${result.providerName} did not produce usable audio-description narration.`);
+      failure.providerId = result.providerId;
+      return handleAudioDescriptionFailure(failure, triedProviderIds.concat(result.providerId));
+    }
+    const errors = window.AudioDescriptionReview.validate(cues, currentInspection.durationSeconds);
+    let finalCues = cues;
+    let producedBy = result.providerName;
+    // "Use multiple providers as a team": when a second healthy provider is available, ask it to
+    // critique and improve the first draft rather than presenting the first response untouched.
+    // If the critique fails or returns something unusable, the original validated draft is kept —
+    // a critique pass is a quality improvement attempt, never a new point of failure.
+    const critic = window.AIProviderLayer.getAlternative('audio-description-draft', [result.providerId]);
+    if (critic) {
+      try {
+        audioDescriptionReviewStatus.textContent = `Asking ${critic.name} to review the draft for missing visuals, redundancy, and timing conflicts.`;
+        const critiqueContext = Object.assign(await aiContext(true), { priorDraftCues: cues });
+        const critiqueResult = await window.AIProviderLayer.run('audio-description-draft', critiqueContext, { confirmed: true, providerId: critic.id });
+        const critiqued = Array.isArray(critiqueResult.cues) ? critiqueResult.cues.filter((cue) => String(cue.text || '').trim()) : [];
+        const critiqueErrors = window.AudioDescriptionReview.validate(critiqued, currentInspection.durationSeconds);
+        if (critiqued.length && critiqueErrors.length <= errors.length) {
+          finalCues = critiqued;
+          producedBy = `${result.providerName}, reviewed and revised by ${critiqueResult.providerName}`;
+        }
+      } catch (error) { /* Critique is best-effort; keep the original validated draft on any failure. */ }
+    }
+    const finalErrors = window.AudioDescriptionReview.validate(finalCues, currentInspection.durationSeconds);
+    audioDescriptionCueCounter = 0; audioDescriptionCues.innerHTML = '';
+    finalCues.forEach((cue) => addAudioDescriptionCue(cue));
+    audioDescriptionCueEditor.open = false;
+    audioDescriptionReviewSummary.textContent = `Audio-description draft ready for review. ${finalCues.length} narration cue${finalCues.length === 1 ? '' : 's'}. ${finalErrors.length ? 'Some cue timing needs attention — open Edit individual audio-description cues to review it.' : 'Timing validation passed.'} Review with the Viewer, then approve, request another draft, or use Edit individual audio-description cues for detailed changes.`;
+    audioDescriptionReviewStatus.textContent = `${producedBy} created this draft.`;
+    audioDescriptionReviewSummary.focus();
+  }
+
+  // Required behavior: never leave a blind user facing a blank required narration field. Keep
+  // trying every healthy compatible provider, with one confirmation per new external provider,
+  // until a usable draft exists or all have failed — matching the transcript and caption pattern.
+  async function handleAudioDescriptionFailure(error, triedProviderIds) {
+    const message = (error && error.message) || 'No usable audio-description draft was generated.';
+    const alternative = window.AIProviderLayer.getAlternative('audio-description-draft', triedProviderIds);
+    if (!alternative) {
+      audioDescriptionReviewSummary.textContent = 'The assistant could not generate a reliable audio-description draft after trying every available method. Manual authoring is available as an advanced option below. A blind user may need assistance from someone who can review the visual content to write descriptions manually.';
+      audioDescriptionReviewStatus.textContent = '';
+      audioDescriptionReviewSummary.focus();
+      return;
+    }
+    const costNote = alternative.external ? ' The video will be sent to an outside service and charges may apply.' : ' This stays on this device.';
+    audioDescriptionReviewStatus.textContent = `${message} Trying another available service.`;
+    const proceed = window.confirm(`${message} ${alternative.name} can try next.${costNote}\n\nContinue?`);
+    if (!proceed) { audioDescriptionReviewStatus.textContent = `${message} You can try again, or open Advanced assistance settings to choose a specific method.`; return; }
+    audioDescriptionReviewStatus.textContent = `Trying ${alternative.name} next.`;
+    await attemptAudioDescriptionDraft(alternative.id, triedProviderIds);
   }
 
 
@@ -429,7 +660,7 @@
       imageDescriptionTextInput.value = String(result.description || result.text || '').trim();
       imageDescriptionStatus.textContent = `${result.providerName} returned a draft. Review it against the image before saving.`;
       imageDescriptionTextInput.focus();
-    } catch (error) { imageDescriptionStatus.textContent = error.message; }
+    } catch (error) { imageDescriptionStatus.textContent = describeAssistanceError(error); }
     finally { draftImageDescriptionButton.disabled = false; }
   }
 
@@ -444,8 +675,6 @@
     currentPlan = null;
     currentRecommendations = null;
     activeJob = null;
-    urlInput.value = '';
-    urlHelp.textContent = 'Paste a link to media or a page containing media.';
     resetViewer();
     resetKnowledge();
     resetAssessment();
@@ -460,9 +689,8 @@
     resetPackageReview();
     resetWorkflowChain();
 
-    fileHelp.textContent = `${file.name} selected. The file stays on this device.`;
-    dropZone.querySelector('strong').textContent = file.name;
-    dropZone.querySelector('span').textContent = 'Press Enter to choose a different file';
+    contentInput.value = file.name;
+    contentHelp.textContent = `${file.name} selected. The file stays on this device.`;
 
     setStatus(`Checking ${file.name}.`);
     inspectionOutput.hidden = false;
@@ -476,13 +704,15 @@
       renderRecommendations(currentInspection);
       renderKnowledge();
       window.AdvancedAccessibilityAnalysis.setContext(currentInspection, currentKnowledgeModel, currentFile);
+      ensureWorkItem();
       syncCurrentSourceToProject();
       await renderViewer(file, currentInspection);
-      renderGoals(currentInspection);
       directGoalSection.hidden = false;
+      renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
       directGoalInput.value = suggestedGoal(currentInspection.mediaType);
-      directGoalStatus.textContent = 'A suggested goal is ready. You can change it using plain language.';
-      setStatus(`${currentInspection.recommendedSummary} Tell the assistant what you want to accomplish or choose an available action.`);
+      directGoalStatus.textContent = '';
+      setStatus(buildContentAcknowledgement(currentInspection, false) + lastRestorationNote);
     } catch (error) {
       console.error(error);
       setStatus('This file could not be checked. Try another file.');
@@ -490,9 +720,43 @@
     }
   }
 
+  // Interpret what was typed before rejecting it: a bare filename or a Windows-style local path
+  // is a common, reasonable thing to paste where a web address was expected, and deserves a
+  // specific explanation rather than a generic "invalid URL" message.
+  function buildContentAcknowledgement(inspection, isUrl) {
+    const type = titleCase(inspection.mediaType);
+    const parts = isUrl ? [`${type} address detected.`] : [`${inspection.name} selected.`, `${type} detected.`];
+    if (inspection.durationSeconds) parts.push(`Duration: ${inspection.durationLabel}.`);
+    parts.push(`Suggested request: ${suggestedGoal(inspection.mediaType)}.`);
+    return parts.join(' ');
+  }
+
+  function looksLikeLocalFileReference(value) {
+    return localFileReferenceKind(value) !== '';
+  }
+
+  function localFileReferenceKind(value) {
+    if (/^[a-zA-Z]:[\\/]/.test(value)) return 'windows-path'; // C:\... or C:/...
+    if (/^\\\\/.test(value)) return 'windows-path'; // \\server\share style path
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(value)) return ''; // has a real scheme already
+    if (/[\\/]/.test(value)) return ''; // has a path separator but no scheme; not a bare filename
+    return /\.[A-Za-z0-9]{2,5}$/.test(value) ? 'filename' : ''; // e.g. "Movie.mp4" with no spaces or separators
+  }
+
+  function describeLocalFileReference(value) {
+    return localFileReferenceKind(value) === 'windows-path'
+      ? 'That looks like a local Windows path. Browsers cannot open it directly. Choose the file from your computer to continue.'
+      : 'That looks like the name of a local file. Choose the file from your computer to continue.';
+  }
+
   async function handleUrl(rawUrl) {
     const value = String(rawUrl || '').trim();
-    if (!value) return;
+    if (!value) { contentHelp.textContent = 'Choose a file or enter a web address.'; contentInput.focus(); return; }
+    if (looksLikeLocalFileReference(value)) {
+      contentHelp.textContent = describeLocalFileReference(value);
+      chooseFileButton.focus();
+      return;
+    }
 
     currentFile = null;
     currentSource = null;
@@ -527,12 +791,9 @@
         name: currentInspection.name,
         url: currentInspection.sourceUrl
       };
-      urlInput.value = currentInspection.sourceUrl;
-      urlHelp.textContent = `Using ${currentInspection.sourceHost}.`;
+      contentInput.value = currentInspection.sourceUrl;
+      contentHelp.textContent = `Using ${currentInspection.sourceHost}.`;
       fileInput.value = '';
-      fileHelp.textContent = 'No local file selected.';
-      dropZone.querySelector('strong').textContent = 'Drop a file here';
-      dropZone.querySelector('span').textContent = 'or press Enter to choose a file';
 
       renderInspection(currentInspection);
       renderAssessment(currentInspection);
@@ -540,43 +801,27 @@
       renderRecommendations(currentInspection);
       renderKnowledge();
       window.AdvancedAccessibilityAnalysis.setContext(currentInspection, currentKnowledgeModel, currentFile);
+      ensureWorkItem();
       syncCurrentSourceToProject();
       await renderViewer(currentSource, currentInspection);
-      renderGoals(currentInspection);
       directGoalSection.hidden = false;
+      renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
       directGoalInput.value = suggestedGoal(currentInspection.mediaType);
-      directGoalStatus.textContent = 'A suggested goal is ready. You can change it using plain language.';
-      setStatus(`${currentInspection.recommendedSummary} Tell the assistant what you want to accomplish or choose an available action.`);
+      directGoalStatus.textContent = '';
+      setStatus(buildContentAcknowledgement(currentInspection, true) + lastRestorationNote);
     } catch (error) {
       console.error(error);
       currentSource = null;
       setStatus('That web address could not be used. Check it and try again.');
       inspectionOutput.innerHTML = `<p role="alert">${escapeHtml(error.message || 'That web address could not be used. Check it and try again.')}</p>`;
-      urlInput.focus();
+      contentInput.focus();
     }
   }
 
   function renderInspection(inspection) {
-    const details = [
-      [inspection.sourceType === 'url' ? 'Source name' : 'File name', inspection.name],
-      ...(inspection.sourceType === 'url' ? [['Website', inspection.sourceHost], ['Web address', inspection.sourceUrl]] : []),
-      ['Type', titleCase(inspection.mediaType)],
-      ['Size', inspection.sizeLabel],
-      ['Duration', inspection.durationLabel],
-      ['Dimensions', inspection.dimensionsLabel],
-      ['Contains audio', yesNo(inspection.hasAudio)],
-      ['Contains video', yesNo(inspection.hasVideo)],
-      ['Contains images', yesNo(inspection.hasImages)],
-      ['Readable text likely', yesNo(inspection.hasReadableText)],
-      ['Captions found', yesNo(inspection.hasCaptions)]
-    ];
-
-    inspectionOutput.innerHTML = `
-      <p class="inspection-summary">${escapeHtml(inspection.recommendedSummary)}</p>
-      <div class="inspection-grid" aria-label="Source details">
-        ${details.map(([label, value]) => fact(label, value)).join('')}
-      </div>
-    `;
+    inspectionOutput.hidden = true;
+    inspectionOutput.innerHTML = '';
   }
 
   function fact(label, value) {
@@ -584,8 +829,36 @@
   }
 
 
+  let lastRestorationNote = '';
+
   function renderAssessment(inspection) {
-    currentKnowledgeModel = window.AccessibilityIntelligence.buildKnowledgeModel(inspection);
+    const baseModel = window.AccessibilityIntelligence.buildKnowledgeModel(inspection);
+    const storedModel = window.SharedKnowledge.load(baseModel.source);
+    currentKnowledgeModel = storedModel ? window.SharedKnowledge.merge(baseModel, storedModel) : baseModel;
+    lastRestorationNote = '';
+    if (storedModel) {
+      const categories = ['transcript', 'captions', 'audioDescription', 'imageDescription'];
+      let restoredTextCount = 0;
+      categories.forEach((category) => {
+        const record = currentKnowledgeModel.accessibility && currentKnowledgeModel.accessibility[category];
+        if (record && Array.isArray(record.artifacts) && record.artifacts.length) {
+          const beforeCount = window.OutputManager.listForSource(currentKnowledgeModel.source).length;
+          window.OutputManager.restore(currentKnowledgeModel.source, record.artifacts);
+          restoredTextCount += window.OutputManager.listForSource(currentKnowledgeModel.source).length - beforeCount;
+        }
+      });
+      // Honest about the actual gap: text content (transcript, captions, AD script) survives a
+      // page reload and is usable immediately. Generated audio — the described-audio mix and any
+      // narration clips — does not; it only ever existed as an in-memory blob URL in the browser
+      // tab that created it, and that is gone once the session ends. Restoring audio safely would
+      // need a different, larger storage approach than what saves everything else, and has not
+      // been built. Saying so directly here is the alternative to a person discovering it only
+      // after "Make This Accessible" runs all the way to rendering and fails.
+      const hadAudioMix = Boolean(currentKnowledgeModel.audio && currentKnowledgeModel.audio.describedMix);
+      lastRestorationNote = restoredTextCount
+        ? ` Previously completed work was found and restored: ${restoredTextCount} saved text result${restoredTextCount === 1 ? '' : 's'} (such as transcript, captions, or the audio-description script). Older saved work without usable text will need to be created again. Generated audio, including any described-audio mix, does not survive a page reload and will need to be created again${hadAudioMix ? ' before rendering can continue' : ''}.`
+        : ' Previously completed work was found for this source, but none of it had restorable text content, so it will need to be created again.';
+    }
     currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
     assessmentSection.hidden = false;
     assessmentSummary.textContent = currentAssessment.summary;
@@ -907,10 +1180,27 @@
   }
 
   function suggestedGoal(mediaType) {
-    if (mediaType === 'audio') return 'Transcribe this';
+    if (mediaType === 'audio') return 'Transcribe this audio';
     if (mediaType === 'image') return 'Describe this picture';
     if (mediaType === 'video') return 'Make this video accessible';
-    return 'Review accessibility';
+    if (mediaType === 'document') return 'Extract the text';
+    if (mediaType === 'archive') return 'List what is inside';
+    return 'Create an accessibility package';
+  }
+
+  // Only requests that matchDirectGoal() actually recognizes are offered as suggestions.
+  // A suggestion that does not work would be worse than no suggestion at all.
+  function suggestionsFor(mediaType) {
+    if (mediaType === 'video') return ['Make this video accessible', 'Transcribe this video', 'Create captions', 'Create audio description', 'Extract the audio', 'Compress this video'];
+    if (mediaType === 'audio') return ['Transcribe this audio', 'Compress this audio', 'Normalize the volume'];
+    if (mediaType === 'image') return ['Describe this picture', 'Detect text in this image', 'Compress this image', 'Resize this image'];
+    if (mediaType === 'document') return ['Extract the text', 'Detect text in this document'];
+    if (mediaType === 'archive') return ['List what is inside'];
+    return ['Create an accessibility package'];
+  }
+
+  function renderGoalSuggestions(mediaType) {
+    directGoalSuggestions.innerHTML = suggestionsFor(mediaType).map((text) => `<option value="${escapeHtml(text)}"></option>`).join('');
   }
 
   function matchDirectGoal(value) {
@@ -920,22 +1210,49 @@
       const plan = window.WorkflowChain.build(intents, currentInspection.mediaType);
       if (window.WorkflowChain.selectedSteps(plan).length) return { chain: plan };
     }
+    const mediaType = currentInspection.mediaType;
     const workflowId = /transcrib|speech.*text|audio.*text/.test(text) ? 'create-transcript'
       : /describe|alt text|image description|picture/.test(text) ? 'generate-alt-text'
       : /publish|publication|render.*accessible|final.*video/.test(text) ? 'render-accessible-video'
       : /caption|subtitle/.test(text) ? 'create-captions'
       : /audio description|describe.*video|narration/.test(text) ? 'audio-description'
       : /extract.*audio|save.*audio/.test(text) ? 'extract-audio'
-      : /package|publish/.test(text) ? 'accessibility-package' : '';
+      : /normalize|loudness|volume/.test(text) ? 'normalize-audio'
+      : /compress|smaller|reduce.*size|shrink/.test(text) ? (mediaType === 'audio' ? 'compress-audio' : mediaType === 'image' ? 'compress-image' : 'compress-video')
+      : /resize|dimensions|scale.*image/.test(text) ? 'resize-image'
+      : /ocr|detect.*text|read.*text/.test(text) ? (mediaType === 'document' ? 'ocr-document' : 'ocr-image')
+      : /extract.*text|plain text|text file/.test(text) ? 'extract-document-text'
+      : /what.*inside|list.*file|archive.*content/.test(text) ? 'inspect-archive'
+      : /ready for ai|ai.?ready|prepare.*ai/.test(text) ? 'prepare-for-ai'
+      : /package|publish|accessibility report/.test(text) ? 'accessibility-package' : '';
     return workflowId ? { intent: intents.find((item) => item.workflowId === workflowId && !item.completed) } : null;
   }
 
-  function submitDirectGoal(event) {
+  async function submitDirectGoal(event) {
     event.preventDefault();
-    if (!currentInspection) { directGoalStatus.textContent = 'Choose a file before starting a goal.'; return; }
+    if (!currentInspection) {
+      const pendingValue = contentInput.value.trim();
+      if (pendingValue && looksLikeLocalFileReference(pendingValue)) {
+        directGoalStatus.textContent = describeLocalFileReference(pendingValue);
+        chooseFileButton.focus();
+        return;
+      }
+      if (pendingValue) {
+        directGoalStatus.textContent = 'Checking the content first.';
+        await handleUrl(pendingValue);
+      }
+      if (!currentInspection) {
+        directGoalStatus.textContent = pendingValue ? 'That content could not be used. Check it and try again.' : 'Add content before starting a request.';
+        return;
+      }
+    }
     const match = matchDirectGoal(directGoalInput.value);
     if (!match || (!match.intent && !match.chain)) {
-      directGoalStatus.textContent = 'That goal was not recognized for this source. Try Transcribe this, Describe this picture, Create captions, Create audio description, or Make this accessible.';
+      // Requests beyond what matchDirectGoal recognizes (translation, VPAT drafts, summaries, and
+      // similar open-ended requests) are not yet interpreted by real language understanding — this
+      // is still pattern matching against a fixed set of phrasings, not a general assistant. Being
+      // specific about what is understood is more honest than implying anything typed will work.
+      directGoalStatus.textContent = 'That request is not recognized yet. Try one of the suggestions in the list, or a request like Transcribe this, Describe this picture, Create captions, Compress this, Detect text in this, or Make this accessible.';
       directGoalInput.focus(); return;
     }
     if (match.chain) { directGoalStatus.textContent = 'Make This Accessible started.'; startWorkflowChain(match.chain); return; }
@@ -944,84 +1261,12 @@
     runIntent(match.intent);
   }
 
-  function renderGoals(inspection) {
-    const intents = currentRecommendations
-      ? currentRecommendations.recommendations
-      : window.IntentEngine.getIntents(inspection);
-    goals.innerHTML = '';
-    goalsSection.hidden = false;
-
-    if (!intents.length) {
-      goalsIntro.textContent = 'No choices are available for this file yet.';
-      return;
-    }
-
-    const remaining = intents.filter((intent) => !intent.completed);
-    const availableCount = remaining.filter((intent) => intent.capability.canRun).length;
-    goalsIntro.textContent = `${remaining.length} remaining choice${remaining.length === 1 ? '' : 's'}. ${availableCount} available now. Choices are ordered by recommendation priority.`;
-
-    const chainPlan = window.WorkflowChain.build(intents, inspection.mediaType);
-    if (window.WorkflowChain.selectedSteps(chainPlan).length > 1) {
-      const chainCard = document.createElement('article');
-      chainCard.className = 'recommendation-card chain-outcome-card';
-      chainCard.setAttribute('aria-labelledby', 'goal-title-accessibility-chain');
-      chainCard.innerHTML = `
-        <h3 id="goal-title-accessibility-chain">${escapeHtml(chainPlan.title)}</h3>
-        <p class="recommendation-priority"><strong>Complete outcome</strong></p>
-        <p>Review and run the available accessibility workflows in the correct order. The plan pauses whenever your review or authorship is required.</p>
-      `;
-      const chainButton = document.createElement('button');
-      chainButton.type = 'button';
-      chainButton.textContent = 'Make this accessible';
-      chainButton.addEventListener('click', () => startWorkflowChain(chainPlan));
-      chainCard.appendChild(chainButton);
-      goals.appendChild(chainCard);
-    }
-
-    intents.forEach((intent) => {
-      const card = document.createElement('article');
-      card.className = 'recommendation-card';
-      card.setAttribute('aria-labelledby', `goal-title-${intent.id}`);
-
-      const title = document.createElement('h3');
-      title.id = `goal-title-${intent.id}`;
-      title.textContent = intent.title;
-      card.appendChild(title);
-
-      if (intent.recommendationLevel) {
-        const priority = document.createElement('p');
-        priority.className = 'recommendation-priority';
-        priority.innerHTML = `<strong>${escapeHtml(intent.recommendationLevel)}</strong>`;
-        card.appendChild(priority);
-      }
-
-      const description = document.createElement('p');
-      description.textContent = intent.recommendationReason || intent.description;
-      card.appendChild(description);
-
-      const button = document.createElement('button');
-      button.type = 'button';
-
-      if (intent.completed) {
-        button.textContent = 'Already complete';
-        button.disabled = true;
-        button.setAttribute('aria-label', `${intent.title}. Already complete.`);
-      } else if (intent.inProgress) {
-        button.textContent = 'In progress';
-        button.disabled = true;
-        button.setAttribute('aria-label', `${intent.title}. In progress.`);
-      } else if (intent.capability.canRun) {
-        button.textContent = intent.actionLabel;
-        button.addEventListener('click', () => runIntent(intent));
-      } else {
-        button.textContent = 'Not available yet';
-        button.disabled = true;
-        button.setAttribute('aria-label', `${intent.title}. Not available yet.`);
-      }
-
-      card.appendChild(button);
-      goals.appendChild(card);
-    });
+  function ensureWorkItem() {
+    if (activeProject()) return activeProject();
+    const name = currentFile ? currentFile.name : (currentInspection ? currentInspection.name : 'Untitled work');
+    const project = window.ProjectWorkspace.create(name);
+    renderProjectWorkspace(`${project.name} was created automatically to keep this work organized. You can rename or organize it later in Your work.`);
+    return project;
   }
 
   function startWorkflowChain(chain) {
@@ -1029,6 +1274,7 @@
       setStatus('No unfinished accessibility work is available for this source.');
       return;
     }
+    ensureWorkItem();
     activeWorkflowChain = chain;
     activeWorkflowChain.status = 'running';
     activeWorkflowChain.startedAt = new Date().toISOString();
@@ -1093,22 +1339,63 @@
       jobStatus.textContent = `Make This Accessible complete. ${summary.completed} workflow${summary.completed === 1 ? '' : 's'} completed.`;
       setStatus('Make This Accessible is complete. The accessibility package and available publication outputs are ready.');
       activeWorkflowChain = null;
-      renderGoals(currentInspection);
-      goalsSection.focus();
+      renderGoalSuggestions(currentInspection.mediaType);
+      renderCurrentTask();
+      currentTaskSection.focus();
       return;
     }
     if (step.blocked) {
       jobStatus.textContent = `Make This Accessible paused before ${step.title}. ${activeWorkflowChain.pauseReason}`;
       setStatus(`Make This Accessible paused. ${activeWorkflowChain.pauseReason}`);
-      renderGoals(currentInspection);
-      goalsSection.focus();
+      renderGoalSuggestions(currentInspection.mediaType);
+      renderCurrentTask();
+      currentTaskSection.focus();
       return;
     }
+    if (step.intent.workflowId === 'render-accessible-video') { offerRenderLaterPause(step.intent); return; }
     setStatus(step.requiresReview
       ? `${step.title} requires your review. Make This Accessible will resume automatically after approval.`
       : `${step.title} is running as the next Make This Accessible step.`);
     runIntent(step.intent);
   }
+
+  let renderLaterTimer = null;
+
+  // A brief, cancellable window before final rendering starts automatically, so the person can
+  // defer it without needing to interrupt anything already running. If nothing is clicked, it
+  // proceeds automatically — this is not a hard requirement to click through, only an opt-out.
+  function offerRenderLaterPause(intent) {
+    renderCurrentTask();
+    currentTaskSummary.textContent = 'Final rendering will begin automatically in a few seconds. Everything completed so far has been saved.';
+    renderLaterButton.hidden = false;
+    currentTaskNextButton.hidden = true;
+    currentTaskSection.hidden = false;
+    currentTaskSection.focus();
+    renderLaterTimer = window.setTimeout(() => {
+      renderLaterTimer = null;
+      renderLaterButton.hidden = true;
+      runIntent(intent);
+    }, 6000);
+  }
+
+  function cancelRenderLaterPause() {
+    if (renderLaterTimer) { window.clearTimeout(renderLaterTimer); renderLaterTimer = null; }
+    renderLaterButton.hidden = true;
+  }
+
+  renderLaterButton.addEventListener('click', () => {
+    cancelRenderLaterPause();
+    setStatus('Final rendering was postponed. Completed work was saved.');
+    currentTaskSummary.textContent = 'Final rendering was postponed. Completed work was saved.';
+    currentTaskNextButton.hidden = false;
+    currentTaskNextButton.textContent = 'Render now';
+    currentTaskNextButton.onclick = () => {
+      const intents = currentRecommendations ? currentRecommendations.recommendations : window.IntentEngine.getIntents(currentInspection);
+      const renderIntent = intents.find((item) => item.workflowId === 'render-accessible-video');
+      if (renderIntent) runIntent(renderIntent);
+    };
+    currentTaskSection.focus();
+  });
 
   function renderWorkflowChainState() {
     if (!activeWorkflowChain) return;
@@ -1123,7 +1410,8 @@
     workflowChainSection.hidden = true;
     workflowChainStatus.textContent = '';
     setStatus(message || 'The remaining accessibility plan was cancelled. Completed work was kept.');
-    goalsSection.focus();
+    renderCurrentTask();
+    if (!currentTaskSection.hidden) currentTaskSection.focus(); else directGoalSection.focus();
   }
 
   function resetWorkflowChain() {
@@ -1135,6 +1423,7 @@
 
   function runIntent(intent) {
     if (!currentSource || !currentInspection || !intent.capability.canRun) return;
+    ensureWorkItem();
 
     if (intent.workflowId === 'create-transcript') {
       openTranscriptReview(intent);
@@ -1204,6 +1493,12 @@
     transcriptReviewSummary.textContent = `Use the Viewer for ${currentFile ? currentFile.name : currentInspection.name}. Enter the spoken content, identify speakers when useful, and include meaningful sounds.`;
     transcriptReviewSection.hidden = false;
     transcriptReviewSection.focus();
+    // If a compatible transcription provider is already available, request a draft right away
+    // instead of waiting for a separate manual click, so goal-driven workflows like "Transcribe
+    // this audio" and "Make this video accessible" actually reach automatic provider selection
+    // and speech recognition. The person still reviews, edits, and approves before it is saved,
+    // and the existing Draft with AI button remains available to retry.
+    if (window.AIProviderLayer.getCapability('transcription-draft').canRun) requestTranscriptDraft();
   }
 
   function submitTranscriptReview(event) {
@@ -1225,7 +1520,8 @@
       text,
       wordCount: window.TranscriptReview.wordCount(text),
       reviewed: true,
-      reviewedAt: new Date().toISOString()
+      reviewedAt: new Date().toISOString(),
+      provider: lastTranscriptProviderName || 'Entered manually'
     };
     const intent = pendingTranscriptIntent;
     startIntentJob(intent, options);
@@ -1233,6 +1529,7 @@
 
   function resetTranscriptReview() {
     pendingTranscriptIntent = null;
+    lastTranscriptProviderName = '';
     transcriptReviewSection.hidden = true;
     transcriptTitleInput.value = '';
     transcriptTextInput.value = '';
@@ -1282,14 +1579,25 @@
     captionTitleInput.value = review.suggestedTitle;
     captionCueCounter = 0;
     captionCues.innerHTML = '';
-    review.cues.forEach((cue) => addCaptionCue(cue));
+    captionCueEditor.open = false;
     captionsReviewedInput.checked = false;
     captionReviewStatus.textContent = '';
-    captionReviewSummary.textContent = review.reusedTranscript
-      ? 'A completed transcript was used to create starter cues. Review every cue against the Viewer and correct the timing and text.'
-      : 'Use the Viewer to enter each caption and its timing. Include spoken words, speaker identification when needed, and meaningful sounds.';
     captionReviewSection.hidden = false;
-    captionReviewSection.focus();
+    if (window.AIProviderLayer.getCapability('caption-draft').canRun) {
+      captionReviewSummary.textContent = 'Creating a caption draft using the best available method.';
+      captionReviewSummary.focus();
+      requestCaptionDraft();
+    } else if (review.reusedTranscript) {
+      review.cues.forEach((cue) => addCaptionCue(cue));
+      captionCueEditor.open = true;
+      captionReviewSummary.textContent = 'No caption-generation service is currently available. Starter cues were created from the completed transcript instead. Review every cue against the Viewer and correct the timing and text.';
+      captionReviewSummary.focus();
+    } else {
+      captionReviewSummary.textContent = 'No caption-generation service is currently available, and no completed transcript exists to create starter cues from. Manual authoring is available as an advanced option below. You may need help from someone who can review the video to caption it manually.';
+      captionCueEditor.open = true;
+      addCaptionCue();
+      captionReviewSummary.focus();
+    }
   }
 
   function addCaptionCue(cue = {}) {
@@ -1302,17 +1610,17 @@
       <legend>Caption cue ${cueId}</legend>
       <div class="caption-time-fields">
         <div class="form-field">
-          <label for="caption-start-${cueId}">Start time</label>
+          <label for="caption-start-${cueId}">Caption cue ${cueId} start time</label>
           <input id="caption-start-${cueId}" class="caption-start" type="text" inputmode="decimal" value="${escapeHtml(cue.start || '00:00:00.000')}" aria-describedby="caption-time-format-${cueId}" required>
         </div>
         <div class="form-field">
-          <label for="caption-end-${cueId}">End time</label>
+          <label for="caption-end-${cueId}">Caption cue ${cueId} end time</label>
           <input id="caption-end-${cueId}" class="caption-end" type="text" inputmode="decimal" value="${escapeHtml(cue.end || '00:00:04.000')}" aria-describedby="caption-time-format-${cueId}" required>
         </div>
       </div>
       <p id="caption-time-format-${cueId}" class="help-text">Format: 00:00:00.000</p>
       <div class="form-field">
-        <label for="caption-text-${cueId}">Caption text</label>
+        <label for="caption-text-${cueId}">Caption cue ${cueId} text</label>
         <textarea id="caption-text-${cueId}" class="caption-text" rows="3" required>${escapeHtml(cue.text || '')}</textarea>
       </div>
       <button type="button" class="remove-caption-cue">Remove caption cue ${cueId}</button>
@@ -1333,7 +1641,12 @@
 
   function renumberCaptionCues() {
     Array.from(captionCues.children).forEach((fieldset, index) => {
-      fieldset.querySelector('legend').textContent = `Caption cue ${index + 1}`;
+      const cueId = index + 1;
+      fieldset.querySelector('legend').textContent = `Caption cue ${cueId}`;
+      fieldset.querySelector('label[for^="caption-start-"]').textContent = `Caption cue ${cueId} start time`;
+      fieldset.querySelector('label[for^="caption-end-"]').textContent = `Caption cue ${cueId} end time`;
+      fieldset.querySelector('label[for^="caption-text-"]').textContent = `Caption cue ${cueId} text`;
+      fieldset.querySelector('.remove-caption-cue').textContent = `Remove caption cue ${cueId}`;
     });
   }
 
@@ -1348,12 +1661,24 @@
   function submitCaptionReview(event) {
     event.preventDefault();
     if (!pendingCaptionIntent) return;
-    const cues = collectCaptionCues();
-    const errors = window.CaptionReview.validate(cues, currentInspection.durationSeconds);
+    let cues = collectCaptionCues();
+    let errors = window.CaptionReview.validate(cues, currentInspection.durationSeconds);
     if (errors.length) {
-      captionReviewStatus.textContent = errors.join(' ');
-      const firstInvalid = captionCues.querySelector(':invalid');
-      if (firstInvalid) firstInvalid.focus();
+      const repaired = window.CaptionReview.repair(cues, currentInspection.durationSeconds);
+      const reErrors = window.CaptionReview.validate(repaired.cues, currentInspection.durationSeconds);
+      if (!reErrors.length && repaired.cues.length) {
+        cues = repaired.cues;
+        captionCueCounter = 0; captionCues.innerHTML = '';
+        cues.forEach((cue) => addCaptionCue(cue));
+        captionReviewStatus.textContent = `Timing was automatically corrected (${errors.length} issue${errors.length === 1 ? '' : 's'} fixed). Review the corrected cues, then save again.`;
+        captionCueEditor.open = true;
+        captionReviewSummary.focus();
+        return;
+      }
+      const types = Array.from(new Set(errors.map((message) => message.replace(/^Cue \d+/, 'A cue')))).slice(0, 3);
+      captionReviewStatus.textContent = `${errors.length} caption cue${errors.length === 1 ? ' has' : 's have'} a timing or text problem: ${types.join(' ')} Open Edit individual caption cues to find and fix the specific cue.`;
+      captionCueEditor.open = true;
+      captionReviewSummary.focus();
       return;
     }
     if (!captionsReviewedInput.checked) {
@@ -1370,6 +1695,7 @@
       webVtt: window.CaptionReview.toWebVtt(captionTitleInput.value, currentFile ? currentFile.name : currentInspection.name, cues)
     };
     const intent = pendingCaptionIntent;
+    captionReviewStatus.textContent = 'Captions saved. Continuing the accessibility workflow.';
     startIntentJob(intent, options);
   }
 
@@ -1382,6 +1708,45 @@
     captionReviewStatus.textContent = '';
   }
 
+  function renderNarrationStyleOptions() {
+    if (narrationStyleInput.options.length) return;
+    narrationStyleInput.innerHTML = window.NarrationStyle.list()
+      .map((style) => `<option value="${escapeHtml(style.id)}">${escapeHtml(style.label)}</option>`)
+      .join('');
+  }
+
+  function updateNarrationStyleDetails() {
+    const sourceName = currentFile ? currentFile.name : (currentInspection ? currentInspection.name : '');
+    const resolved = window.NarrationStyle.resolveVoice(narrationStyleInput.value, sourceName);
+    const styleUsed = narrationStyleInput.value === 'automatic' ? `${resolved.style.label} (chosen automatically)` : resolved.style.label;
+    narrationStyleTechnical.textContent = `Style: ${styleUsed}. Using: ${resolved.providerName}. Voice: ${titleCase(resolved.voice)}.`;
+  }
+
+  async function previewNarrationStyle() {
+    const approval = confirmAssistanceUse('narration-audio', narrationPreviewStatus);
+    if (!approval) return;
+    previewNarrationStyleButton.disabled = true;
+    const sourceName = currentFile ? currentFile.name : (currentInspection ? currentInspection.name : '');
+    const resolved = window.NarrationStyle.resolveVoice(narrationStyleInput.value, sourceName);
+    narrationPreviewStatus.textContent = `Creating a sample of the ${resolved.style.label} narration style.`;
+    try {
+      const result = await window.AIProviderLayer.run('narration-audio', {
+        narrationCues: [{ text: `Welcome to the Media Workflow Assistant. This is a sample of the ${resolved.style.label} narration style.` }],
+        narrationVoice: resolved.voice,
+        narrationSpeed: Number(narrationSpeedInput.value) || 1
+      }, { confirmed: approval.confirmed });
+      const clip = result.clips && result.clips[0];
+      if (!clip) throw new Error('No preview audio was returned.');
+      const audio = new Audio(`data:${clip.mimeType};base64,${clip.base64}`);
+      await audio.play();
+      narrationPreviewStatus.textContent = `Playing a sample of the ${resolved.style.label} narration style.`;
+    } catch (error) {
+      narrationPreviewStatus.textContent = describeAssistanceError(error);
+    } finally {
+      previewNarrationStyleButton.disabled = false;
+    }
+  }
+
   function openAudioDescriptionReview(intent) {
     pendingAudioDescriptionIntent = intent;
     const review = window.AudioDescriptionReview.build(currentFile ? currentFile.name : currentInspection.name);
@@ -1389,17 +1754,31 @@
     audioDescriptionNotesInput.value = '';
     audioDescriptionCueCounter = 0;
     audioDescriptionCues.innerHTML = '';
-    review.cues.forEach((cue) => addAudioDescriptionCue(cue));
+    audioDescriptionCueEditor.open = false;
     audioDescriptionReviewedInput.checked = false;
     generateNarrationMixInput.checked = Boolean(activeWorkflowChain);
-    narrationVoiceInput.value = 'alloy';
+    renderNarrationStyleOptions();
+    narrationStyleInput.value = window.NarrationStyle.getSavedPreference() || window.NarrationStyle.suggestStyleId(currentFile ? currentFile.name : currentInspection.name) || 'automatic';
+    updateNarrationStyleDetails();
+    narrationPreviewStatus.textContent = '';
     narrationSpeedInput.value = '1';
     narrationVolumeInput.value = '100';
     sourceDuckingInput.value = '35';
     audioDescriptionReviewStatus.textContent = '';
-    audioDescriptionReviewSummary.textContent = 'Use the Viewer to identify essential visual information that is not already communicated by dialogue, narration, or sound. Add concise narration and verify each proposed placement.';
     audioDescriptionReviewSection.hidden = false;
-    audioDescriptionReviewSection.focus();
+    if (window.AIProviderLayer.getCapability('audio-description-draft').canRun) {
+      audioDescriptionReviewSummary.textContent = 'Creating an audio-description draft using the best available method.';
+      audioDescriptionReviewSummary.focus();
+      requestAudioDescriptionDraft();
+    } else {
+      // No blank narration field is ever shown here. Nothing exists to generate a draft with,
+      // so this states that plainly and reveals manual authoring only as an explicit, explained
+      // last resort — never silently.
+      audioDescriptionReviewSummary.textContent = 'No audio-description generation service is currently available, so no draft could be created. Manual authoring is available as an advanced option below. A blind user may need assistance from someone who can review the visual content to write descriptions manually.';
+      audioDescriptionCueEditor.open = true;
+      addAudioDescriptionCue();
+      audioDescriptionReviewSummary.focus();
+    }
   }
 
   function addAudioDescriptionCue(cue = {}) {
@@ -1408,14 +1787,14 @@
     const fieldset = document.createElement('fieldset');
     fieldset.className = 'audio-description-cue';
     fieldset.innerHTML = `
-      <legend>Description cue ${cueId}</legend>
+      <legend>Audio-description cue ${cueId}</legend>
       <div class="caption-time-fields">
-        <div class="form-field"><label for="ad-start-${cueId}">Start time</label><input id="ad-start-${cueId}" class="ad-start" type="text" inputmode="decimal" value="${escapeHtml(cue.start || '00:00:00.000')}" required></div>
-        <div class="form-field"><label for="ad-end-${cueId}">End time</label><input id="ad-end-${cueId}" class="ad-end" type="text" inputmode="decimal" value="${escapeHtml(cue.end || '00:00:04.000')}" required></div>
+        <div class="form-field"><label for="ad-start-${cueId}">Audio-description cue ${cueId} start time</label><input id="ad-start-${cueId}" class="ad-start" type="text" inputmode="decimal" value="${escapeHtml(cue.start || '00:00:00.000')}" required></div>
+        <div class="form-field"><label for="ad-end-${cueId}">Audio-description cue ${cueId} end time</label><input id="ad-end-${cueId}" class="ad-end" type="text" inputmode="decimal" value="${escapeHtml(cue.end || '00:00:04.000')}" required></div>
       </div>
-      <div class="form-field"><label for="ad-placement-${cueId}">Narration placement</label><select id="ad-placement-${cueId}" class="ad-placement"><option>During a pause</option><option>Before the scene</option><option>After the scene</option><option>Extended description</option></select></div>
-      <div class="form-field"><label for="ad-text-${cueId}">Description narration</label><textarea id="ad-text-${cueId}" class="ad-text" rows="4" required>${escapeHtml(cue.text || '')}</textarea></div>
-      <button type="button" class="remove-audio-description-cue">Remove description cue ${cueId}</button>`;
+      <div class="form-field"><label for="ad-placement-${cueId}">Audio-description cue ${cueId} placement</label><select id="ad-placement-${cueId}" class="ad-placement"><option>During a pause</option><option>Before the scene</option><option>After the scene</option><option>Extended description</option></select></div>
+      <div class="form-field"><label for="ad-text-${cueId}">Audio-description cue ${cueId} narration</label><textarea id="ad-text-${cueId}" class="ad-text" rows="4" required>${escapeHtml(cue.text || '')}</textarea></div>
+      <button type="button" class="remove-audio-description-cue">Remove audio-description cue ${cueId}</button>`;
     fieldset.querySelector('.ad-placement').value = cue.placement || 'During a pause';
     fieldset.querySelector('.remove-audio-description-cue').addEventListener('click', () => {
       if (audioDescriptionCues.children.length === 1) {
@@ -1425,7 +1804,7 @@
       const nextFocus = fieldset.previousElementSibling || fieldset.nextElementSibling || addAudioDescriptionCueButton;
       fieldset.remove();
       renumberAudioDescriptionCues();
-      audioDescriptionReviewStatus.textContent = 'Description cue removed.';
+      audioDescriptionReviewStatus.textContent = 'Audio-description cue removed.';
       nextFocus.focus();
     });
     audioDescriptionCues.appendChild(fieldset);
@@ -1433,7 +1812,13 @@
 
   function renumberAudioDescriptionCues() {
     Array.from(audioDescriptionCues.children).forEach((fieldset, index) => {
-      fieldset.querySelector('legend').textContent = `Description cue ${index + 1}`;
+      const cueId = index + 1;
+      fieldset.querySelector('legend').textContent = `Audio-description cue ${cueId}`;
+      fieldset.querySelector('label[for^="ad-start-"]').textContent = `Audio-description cue ${cueId} start time`;
+      fieldset.querySelector('label[for^="ad-end-"]').textContent = `Audio-description cue ${cueId} end time`;
+      fieldset.querySelector('label[for^="ad-placement-"]').textContent = `Audio-description cue ${cueId} placement`;
+      fieldset.querySelector('label[for^="ad-text-"]').textContent = `Audio-description cue ${cueId} narration`;
+      fieldset.querySelector('.remove-audio-description-cue').textContent = `Remove audio-description cue ${cueId}`;
     });
   }
 
@@ -1452,9 +1837,10 @@
     const cues = collectAudioDescriptionCues();
     const errors = window.AudioDescriptionReview.validate(cues, currentInspection.durationSeconds);
     if (errors.length) {
-      audioDescriptionReviewStatus.textContent = errors.join(' ');
-      const firstInvalid = audioDescriptionCues.querySelector(':invalid');
-      if (firstInvalid) firstInvalid.focus();
+      const types = Array.from(new Set(errors.map((message) => message.replace(/^Description cue \d+/, 'A cue')))).slice(0, 3);
+      audioDescriptionReviewStatus.textContent = `${errors.length} description cue${errors.length === 1 ? ' has' : 's have'} a timing or narration problem: ${types.join(' ')} Open Edit individual audio-description cues to find and fix the specific cue.`;
+      audioDescriptionCueEditor.open = true;
+      audioDescriptionReviewSummary.focus();
       return;
     }
     if (!audioDescriptionReviewedInput.checked) {
@@ -1462,7 +1848,10 @@
       audioDescriptionReviewedInput.focus();
       return;
     }
+    audioDescriptionReviewStatus.textContent = 'Audio description saved. Continuing the accessibility workflow.';
     const sourceName = currentFile ? currentFile.name : currentInspection.name;
+    const resolvedVoice = window.NarrationStyle.resolveVoice(narrationStyleInput.value, sourceName);
+    window.NarrationStyle.savePreference(narrationStyleInput.value);
     const options = {
       title: audioDescriptionTitleInput.value.trim() || `Audio description script for ${sourceName}`,
       notes: audioDescriptionNotesInput.value.trim(),
@@ -1472,7 +1861,9 @@
       reviewedAt: new Date().toISOString(),
       scriptMarkdown: window.AudioDescriptionReview.toMarkdown(audioDescriptionTitleInput.value, sourceName, cues, audioDescriptionNotesInput.value),
       generateNarrationMix: generateNarrationMixInput.checked,
-      narrationVoice: narrationVoiceInput.value,
+      narrationVoice: resolvedVoice.voice,
+      narrationStyleId: narrationStyleInput.value,
+      narrationStyleLabel: resolvedVoice.style.label,
       narrationSpeed: Number(narrationSpeedInput.value) || 1,
       narrationVolume: Number(narrationVolumeInput.value) || 100,
       sourceDucking: Number(sourceDuckingInput.value) || 35
@@ -1506,10 +1897,11 @@
     audioDescriptionCues.innerHTML = '';
     audioDescriptionReviewedInput.checked = false;
     generateNarrationMixInput.checked = false;
-    narrationVoiceInput.value = 'alloy';
+    narrationStyleInput.value = 'automatic';
     narrationSpeedInput.value = '1';
     narrationVolumeInput.value = '100';
     sourceDuckingInput.value = '35';
+    narrationPreviewStatus.textContent = '';
     audioDescriptionReviewStatus.textContent = '';
   }
 
@@ -1592,6 +1984,44 @@
     jobStatus.textContent = position > 1 ? `${job.intent.title} is queued at position ${position}.` : `${job.intent.title} is queued and ready to start.`;
   }
 
+  function formatDuration(ms) {
+    const totalSeconds = Math.max(0, Math.round(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes === 0) return `${seconds} second${seconds === 1 ? '' : 's'}`;
+    if (seconds === 0) return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+    return `${minutes} minute${minutes === 1 ? '' : 's'} ${seconds} second${seconds === 1 ? '' : 's'}`;
+  }
+
+  // A simple, clearly-approximate estimate from elapsed time and current progress. Not the
+  // historical-learning model described in the product direction — that needs its own scoped
+  // implementation with somewhere to store real per-provider timing data. This gives an honest,
+  // continuously-updating "about this long" figure in the meantime, rather than percentage only.
+  function estimateRemainingText(job) {
+    const elapsedMs = Date.now() - (job.startedAt ? new Date(job.startedAt).getTime() : Date.now());
+    const progress = Number(job.progress) || 0;
+    if (progress < 5 || elapsedMs < 4000) return 'Estimating remaining time.';
+    const totalEstimateMs = (elapsedMs / progress) * 100;
+    const remainingMs = Math.max(0, totalEstimateMs - elapsedMs);
+    const low = remainingMs * 0.75;
+    const high = remainingMs * 1.25;
+    if (high < 20000) return 'Estimated remaining time: less than a minute.';
+    return `Estimated remaining time: approximately ${formatDuration(low)} to ${formatDuration(high)}.`;
+  }
+
+  function updateTimeStatus(job) {
+    if (!job.startedAt) {
+      jobTimeStatus.textContent = `Still waiting in the queue. Overall progress: ${Math.round(Number(job.progress) || 0)} percent.`;
+      return;
+    }
+    const elapsedMs = Date.now() - new Date(job.startedAt).getTime();
+    jobTimeStatus.textContent = `Elapsed: ${formatDuration(elapsedMs)}. ${estimateRemainingText(job)} Overall progress: ${Math.round(Number(job.progress) || 0)} percent.`;
+  }
+
+  function stopProgressTimer() {
+    if (progressTimer) { window.clearInterval(progressTimer); progressTimer = null; }
+  }
+
   function renderProgress(job) {
     progressSection.hidden = false;
     jobStatus.textContent = `${job.intent.title} is starting.`;
@@ -1603,11 +2033,17 @@
         <span>${escapeHtml(step)}</span>
       </li>
     `).join('');
+    stopProgressTimer();
+    updateTimeStatus(job);
+    // Every 20 seconds rather than every second: continuous updates without announcing every
+    // small change, per the requirement to avoid excessive percentage/time announcements.
+    progressTimer = window.setInterval(() => updateTimeStatus(job), 20000);
   }
 
   function updateProgress(job, detail) {
     if (window.ProductionFeatures) window.ProductionFeatures.saveJob(job);
     jobStatus.textContent = detail.message;
+    updateTimeStatus(job);
     updateActiveJobStatus(job, job.status);
     progressBar.style.width = `${job.progress}%`;
     const meter = progressBar.parentElement;
@@ -1647,7 +2083,8 @@
     renderPlan(currentInspection);
     renderRecommendations(currentInspection);
     renderKnowledge();
-    renderGoals(currentInspection);
+    renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
     window.AdvancedAccessibilityAnalysis.setContext(currentInspection, currentKnowledgeModel, currentFile);
 
     jobStatus.textContent = `${job.intent.title} finished. Your file is ready.`;
@@ -1661,25 +2098,66 @@
     });
 
     cancelJobButton.disabled = true;
+    progressSection.hidden = true;
+    stopProgressTimer();
+    if (job.intent.workflowId === 'render-accessible-video') {
+      setStatus('Your accessible video is ready.');
+      renderResults(job);
+    }
     if (activeWorkflowChain && job.chainId === activeWorkflowChain.id) {
       window.WorkflowChain.markCompleted(activeWorkflowChain, job.chainWorkflowId);
-      setStatus(`${job.intent.title} completed. The accessibility plan is continuing.`);
+      if (job.intent.workflowId !== 'render-accessible-video') setStatus(`${job.intent.title} completed. The accessibility plan is continuing.`);
       continueWorkflowChain();
-    } else {
+    } else if (job.intent.workflowId !== 'render-accessible-video') {
       renderResults(job);
     }
   }
 
   function failProgress(job, error) {
+    if (error && job.intent && job.intent.workflowId === 'render-accessible-video') {
+      if (window.ProductionFeatures) { window.ProductionFeatures.saveJob(job); window.ProductionFeatures.recordHistory(job, 'Rendering needs a direct retry', error.message); }
+      removeActiveJob(job.id);
+      refreshAfterJobStateChange();
+      cancelJobButton.disabled = true;
+      progressSection.hidden = true;
+      stopProgressTimer();
+      jobStatus.textContent = error.needsUserActivation ? 'Final browser rendering requires one activation.' : `Rendering did not finish. ${error.message}`;
+      setStatus(jobStatus.textContent);
+      renderCurrentTask();
+      currentTaskSummary.textContent = error.needsUserActivation
+        ? 'Everything is ready. Press Start final rendering to complete the video.'
+        : error.message;
+      currentTaskNextButton.hidden = true;
+      renderLaterButton.hidden = true;
+      startFinalRenderingButton.hidden = false;
+      startFinalRenderingButton.textContent = 'Start final rendering';
+      startFinalRenderingButton.onclick = () => startFinalRendering(job.intent);
+      currentTaskSection.hidden = false;
+      startFinalRenderingButton.focus();
+      return;
+    }
     if (window.ProductionFeatures) { window.ProductionFeatures.saveJob(job); window.ProductionFeatures.recordHistory(job, job.status === 'paused' ? 'Job paused' : 'Error encountered', error.message); }
     removeActiveJob(job.id);
     refreshAfterJobStateChange();
     cancelJobButton.disabled = true;
+    progressSection.hidden = true;
+    stopProgressTimer();
     jobStatus.textContent = `This action could not be completed. ${error.message}`;
     if (activeWorkflowChain && job.chainId === activeWorkflowChain.id) {
       window.WorkflowChain.markFailed(activeWorkflowChain, job.chainWorkflowId, error.message);
       setStatus(`The accessibility plan paused because ${job.intent.title} could not be completed. Completed work was kept.`);
     }
+    renderCurrentTask();
+    if (!currentTaskSection.hidden) currentTaskSection.focus(); else directGoalSection.focus();
+  }
+
+  // The retry path for when browser rendering needs a fresh, direct user gesture: calling
+  // runIntent() synchronously from this click handler, with nothing awaited first, gives the
+  // browser the best possible chance of honoring the activation for the playback/AudioContext
+  // calls that happen several async layers downstream.
+  function startFinalRendering(intent) {
+    startFinalRenderingButton.hidden = true;
+    runIntent(intent);
   }
 
   function cancelProgress(job) {
@@ -1687,8 +2165,12 @@
     removeActiveJob(job.id);
     refreshAfterJobStateChange();
     cancelJobButton.disabled = true;
+    progressSection.hidden = true;
+    stopProgressTimer();
     jobStatus.textContent = 'The workflow was cancelled. No output was saved.';
     if (activeWorkflowChain && job.chainId === activeWorkflowChain.id) cancelWorkflowChain('The current workflow and remaining accessibility plan were cancelled. Completed work was kept.');
+    renderCurrentTask();
+    if (!currentTaskSection.hidden) currentTaskSection.focus(); else directGoalSection.focus();
   }
 
   function updateActiveJobStatus(job, status) {
@@ -1697,7 +2179,8 @@
     window.SharedKnowledge.save(currentKnowledgeModel);
     syncCurrentSourceToProject();
     renderRecommendations(currentInspection);
-    renderGoals(currentInspection);
+    renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
   }
 
   function removeActiveJob(jobId) {
@@ -1710,7 +2193,8 @@
     currentAssessment = window.AccessibilityAssessment.assess(currentKnowledgeModel);
     currentPlan = window.AccessibilityPlan.build(currentKnowledgeModel, currentAssessment, window.IntentEngine.getIntents(currentInspection));
     renderRecommendations(currentInspection);
-    renderGoals(currentInspection);
+    renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
     renderKnowledge();
   }
 
@@ -1786,7 +2270,7 @@
     });
 
     document.getElementById('choose-another-goal').addEventListener('click', () => {
-      goalsSection.focus();
+      directGoalSection.focus();
     });
 
     document.getElementById('choose-another-file').addEventListener('click', () => {
@@ -1798,6 +2282,7 @@
 
   function resetProgress() {
     progressSection.hidden = true;
+    stopProgressTimer();
     jobStatus.textContent = 'Nothing is running.';
     progressBar.style.width = '0%';
     progressSteps.innerHTML = '';
@@ -1828,14 +2313,7 @@
       .replace(/'/g, '&#039;');
   }
 
-  dropZone.addEventListener('click', () => fileInput.click());
-
-  dropZone.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      fileInput.click();
-    }
-  });
+  chooseFileButton.addEventListener('click', () => fileInput.click());
 
   ['dragenter', 'dragover'].forEach((eventName) => {
     dropZone.addEventListener(eventName, (event) => {
@@ -1853,11 +2331,31 @@
 
   dropZone.addEventListener('drop', (event) => {
     event.preventDefault();
-    handleFile(event.dataTransfer.files[0]);
+    if (event.dataTransfer.files && event.dataTransfer.files[0]) { handleFile(event.dataTransfer.files[0]); return; }
+    const text = event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text/plain');
+    if (text) { contentInput.value = text.trim(); handleUrl(text.trim()); }
   });
 
   fileInput.addEventListener('change', (event) => {
     handleFile(event.target.files[0]);
+  });
+
+  contentInput.addEventListener('paste', (event) => {
+    const files = event.clipboardData && event.clipboardData.files;
+    if (files && files.length) {
+      // A file copied in the operating system's file manager (Ctrl+C) and pasted here (Ctrl+V)
+      // arrives as a real File object via clipboardData.files, not as text — there is no
+      // filename text to read, so this must be checked before falling back to the text value.
+      event.preventDefault();
+      handleFile(files[0]);
+    }
+  });
+
+  contentInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleUrl(contentInput.value);
+    }
   });
 
   workflowChainForm.addEventListener('submit', submitWorkflowChain);
@@ -1869,14 +2367,16 @@
       openaiApiKey.value = '';
       aiProviderStatus.textContent = 'OpenAI service saved securely in this browser profile. Automatic selection can now use it for transcription and image description.';
       renderAIProviders();
-      if (currentInspection) renderGoals(currentInspection);
+      if (currentInspection) renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
     } catch (error) { aiProviderStatus.textContent = error.message; }
   });
   document.getElementById('clear-openai-provider').addEventListener('click', async () => {
     await window.OpenAIProvider.clear(); openaiApiKey.value = '';
     if (window.AIProviderLayer.getSelectionMode() === 'openai-direct') window.AIProviderLayer.select('automatic');
     aiProviderStatus.textContent = 'OpenAI service configuration cleared.'; renderAIProviders();
-    if (currentInspection) renderGoals(currentInspection);
+    if (currentInspection) renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask();
   });
   document.getElementById('test-openai-provider').addEventListener('click', async () => {
     aiProviderStatus.textContent = 'Testing OpenAI connection.';
@@ -1919,7 +2419,8 @@
     if (window.AIProviderLayer.getSelectionMode() === 'gemini-direct') window.AIProviderLayer.select('automatic');
     aiProviderStatus.textContent = 'Gemini configuration cleared.'; renderAIProviders();
   });
-  document.addEventListener('provider-credentials-ready', () => { renderAIProviders(); if (currentInspection) renderGoals(currentInspection); });
+  document.addEventListener('provider-credentials-ready', () => { renderAIProviders(); if (currentInspection) renderGoalSuggestions(currentInspection.mediaType);
+    renderCurrentTask(); });
   document.getElementById('save-connected-provider').addEventListener('click', () => {
     try {
       window.ConnectedAIProvider.configure({ serviceName: connectedProviderName.value, endpoint: connectedProviderEndpoint.value, model: connectedProviderModel.value, apiKey: connectedProviderKey.value, costCategory: connectedProviderCost.value });
@@ -1946,21 +2447,30 @@
   draftImageDescriptionButton.addEventListener('click', requestImageDescriptionDraft);
   draftCaptionsButton.addEventListener('click', requestCaptionDraft);
   draftAudioDescriptionButton.addEventListener('click', requestAudioDescriptionDraft);
+  previewNarrationStyleButton.addEventListener('click', previewNarrationStyle);
+  narrationStyleInput.addEventListener('change', updateNarrationStyleDetails);
   renderAIProviders();
 
   transcriptReviewForm.addEventListener('submit', submitTranscriptReview);
   imageDescriptionReviewForm.addEventListener('submit', submitImageDescriptionReview);
-  cancelImageDescriptionButton.addEventListener('click', () => { resetImageDescriptionReview(); goalsSection.focus(); setStatus('Image description cancelled.'); });
+  cancelImageDescriptionButton.addEventListener('click', () => { resetImageDescriptionReview(); directGoalSection.focus(); setStatus('Image description cancelled.'); });
   captionReviewForm.addEventListener('submit', submitCaptionReview);
   audioDescriptionReviewForm.addEventListener('submit', submitAudioDescriptionReview);
   addAudioDescriptionCueButton.addEventListener('click', () => { addAudioDescriptionCue(); audioDescriptionReviewStatus.textContent = 'Description cue added.'; });
-  cancelAudioDescriptionReviewButton.addEventListener('click', () => { resetAudioDescriptionReview(); if (activeWorkflowChain) cancelWorkflowChain('The audio description checkpoint and remaining accessibility plan were cancelled.'); else goalsSection.focus(); });
+  function pauseWorkflowChainStep(message) {
+    if (activeWorkflowChain) { activeWorkflowChain.status = 'paused'; workflowChainSection.hidden = true; }
+    setStatus(message);
+    renderCurrentTask();
+    if (!currentTaskSection.hidden) currentTaskSection.focus(); else directGoalSection.focus();
+  }
+
+  cancelAudioDescriptionReviewButton.addEventListener('click', () => { resetAudioDescriptionReview(); if (activeWorkflowChain) pauseWorkflowChainStep('The audio description checkpoint was left incomplete. Choose the goal again to resume; the rest of the accessibility plan was kept.'); else directGoalSection.focus(); });
   addCaptionCueButton.addEventListener('click', () => { addCaptionCue(); captionCues.lastElementChild.querySelector('.caption-start').focus(); });
-  cancelCaptionReviewButton.addEventListener('click', () => { resetCaptionReview(); if (activeWorkflowChain) cancelWorkflowChain('The caption checkpoint and remaining accessibility plan were cancelled.'); else goalsSection.focus(); });
+  cancelCaptionReviewButton.addEventListener('click', () => { resetCaptionReview(); if (activeWorkflowChain) pauseWorkflowChainStep('The caption checkpoint was left incomplete. Choose the goal again to resume; the rest of the accessibility plan was kept.'); else directGoalSection.focus(); });
   cancelTranscriptReviewButton.addEventListener('click', () => {
     resetTranscriptReview();
-    if (activeWorkflowChain) cancelWorkflowChain('The transcript checkpoint and remaining accessibility plan were cancelled.');
-    else { goalsSection.focus(); setStatus('Transcript creation cancelled.'); }
+    if (activeWorkflowChain) pauseWorkflowChainStep('The transcript checkpoint was left incomplete. Choose the goal again to resume; the rest of the accessibility plan was kept.');
+    else { directGoalSection.focus(); setStatus('Transcript creation cancelled.'); }
   });
   packageReviewForm.addEventListener('submit', submitPackageReview);
 
@@ -1970,8 +2480,8 @@
     resetCaptionReview();
     resetAudioDescriptionReview();
     resetPackageReview();
-    if (activeWorkflowChain) cancelWorkflowChain('The package checkpoint and remaining accessibility plan were cancelled.');
-    else { goalsSection.focus(); setStatus('Package review cancelled.'); }
+    if (activeWorkflowChain) pauseWorkflowChainStep('The publication package checkpoint was left incomplete. Choose the goal again to resume; the rest of the accessibility plan was kept.');
+    else { directGoalSection.focus(); setStatus('Package review cancelled.'); }
   });
 
   cancelJobButton.addEventListener('click', () => {
@@ -2054,10 +2564,44 @@
     }
   });
 
-  renderProjectWorkspace();
+  function renderLocalProduction() {
+    const status = document.getElementById('local-production-status');
+    const technical = document.getElementById('local-production-technical');
+    const locateButton = document.getElementById('locate-ffmpeg-button');
+    if (!status || !window.LocalProduction) return;
+    const health = window.LocalProduction.getStatus();
+    if (!health) { status.textContent = 'Checking for local video production...'; return; }
+    if (!health.helperRunning) {
+      status.textContent = 'Local video production is not ready because the local production helper is not running. Accessible-video rendering will use browser-based rendering instead when available. See Technical details for how to start the local production helper.';
+      technical.textContent = 'Run "python production_helper.py" from the tools/local-production-helper folder included with this application, then choose Check again.';
+      locateButton.hidden = true;
+    } else if (health.ffmpeg && health.ffmpeg.found && health.ffprobe && health.ffprobe.found) {
+      status.textContent = 'Local production ready. FFmpeg and FFprobe were detected. Accessible-video rendering will use them automatically.';
+      technical.textContent = `FFmpeg: ${health.ffmpeg.version || health.ffmpeg.path}. FFprobe: ${health.ffprobe.version || health.ffprobe.path}.`;
+      locateButton.hidden = true;
+    } else {
+      status.textContent = 'Local video production is not ready because FFmpeg could not be located on this computer. Accessible-video rendering will use browser-based rendering instead when available.';
+      technical.textContent = 'The local production helper is running but did not find FFmpeg on the system PATH or in common install locations.';
+      locateButton.hidden = false;
+    }
+  }
 
-  urlForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    handleUrl(urlInput.value);
+  document.addEventListener('local-production-updated', renderLocalProduction);
+  const retestLocalProductionButton = document.getElementById('retest-local-production-button');
+  if (retestLocalProductionButton) retestLocalProductionButton.addEventListener('click', async () => {
+    retestLocalProductionButton.disabled = true;
+    try { await window.LocalProduction.checkHealth(); } finally { retestLocalProductionButton.disabled = false; }
   });
+  const locateFfmpegButton = document.getElementById('locate-ffmpeg-button');
+  if (locateFfmpegButton) locateFfmpegButton.addEventListener('click', () => {
+    // The local production helper only trusts FFmpeg found on PATH or in its own known install
+    // locations, for the same reason it never accepts an arbitrary client-supplied path: doing so
+    // would mean executing whatever executable the browser page points it at. Guide the person to
+    // a real fix instead of accepting an unchecked path from the browser.
+    document.getElementById('local-production-technical').textContent = 'Install FFmpeg so it is available on the system PATH (or in C:\\ffmpeg\\bin), then choose Check again. The local production helper only runs FFmpeg it can verify itself, for security reasons — it cannot accept a folder location typed into the browser.';
+    document.getElementById('local-production-details').open = true;
+  });
+  renderLocalProduction();
+
+  renderProjectWorkspace();
 })();

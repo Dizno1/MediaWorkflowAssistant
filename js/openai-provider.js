@@ -16,6 +16,7 @@
     quality: { 'transcription-draft': 96, 'caption-draft': 98, 'visual-analysis': 96, 'audio-description-draft': 94, 'narration-audio': 96, 'advanced-accessibility-analysis': 95 },
     preferredCapabilities: ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio', 'advanced-accessibility-analysis'],
     isAvailable: () => ready && Boolean(configuration.apiKey),
+    health: () => ({ status: !configuration.apiKey ? 'unknown' : configuration.lastTestStatus === 'Connected' ? 'connected' : configuration.lastTestStatus ? 'failed' : 'unknown', testedAt: configuration.lastTestedAt || '' }),
     getCapabilities: () => ['transcription-draft', 'caption-draft', 'visual-analysis', 'audio-description-draft', 'narration-audio', 'advanced-accessibility-analysis'],
     async run(capability, context, options) {
       if (!configuration.apiKey) throw new Error('Add an OpenAI API key in Advanced assistance settings first.');
@@ -72,9 +73,15 @@
     form.append('model', model);
     form.append('response_format', includeSegments ? 'verbose_json' : 'json');
     if (includeSegments) form.append('timestamp_granularities[]', 'segment');
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST', headers: { Authorization: `Bearer ${configuration.apiKey}` }, body: form, signal
-    });
+    let response;
+    try {
+      response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST', headers: { Authorization: `Bearer ${configuration.apiKey}` }, body: form, signal
+      });
+    } catch (error) {
+      if (error && error.name === 'AbortError') throw error;
+      throw new Error(window.AIProviderLayer.plainLanguageError('OpenAI', null, 'network'));
+    }
     return readJson(response);
   }
 
@@ -95,15 +102,19 @@
     if (!String(context.sourceData.mimeType || '').startsWith('video/')) throw new Error('Audio-description drafting requires a local video file.');
     const sample = await window.AudioDescriptionDrafting.sampleVideo(context.sourceData, context.durationSeconds, 8);
     const transcript = String(context.transcriptText || '').trim();
+    const priorDraft = Array.isArray(context.priorDraftCues) && context.priorDraftCues.length ? context.priorDraftCues : null;
     const instructions = [
-      'Create a concise draft audio-description cue list from these timestamped video frames.',
+      priorDraft
+        ? 'Review this draft audio-description cue list against these timestamped video frames. Identify missing important visuals, redundant descriptions, timing conflicts with dialogue, and subjective wording, then return an improved cue list in the same JSON shape.'
+        : 'Create a concise draft audio-description cue list from these timestamped video frames.',
       'Describe only essential visual information that is not likely conveyed by dialogue or sound.',
       'Do not identify people or infer emotions, identities, motives, relationships, or events unless clearly visible.',
       'Use the supplied timestamps as anchors. Keep narration short enough to fit in likely pauses.',
       'Return JSON only with this shape: {"cues":[{"startSeconds":0,"endSeconds":4,"placement":"During a pause","text":"Narration"}]}.',
       `Video duration: ${sample.durationSeconds.toFixed(3)} seconds.`,
-      transcript ? `Transcript context, which may help avoid describing information already spoken: ${transcript.slice(0, 12000)}` : 'No transcript context is available. Human review must determine whether dialogue conflicts with each cue.'
-    ].join('\n');
+      transcript ? `Transcript context, which may help avoid describing information already spoken: ${transcript.slice(0, 12000)}` : 'No transcript context is available. Human review must determine whether dialogue conflicts with each cue.',
+      priorDraft ? `Draft cues to review and improve: ${JSON.stringify(priorDraft).slice(0, 8000)}` : ''
+    ].filter(Boolean).join('\n');
     const content = [{ type: 'input_text', text: instructions }];
     sample.frames.forEach((frame) => {
       content.push({ type: 'input_text', text: `Frame sampled at ${frame.timeSeconds.toFixed(3)} seconds.` });
@@ -123,15 +134,21 @@
     const speed = Math.min(1.25, Math.max(0.75, Number(context.narrationSpeed) || 1));
     const clips = [];
     for (let index = 0; index < cues.length; index += 1) {
-      const response = await fetch('https://api.openai.com/v1/audio/speech', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${configuration.apiKey}`, 'Content-Type': 'application/json' },
-        signal,
-        body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input: cues[index].text, speed, response_format: 'mp3' })
-      });
+      let response;
+      try {
+        response = await fetch('https://api.openai.com/v1/audio/speech', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${configuration.apiKey}`, 'Content-Type': 'application/json' },
+          signal,
+          body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input: cues[index].text, speed, response_format: 'mp3' })
+        });
+      } catch (error) {
+        if (error && error.name === 'AbortError') throw error;
+        throw new Error(window.AIProviderLayer.plainLanguageError('OpenAI', null, 'network'));
+      }
       if (!response.ok) {
-        let detail = {}; try { detail = await response.json(); } catch (error) {}
-        throw new Error(detail && detail.error && detail.error.message ? detail.error.message : `OpenAI returned HTTP ${response.status}.`);
+        if (response.status === 401) await recordTestResult('Failed');
+        throw new Error(window.AIProviderLayer.plainLanguageError('OpenAI', response.status));
       }
       clips.push({ cueIndex: index, mimeType: 'audio/mpeg', base64: await blobToBase64(await response.blob()) });
     }
@@ -169,22 +186,33 @@
   }
 
   async function requestResponse(content, signal) {
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${configuration.apiKey}`, 'Content-Type': 'application/json' },
-      signal,
-      body: JSON.stringify({
-        model: configuration.visionModel || 'gpt-4.1-mini',
-        input: [{ role: 'user', content }]
-      })
-    });
+    let response;
+    try {
+      response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${configuration.apiKey}`, 'Content-Type': 'application/json' },
+        signal,
+        body: JSON.stringify({
+          model: configuration.visionModel || 'gpt-4.1-mini',
+          input: [{ role: 'user', content }]
+        })
+      });
+    } catch (error) {
+      if (error && error.name === 'AbortError') throw error;
+      throw new Error(window.AIProviderLayer.plainLanguageError('OpenAI', null, 'network'));
+    }
     return readJson(response);
   }
 
   async function readJson(response) {
     let result = {};
     try { result = await response.json(); } catch (error) {}
-    if (!response.ok) throw new Error(result && result.error && result.error.message ? result.error.message : `OpenAI returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      if (response.status === 401) await recordTestResult('Failed');
+      // Never surface result.error.message here: OpenAI's own 401 body includes a masked
+      // fragment of the rejected key, so only a sanitized, categorized message is shown.
+      throw new Error(window.AIProviderLayer.plainLanguageError('OpenAI', response.status));
+    }
     return result;
   }
 
@@ -226,12 +254,27 @@
   function getConfiguration() { return { hasApiKey: Boolean(configuration.apiKey), transcriptionModel: configuration.transcriptionModel || 'gpt-4o-mini-transcribe', visionModel: configuration.visionModel || 'gpt-4.1-mini', lastTestedAt: configuration.lastTestedAt || '', lastTestStatus: configuration.lastTestStatus || '', ready }; }
   async function clear() { configuration = {}; ready = true; await window.SecureCredentialStore.remove(STORE_ID); }
   async function testConnection(signal) {
-    if (!configuration.apiKey) throw new Error('Save an OpenAI API key before testing.');
-    const response = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${configuration.apiKey}` }, signal });
-    if (!response.ok) throw new Error(`OpenAI connection test returned HTTP ${response.status}.`);
-    configuration.lastTestedAt = new Date().toISOString(); configuration.lastTestStatus = 'Connected';
+    if (!configuration.apiKey) throw new Error('Configuration file did not contain a recognized API key. Add an OpenAI API key before testing.');
+    let response;
+    try {
+      response = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${configuration.apiKey}` }, signal });
+    } catch (error) {
+      if (error && error.name === 'AbortError') throw error;
+      await recordTestResult('Failed');
+      throw new Error('Network request failed. Check the internet connection and try again.');
+    }
+    if (!response.ok) {
+      if (response.status === 401) { await recordTestResult('Failed'); throw new Error('Authentication failed. The saved OpenAI API key was rejected. A ChatGPT subscription does not grant API access; a separate API key is required. Replace the key in Provider Manager.'); }
+      if (response.status === 429) { await recordTestResult('Failed'); throw new Error('OpenAI reported a rate limit or quota issue for this API key. Check the account usage and billing status.'); }
+      await recordTestResult('Failed');
+      throw new Error(`OpenAI connection test returned HTTP ${response.status}.`);
+    }
+    await recordTestResult('Connected');
+    return { message: 'Connected.' };
+  }
+  async function recordTestResult(status) {
+    configuration.lastTestedAt = new Date().toISOString(); configuration.lastTestStatus = status;
     await window.SecureCredentialStore.save(STORE_ID, configuration);
-    return { message: 'OpenAI responded successfully.' };
   }
   async function initialize() {
     configuration = await window.SecureCredentialStore.load(STORE_ID) || {};

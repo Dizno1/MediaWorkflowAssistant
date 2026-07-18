@@ -4,7 +4,7 @@ An accessibility-first media workflow application that analyzes media and helps 
 
 ## Current Milestone
 
-Phase 31 of the executable accessibility workflow roadmap is complete.
+Phase 32 of the executable accessibility workflow roadmap is complete. Sprint 6 (Provider Integration Correction), Sprint 7 (Health-Aware Provider Selection), Sprint 8 (Confirmed Production Bug Fixes), Phase 33 (Assistant-First Experience, three increments plus two corrections), Phase 35 (Intent-Driven Interaction, plus two tightening passes and a workflow-continuation root-cause fix), a Workflow Intelligence pass, a Reviewer-First Workflow pass, an optional Local Production Engine (tested, working FFmpeg rendering), and a Workflow Polish pass (Current Task summary, corrected focus management, and a second-provider audio-description critique pass) have also been completed.
 
 The application now includes:
 
@@ -446,12 +446,1743 @@ New and modified files:
 
 See `docs/Phase 31 Shared Services Integration.md`.
 
+## Phase 32 - First-Time Experience and Shared Services Discovery - Completed
+
+Phase 32 replaces the direct SharedServices-folder workflow with an accessible first-time setup experience. The user selects the parent Open Door Design Apps folder once. The application discovers SharedServices, imports the recognized provider settings, remembers the approved folder handle in the browser profile, and tests configured connections.
+
+The normal interface now reports which provider services are ready and keeps technical controls inside collapsed disclosures. The provider layer continues to choose services automatically during goal-driven workflows.
+
+New and modified files:
+
+- `js/shared-services.js` adds Apps-folder discovery, known-application fallback discovery, persisted directory handles, reconnect behavior, and grouped connection testing.
+- `js/shared-services-ui.js` adds the first-time setup state, maintenance state, plain-language connection results, and remembered-folder status.
+- `index.html` replaces the direct folder importer with the accessible setup and maintenance interface.
+- `css/styles.css` adds setup and status presentation.
+- `docs/Phase 32 First-Time Experience and Shared Services Discovery.md` documents the implementation, security boundaries, accessibility behavior, and limitations.
+
+See `docs/Phase 32 First-Time Experience and Shared Services Discovery.md`.
+
+## Sprint 6 - Provider Integration Correction - Completed
+
+Real testing of the Phase 31/32 Shared Services import against live Open Door
+Design provider files surfaced four problems: OpenAI reported HTTP 401 with
+no explanation, Gemini reported that an obsolete model identifier was not
+found, Azure Vision reported a bare "Failed to fetch" for every attempt, and
+the Provider Manager summary undercounted configured services because it did
+not include Azure Speech or Azure Vision imported through Shared Services.
+This sprint corrects the reporting and, where possible, the underlying
+behavior, without adding a new orchestration layer or a new phase.
+
+- **Provider status is now consistent.** The Provider Manager summary
+  counts Azure Speech and Azure Vision imported through Shared Services, so
+  it no longer disagrees with the Shared Services import summary.
+- **OpenAI connection results are plain-language.** HTTP 401 is reported as
+  "Authentication failed," with a note that a ChatGPT subscription does not
+  grant API access. Network failures are distinguished from HTTP error
+  responses. A missing key is reported as "Configuration file did not
+  contain a recognized API key."
+- **Gemini model handling is self-correcting.** The Gemini adapter queries
+  Gemini's model list, keeps a user-configured model when it is still
+  supported, and falls back to a currently supported model (preferring
+  `gemini-2.5-flash`) when an imported or previously saved model has been
+  retired. This runs on import/save and again automatically if a live
+  request reports a model as unavailable.
+- **Azure Vision failures are diagnosed, not just reported.** The connection
+  test now distinguishes a malformed endpoint, an authentication failure,
+  and a network-level failure. Because most Azure Computer Vision resources
+  do not allow direct browser-to-Azure requests, a network failure against
+  what looks like a genuine endpoint is now reported as a likely
+  cross-origin restriction, with the existing configuration preserved for a
+  future local helper or backend rather than silently discarded.
+- **A hardcoded personal folder path was removed.** The first-time setup
+  announcement and setup panel previously named one person's Windows
+  username and folder path directly; both now use generic wording.
+
+New and modified files:
+
+- `js/provider-manager-ui.js` counts Shared Services providers and refreshes
+  on Shared Services updates.
+- `js/openai-provider.js` reports plain-language, distinguishable connection
+  results.
+- `js/gemini-provider.js` adds live model discovery and fallback.
+- `js/shared-services.js` distinguishes Azure Speech and Azure Vision
+  failure modes instead of reporting every failure as "Failed to fetch."
+- `js/shared-services-ui.js` and `index.html` remove the hardcoded personal
+  path.
+- `docs/Sprint 6 Notes.md` documents the specific fixes, what was already
+  correct and left unchanged, and known limitations.
+
+See `docs/Sprint 6 Notes.md` for full detail, including a known limitation
+where automatic provider selection can still try an available-but-invalid
+OpenAI key before falling back to Azure Speech within a single run, and the
+Azure Vision cross-origin limitation, both left for a future phase.
+
+## Sprint 7 - Health-Aware Provider Selection - Completed
+
+Sprint 7 corrects the automatic-selection limitation identified at the end
+of Sprint 6, in service of the long-term-vision goal that "Transcribe this
+audio" should automatically select the healthiest compatible provider.
+
+- The OpenAI, Gemini, Azure Speech, and Azure Vision adapters each expose a
+  `health()` accessor (`connected`, `failed`, or `unknown`) based on the
+  most recent real connection test or real usage attempt.
+- A failed connection test is now persisted, not only a successful one, and
+  a real (non-test) request that is rejected for authentication also
+  updates the recorded health.
+- Automatic selection scoring in the AI Provider Layer now scores a
+  provider with demonstrated `failed` health below an alternative, so a
+  broken credential no longer keeps winning automatic selection over a
+  working one. A provider that has never been tested is not penalized.
+- When a confirmed request to a specific provider fails, the resulting
+  status message now names the next-best available alternative provider
+  for that task, so the person is told what happened and what they can try
+  next. The application does not silently substitute a different external
+  provider after consent was given to a specific one, since Azure Speech
+  and OpenAI each carry their own required disclosure.
+
+New and modified files:
+
+- `js/ai-provider-layer.js` adds health-aware scoring, an alternative-provider
+  lookup, and error tagging with the attempted provider and capability.
+- `js/openai-provider.js`, `js/gemini-provider.js`, and `js/shared-services.js`
+  add `health()` accessors and persist failed test/usage results.
+- `js/app.js` names a concrete next step in transcript, caption,
+  audio-description, and image-description failure messages.
+- `docs/Sprint 7 Notes.md` documents the change, what was intentionally not
+  done and why, and current status against the long-term-vision priorities.
+
+See `docs/Sprint 7 Notes.md` for full detail, including why automatic
+cross-provider retry-after-failure within a single request was considered
+and rejected.
+
+## Sprint 8 - Confirmed Production Bug Fixes - Completed
+
+A real test session (a 2 minute 36 second video, "Make this video
+accessible") surfaced several confirmed defects. This sprint fixes the
+bounded, verifiable ones:
+
+- A Perplexity key was being imported and used as an OpenAI key because the
+  importer matched any generically-named `key` property in `openai.json`
+  with no format check. The importer now classifies a candidate key by its
+  own format and refuses to assign a key positively identified as a
+  different provider's, reporting exactly which file had the mismatch
+  instead of silently skipping it.
+- Provider error text could still leak a masked credential fragment in a
+  few remaining code paths (this is what exposed part of the Perplexity
+  key). Every provider adapter now throws only a sanitized, categorized
+  message built from the HTTP status, never from response body text.
+- A provider with confirmed-failed health could still win automatic
+  selection. It is now excluded from automatic selection entirely until it
+  is re-tested successfully or its credential is replaced.
+- No workflow could previously be blocked from starting without an active
+  project; this is now enforced at both central workflow-start points.
+- Cancelling an individual review checkpoint (transcript, caption, audio
+  description, package) previously discarded the entire remaining
+  accessibility plan, identically to the dedicated "Cancel this workflow"
+  button. It now pauses only that step; the plan resumes correctly when the
+  goal is chosen again.
+- The progress region stayed visible with stale content after a job
+  finished, failed, or was cancelled. It is now hidden at that point.
+- Entering transcript review now automatically requests an AI-assisted
+  draft (with the existing confirmation) when a compatible provider is
+  available, so automatic provider selection is actually reached from
+  "Make this video accessible" and "Transcribe this audio" rather than
+  requiring an extra manual click first.
+
+See `docs/Sprint 8 Notes.md` for full detail, including a deliberate scope
+note: the uploaded Phase 33 direction (a full redesign of the opening
+experience around a single "Add content" section and an editable
+natural-language request combo box) was not attempted this sprint. It is a
+different scale of work than a corrective bug-fix sprint and deserves its
+own dedicated, scoped phase rather than being rushed alongside these fixes.
+
+## Phase 33 - Assistant-First Experience (first increment) - Completed
+
+Sprint 8 added a requirement that an active project must exist before any
+workflow could start. The project owner corrected this: projects are an
+internal implementation detail and must never be a precondition the user
+has to satisfy. **That requirement has been reversed.** A project (called
+"Your work" in the interface) is now created automatically and invisibly
+the first time content is successfully added — the user is never asked to
+create, name, or select one first. `js/project-workspace.js`'s existing
+`create()` function already required nothing but a name, so this needed no
+new architecture, only different application logic: `ensureWorkItem()`
+replaces the old blocking `ensureActiveProject()` gate, auto-creating a
+project named from the source instead of stopping and asking.
+
+This phase also implemented the core first-interaction model described in
+the Phase 33 direction document:
+
+- **Add content.** The separate "Start with a file" panel and its own URL
+  sub-form are now one "Add content" section. Only a file or a URL is
+  needed, never both — the URL field's incorrect `required` attribute was
+  removed, and submitting the form with neither now shows "Choose a file or
+  enter a web address." instead of relying on (or bypassing) browser
+  validation for what was never actually a required field.
+- **The editable request combo box.** "What would you like me to do?" is
+  now backed by a native HTML `<input list>` / `<datalist>` pair rather
+  than a plain text field. This is deliberately a native combo box, not a
+  custom ARIA widget: browsers and screen readers (including JAWS and NVDA)
+  support the native pattern reliably, where custom ARIA combobox
+  implementations are a common source of screen-reader bugs. The assistant
+  still pre-fills the most likely request after inspecting the content, the
+  suggestion list offers alternatives, and any plain-language text can be
+  typed instead — nothing is restricted to the list. The accessible
+  description states exactly that: "A suggested request is already
+  entered. You can use it, choose another suggestion from the list, or
+  type your own request in plain language."
+- **Suggestions are honest, not aspirational.** The suggestion list for
+  each content type only includes requests that `matchDirectGoal()`
+  actually recognizes today (for example, video offers "Make this video
+  accessible," "Transcribe this video," "Create captions," "Create audio
+  description," and "Extract the audio" — not "Make the video smaller,"
+  which nothing in the application currently handles from typed text). A
+  suggestion that silently fails to match would be worse than no
+  suggestion.
+- **Reading order.** The primary path — Your work, Add content, the
+  request combo box, goal cards, the workflow chain, progress, every review
+  checkpoint, and results — now appears before technical and advanced
+  sections in the page's actual DOM order (not just visually): local
+  quality-analysis panels, the Accessibility Advisor, the publication
+  pipeline, assistance/provider settings, and jobs/batches/project history
+  all now come after the primary path, matching how a screen-reader user
+  reading top to bottom, or a JAWS/NVDA user tabbing through headings,
+  encounters the page.
+
+## What was intentionally not done this increment
+
+The Phase 33 direction document describes considerably more than this
+increment implements. Not yet done, in the order given in the direction
+document:
+
+- **Restoration/reconnection.** Selecting previous work does not yet fully
+  restore pending review state, next-recommended-action, or prompt to
+  reconnect a source file. The underlying data (history, artifacts,
+  sources) is already recorded per project; presenting it as a guided
+  "resume" flow with reconnection is a distinct, non-trivial feature.
+- **Long-form/chunked processing.** The 50 MB connected-service limit,
+  local-only large-file handling, audio chunking, and resumable chunk
+  processing are unchanged. This is a substantial processing-pipeline
+  change, not a UI change.
+- **Time reporting (elapsed/estimated-remaining, historical learning).**
+  Progress is still percentage-only. This needs its own scoped
+  implementation, including where per-provider historical timing data would
+  be stored.
+- **Walk-away behavior** (wake lock, completion/review notifications,
+  grouped review) is not implemented.
+- **Publication title and other still-required fields.** `publication-title`
+  and a few other fields remain `required` in their own forms; these were
+  not touched this increment because unlike the URL field, they are not
+  mutually-exclusive alternatives to another field, and generating a good
+  automatic default deserves its own pass rather than simply removing
+  `required`.
+
+## Testing performed
+
+- `node --check` on every JavaScript file in the repository (all pass).
+- The HTML section reorder was performed programmatically (extracting and
+  splicing whole `<section>...</section>` blocks) rather than by hand, and
+  verified by: confirming the count of `<section>`/`</section>` tags is
+  unchanged, confirming an order-independent (sorted-line) diff between the
+  original and reordered file shows no content difference beyond blank
+  lines, and confirming every element ID referenced from `js/app.js` via
+  `getElementById` still exists in the reordered file (four IDs referenced
+  in `app.js` were already missing from `index.html` before this change —
+  a pre-existing issue, not introduced here, and not investigated further
+  in this pass).
+- Live testing was **not** performed — this environment has no network
+  access and no real provider credentials or Shared Services files.
+
+## Phase 33 - Assistant-First Experience (second increment) - Completed
+
+Real JAWS testing of the first increment surfaced concrete problems: the
+Add content experience was still effectively two separate controls under
+one heading (a visible drop zone, a separately-labeled "Choose a file"
+button, and a distinct URL form with an "or" divider between them); the
+Accessibility Advisor, Publication pipeline, and Assistance settings
+sections announced their full content (including, for the Advisor, a
+report already showing "Critical: No sources in the project" before any
+content had even been added) immediately, with no way to collapse them;
+Publication title was still `required`; and the project workspace
+("Project workspace" section) was the very first heading a screen reader
+user encountered, before Add content — the opposite of the agreed
+direction. This increment fixes all of those, based directly on that
+testing session.
+
+- **Add content is now genuinely one control cluster.** The separately
+  labeled "Choose a file" button (which duplicated what the drop zone
+  already did) was removed; the drop zone alone now triggers the file
+  picker, and the file `<input>` is hidden (`hidden` + `aria-hidden` +
+  `tabindex="-1"`) and only ever opened programmatically — this is a
+  standard, reliable pattern (`.click()` on a hidden file input still opens
+  the native picker in every major browser). The "or" divider between file
+  and URL entry was removed. What remains is the minimum two native
+  controls a browser actually requires (a file input cannot accept typed
+  text, and a text input cannot open the OS file picker), presented as one
+  unbroken "Add content" experience with one shared instruction, rather
+  than two separate forms.
+- **Genuine progressive disclosure, not just reordering.** The Accessibility
+  Advisor, Publication pipeline, Assistance settings (including Shared
+  Services import), and Jobs/batches/project history sections are now
+  native `<details>` disclosures, collapsed by default. Their headings are
+  still discoverable by heading-list navigation, but their controls and
+  content no longer compete with the primary workflow until a person
+  deliberately opens them. Native `<details>`/`<summary>` was used rather
+  than a custom ARIA disclosure widget, for the same reliability reason the
+  request combo box uses native `<datalist>`.
+- **"Your work" (the project workspace) is no longer first, and is now
+  collapsed too.** It was moved to the very last section in the page and
+  wrapped in the same collapsed-by-default `<details>` pattern, renamed
+  from "Project workspace" to "Your work" in its heading. A screen reader
+  user browsing headings from the top now reaches Add content first, not
+  project management.
+- **Publication title is no longer `required`.** It was already
+  auto-populated from the active project's name (unchanged, pre-existing
+  behavior); a defensive fallback to the project name was added at package
+  creation in case the field is ever empty regardless.
+- **Elapsed and estimated-remaining time reporting.** A new live region
+  reports elapsed time and an approximate remaining-time range (for
+  example, "Elapsed: 2 minutes 14 seconds. Estimated remaining time:
+  approximately 4 to 7 minutes. Overall progress: 34 percent."), updating
+  every 20 seconds rather than on every progress-bar tick, so it doesn't
+  add to announcement noise. The estimate is a simple, clearly-labeled
+  approximation from elapsed time and current progress percentage — not
+  the historical per-provider learning model described in the product
+  direction, which needs its own scoped implementation and a place to
+  store real timing data across sessions. That remains future work.
+
+### What is still deferred
+
+Long-form/chunked processing, wake-lock/walk-away notifications,
+restoration/reconnection of in-progress review state, and historical
+time-estimate learning are all still not implemented, for the same reason
+given in the first increment: each is independently substantial and
+deserves its own scoped pass rather than a partial version bolted onto a
+UI-focused sprint.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- The two HTML section moves (collapsing four sections into `<details>`,
+  and relocating and collapsing the project workspace section) were done
+  with the same script-based extract-and-splice approach as the first
+  increment's reorder, verified the same way: section and `<details>` tag
+  counts balanced, an order-independent diff showing no content lost
+  beyond blank lines, and every `getElementById` reference from `app.js`
+  still resolving.
+- Manual inspection confirming every `.focus()` call that targets an
+  element now living inside a collapsed `<details>` is only reachable from
+  a handler on a control inside that same section (so the section is
+  already open by the time focus would move there).
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser to drive JAWS or
+  NVDA against directly. All of the above responds to a real JAWS testing
+  session's findings but has not been re-verified against JAWS itself.
+
+## Design Philosophy
+
+These principles govern every interaction design decision in this
+application, not just the ones explicitly called out in a given phase.
+
+- **Screen Reader First.** The first question is never "what does this
+  look like." It is "what does the user hear." A design that works well
+  read top to bottom, one thing at a time, is the target — not a visual
+  layout that gets an accessibility pass afterward.
+- **Assistant First, not a tool collection.** The application behaves like
+  something that understands a goal and does the work, not like a set of
+  separate accessibility utilities the user has to know how to operate.
+- **Task First.** The application exists to help someone finish
+  accessibility work. Internal concepts — projects, workflow IDs,
+  providers, checkpoints, publication packages — exist because the
+  software requires them, not because the user should need to understand
+  them. They surface only when they provide real value to the person, not
+  by default.
+- **Progressive Disclosure.** Only what is useful at the user's current
+  stage is presented. Controls for later stages, or for configuration most
+  people never touch, are collapsed rather than removed — discoverable
+  when wanted, silent otherwise.
+- **Reduce Cognitive Load.** Every live-region announcement, every visible
+  control, and every decision presented to the user has to earn its place.
+  If it doesn't help the person understand what's happening or decide what
+  to do next, it is noise, and noise has a real cost for someone listening
+  to the whole page rather than scanning it visually.
+- **The Assistant Suggests. The User Decides.** Wherever the application
+  has an opinion about what someone probably wants (the pre-filled request,
+  the suggested provider, the default publication title), that opinion is
+  offered, never enforced. Plain-language input always overrides a
+  suggestion.
+- **The user is never forced to understand the implementation.** Success
+  is not "the user learned how workflows, providers, and projects work."
+  Success is "the user got their file made accessible and never had to
+  think about any of that."
+- **Providers Remain Behind the Scenes.** Normal users never choose among
+  OpenAI, Azure Speech, Gemini, Azure Vision, Anthropic, Whisper, or
+  Ollama during an active workflow. The assistant selects the healthy
+  compatible provider; provider identity only matters at initial setup or
+  during troubleshooting in More options.
+- **Internal Architecture Must Not Dictate User Experience.** Projects,
+  workflow IDs, providers, checkpoints, and publication packages exist
+  because the software requires them internally. None of them get to
+  decide what the person sees, hears, or has to do first — the user
+  experience is designed from the task backward, never from the
+  implementation outward.
+- **Drop In, Edit, Walk Away.** The primary user model this application is
+  designed around: add content, accept or adjust the suggested request,
+  start, and leave. The application continues on its own and only asks
+  for the user's attention when something genuinely needs a human
+  decision.
+
+### Intent-Driven Interaction
+
+The request combo box is not a workflow picker. It represents the user's
+intent, expressed however they choose to express it, through three
+equally valid paths:
+
+1. **Accept the assistant's proposal.** After content is inspected, the
+   combo box is already pre-filled with the most likely request. Pressing
+   Start requires no typing at all.
+2. **Choose a different suggestion.** Opening the combo box's suggestion
+   list shows other things the assistant can do with this specific piece
+   of content — the suggestions double as a teaching tool, showing the
+   range of what's possible without requiring the user to already know it.
+3. **Type anything, in plain language.** The suggestion list is never a
+   restriction. Whatever is typed is what gets interpreted.
+
+The assistant suggests. The user decides. Users should never need to
+understand workflows, providers, projects, processing pipelines, or any
+other internal architecture to say what they want and get it done.
+
+This interaction model — one editable combo box, content-aware
+suggestions, free-form text always accepted — is intended to become the
+standard interaction pattern across future Open Door Design assistants,
+not just this one: Document Remediation, Website Accessibility, VPAT
+generation, and CPACC study assistance are all expected to eventually
+share it. One interaction model, many capabilities.
+
+**Current honesty note:** request interpretation today is pattern
+matching against a fixed set of recognized phrasings (`matchDirectGoal()`
+in `js/app.js`), not general language understanding. Requests that map to
+a real, implemented capability (transcribe, describe, caption, audio
+description, extract audio, compress, or the full "make this accessible"
+chain) work regardless of exact wording. Open-ended requests with no
+corresponding capability yet — translation, meeting-note generation, VPAT
+drafting, and similar — are not interpreted; the person is told plainly
+what is understood today rather than the system silently failing or
+pretending to have done something it didn't. Genuine open-ended language
+understanding (interpreting arbitrary novel requests and either mapping
+them to existing capabilities or explaining what would be needed to
+support them) is future work.
+
+## Phase 33 - Assistant-First Experience (third increment) - Completed
+
+This increment is a refinement pass, not new functionality, aimed at
+eliminating friction and unnecessary speech in the first-time experience.
+
+- **The "Current source" section is gone.** It rendered an eleven-row
+  technical fact grid (file name, type, size, duration, dimensions,
+  contains-audio, contains-video, contains-images, readable-text-likely,
+  captions-found) immediately after every file or URL was added — before
+  the person had even been asked what they wanted to do. It provided a
+  heading and a full data table for information most people don't need at
+  that moment. It's been removed entirely, per "if it provides no
+  meaningful information, remove it; only introduce a heading if it
+  genuinely improves navigation."
+- **One concise spoken summary replaces it.** The existing status region
+  (which needed no heading of its own — it's a live region, not a
+  navigation landmark) now reports a single sentence identifying what was
+  found (for example, "I found a video with duration 2 minutes 36
+  seconds.") plus the suggested request, instead of three separate,
+  overlapping announcements (a file-selected message, a checking message,
+  and a "your suggested goal is ready" message that duplicated what the
+  suggestion field already showed).
+- **Removed a duplicate announcement.** The request combo box's status
+  region no longer pre-announces "a suggested goal is ready" on every
+  successful content add — that fact was already conveyed by the concise
+  summary and by the field itself being visibly pre-filled. The status
+  region is reserved for things that need saying: errors, confirmations,
+  and the result of starting a request.
+- **One internal-architecture term removed from user-visible text.** A
+  workflow step in the publication package process was labeled "Collect
+  Shared Knowledge" — "Shared Knowledge" is this application's internal
+  name for its cross-workflow context model, not something a user should
+  ever need to know exists. It now reads "Collect what has been learned
+  about this source."
+
+### What was reviewed and left unchanged
+
+Per "does every announcement help the user, does every visible control
+help complete the current task" — the provider/service name shown in the
+external-processing confirmation dialog ("Continue with Azure Speech
+from Shared Services?") was deliberately kept. That is not implementation
+jargon; knowing which outside company is about to receive your audio or
+image is the actual content of an informed-consent decision, not an
+internal detail to hide.
+
+### What is still deferred
+
+Contextual/dynamic combo-box suggestion wording (the suggestion list
+already varies by content type; making the surrounding help text itself
+reference the detected type by name was judged low-value relative to its
+risk of becoming another redundant announcement) and full walk-away
+architecture (notifications, wake lock) remain future work, for the same
+reasons given in the previous two increments.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  in `index.html` after removing the "Current source" section (the same
+  four pre-existing missing IDs from earlier increments remain, and no new
+  ones were introduced).
+- Confirmed the top-level section count decreased by exactly one (30 to
+  29), matching the one section that was removed, with `<details>` tag
+  counts unchanged.
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser to drive JAWS or
+  NVDA directly.
+
+## Phase 35 - Intent-Driven Interaction - Completed
+
+This phase reframes the request combo box as the center of the
+application and closes real gaps in how forgiving it is. See the
+"Intent-Driven Interaction" design section above for the philosophy.
+
+- **Heading and label changed** from "What would you like me to do?" to
+  "What can I help you accomplish today?" throughout `index.html`.
+- **A real, previously-unreachable capability is now reachable by typed
+  request.** `compress-video` already existed as a working, no-additional-
+  cost local capability (offered as a goal card, using the Browser
+  Provider) but `matchDirectGoal()` had no phrase mapped to it — typing
+  "Compress this video" or similar simply fell through to "not
+  recognized." It's now matched by `/compress|smaller|reduce.*size|shrink/`
+  and added to the video suggestion list.
+- **Filenames and local paths pasted into the web-address field are now
+  interpreted, not just rejected.** `looksLikeLocalFileReference()`
+  recognizes a bare filename with an extension (`Movie.mp4`), a Windows
+  drive path (`C:\Users\...`), and a UNC path (`\\server\share\...`), and
+  responds with a specific explanation — that browsers don't allow web
+  pages to open local files directly, and to use "Choose a file" instead —
+  rather than a generic invalid-URL error from a failed `new URL()` call.
+- **The "not recognized" message now names what is actually understood**
+  (including the newly-added compress-video phrasing) instead of a
+  shorter, staler list.
+- **Documented plainly, not glossed over:** request interpretation is
+  still pattern matching against known phrasings, not general language
+  understanding. The examples in the phase direction document that don't
+  correspond to an implemented capability (translation, VPAT drafting,
+  meeting notes, "find every slide transition") are not functional yet —
+  see the honesty note in the Intent-Driven Interaction section.
+
+### Testing performed
+
+- `node --check` on every JavaScript file in the repository (all pass).
+- Manually traced `matchDirectGoal()`'s new compress-video branch against
+  the intent list to confirm `compress-video` is registered for video
+  sources and does not require external provider configuration to run.
+- Manually verified `looksLikeLocalFileReference()` against the specific
+  examples in the phase direction document (`Movie.mp4`, a Windows drive
+  path) and against valid URLs, to confirm it doesn't misclassify a real
+  web address.
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available.
+
+## Phase 35 Correction - One Opening Experience, Not Three - Completed
+
+The previous increment implemented the intent combo box but left it
+running alongside the pre-existing per-capability "goal cards" list (a
+separate section with one button per available action, plus its own
+"Make this accessible" chain button) — the code shipped with two
+different UI surfaces for the same decision, one of them now redundant.
+That was a real defect, not a matter of DOM position: the fix is removal,
+not relabeling.
+
+- **The goal-cards section (`goals-section`/`renderGoals()`) has been
+  deleted**, not hidden, not deprioritized. There is now exactly one place
+  to decide what to do: the intent combo box.
+- **No capability was lost in the removal.** The goal cards exposed
+  several capabilities the combo box's request matcher didn't yet
+  recognize by typed phrase: audio compression and volume normalization,
+  image OCR/compression/resizing, document OCR and text extraction,
+  archive inspection, and AI-preparation packaging. `matchDirectGoal()`
+  now recognizes all of them (disambiguating ambiguous words like
+  "compress" or "OCR" by the current source's media type), and
+  `suggestionsFor()` offers the relevant ones per content type. The "Make
+  this accessible" full-workflow chain, previously only reachable via the
+  goal-cards section's dedicated button, is unchanged in that it was
+  always also reachable through the combo box's own "make ... accessible"
+  matching — that path already existed and needed no change.
+- **A pre-existing bug surfaced and was fixed in the process:** the
+  default suggested request for documents and archives was "Review
+  accessibility," which matched no recognized phrase at all and would
+  always have failed. Documents now default to "Extract the text" and
+  archives to "List what is inside," both of which are real, working
+  requests.
+- Every `goalsSection.focus()` call (used to return focus to the decision
+  point after cancelling a review step) now focuses the intent combo box
+  section instead, since that is the sole decision point remaining.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed no reference to the removed section's IDs (`goals-section`,
+  `goals-heading`, `goals-intro`) remains anywhere in `index.html`,
+  `js/app.js`, or `css/styles.css`.
+- Manually cross-checked every `workflowId` the removed goal-cards list
+  could reach (via `inferCapabilities()` in `js/media-inspector.js`)
+  against the expanded `matchDirectGoal()` to confirm each has a
+  corresponding recognized phrase.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  in `index.html` after the removal (the same four pre-existing missing
+  IDs from earlier increments remain; no new ones were introduced).
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available.
+
+## Phase 35 Correction 2 - One Secondary Heading, Not Five - Completed
+
+Real testing of the previous correction showed the actual problem
+hadn't been fully fixed: collapsing the Accessibility Advisor,
+Publication pipeline, Assistance settings, Jobs/batches/history, and Your
+work sections individually still left five separate headings — each
+announced as "collapsed button" — sitting in the reading order on a
+completely fresh page load, before any content had been added and before
+the person had done anything at all. Collapsing each one was not the same
+as getting them out of the way.
+
+- **All five sections are now nested inside one single collapsed
+  disclosure, "More options."** A first-time user on a fresh page load now
+  encounters exactly one additional heading after the primary Add
+  content/request flow, not five. Opening "More options" reveals the same
+  five sections as before, each still individually collapsible — nothing
+  about their functionality changed, only how many headings stand between
+  a new user and getting started.
+- Each of the five sections' own heading was demoted from `<h2>` to `<h3>`,
+  since they are now genuinely subsections of "More options" rather than
+  top-level sections in their own right — this keeps the heading hierarchy
+  accurate for headings-list navigation, not just visually nested.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- The consolidation was done by script (extracting the exact contiguous
+  line range covering all five sections and wrapping it, rather than
+  manual retyping), verified by an order-independent diff confirming no
+  content was lost — only the wrapper and demoted heading levels were
+  added — and by confirming `<section>`/`<details>` tag counts remained
+  balanced.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  after the change.
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available.
+
+## Phase 35 Correction 3 - One Field for Content - Completed
+
+The Add content experience was still two visually-stacked controls (a
+drop zone that doubled as a fake button, and a separate URL text field
+below it), each with its own label and help text. The person testing this
+asked for something more specific: one edit field, into which a file can
+be dropped or a web address typed or pasted, regardless of type — video,
+audio, image, PDF, text, Word document — with the assistant determining
+what it is.
+
+**What a browser will and will not allow.** JavaScript cannot read a
+local file's contents because its name or path was typed or pasted into a
+text field — that is a browser security boundary, not a design choice,
+and no amount of UI work changes it. The two ways a web page can actually
+receive a real file are the native file-picker dialog and a genuine
+drag-and-drop of the file object. Given that constraint, the closest
+correct implementation of "one field, anything works" is: one text field
+that accepts a typed or pasted web address *and* is itself a live drop
+target for a dragged file, plus one small button for people who'd rather
+click than drag.
+
+- **`content-input` replaces both `url-input` and the old fake-button drop
+  zone.** It is a real, always-focusable text field. Typing or pasting a
+  web address and pressing Enter (or clicking "Add") inspects it, exactly
+  as before.
+- **The surrounding `drop-zone` container is now purely a drop target**,
+  not also a keyboard-activatable fake button — the old
+  `role="button" tabindex="0"` plus a manual Enter/Space keydown handler
+  was a non-standard reimplementation of what a real `<button>` already
+  does. Dropping a file anywhere on it inspects the file immediately, the
+  same as before.
+- **"Choose a file" is now a real `<button>`**, not a `role="button"` div,
+  triggering the same hidden native file input as before. This is more
+  reliable with JAWS/NVDA than the div-with-ARIA-role pattern it replaced,
+  not just simpler.
+- **Dropping a link (not a file) onto the control also works.** If
+  something is dragged that isn't a file — a link dragged from a browser
+  tab, for example — the drop handler now reads `text/uri-list` or
+  `text/plain` from the drag data and treats it as a pasted address.
+- One shared label ("File or web address"), one shared help paragraph, one
+  form. There is no longer a second, separately-labeled sub-form.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed no reference to the removed `url-input`, `url-help`,
+  `url-form`, or `drop-help` IDs remains anywhere in `index.html`,
+  `js/app.js`, or `css/styles.css`.
+- Manually traced both the file path (drop and native picker) and the
+  URL path (typed/pasted, plus a dragged link) through to `handleFile()`
+  and `handleUrl()` respectively, to confirm both still reach the same
+  inspection logic as before the change.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  in `index.html` after the rewrite (the same four pre-existing missing
+  IDs from earlier increments remain; no new ones were introduced).
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available to
+  actually drag a file onto the control or drive it with JAWS/NVDA.
+
+## Phase 35 Tightening - Unified Opening Interaction and Transcript Fallback - Completed
+
+This pass responds to a comprehensive review of the running application
+against a full set of acceptance tests. It tightens the opening experience
+into the single interaction the tests describe, and implements the two
+correctness requirements — transcript validation and automatic provider
+fallback — needed to trust the result of "Make this video accessible."
+
+- **The intent combo box and universal content input are now one always-
+  visible section**, not a two-stage reveal where the request field only
+  appeared after content existed. On page load the person now hears, in
+  order: the heading, "What can I help you accomplish today?", the
+  editable combo box, the content input area, "Choose a file," and
+  "Start" — matching the specified reading order exactly. The request
+  field is not required to have a value up front; submitting it empty is
+  handled by existing guard logic, not native browser validation.
+- **"Start" now does double duty.** If content was typed or pasted into
+  the content field but never explicitly submitted, pressing Start checks
+  it first before evaluating the request — so a person who fills in both
+  fields and presses one button gets the expected result, rather than
+  being told to "add content" when they just did.
+- **Filename and Windows-path detection now uses the exact specified
+  wording**, distinguishing a bare filename ("That looks like the name of
+  a local file...") from a Windows-style path ("That looks like a local
+  Windows path. Browsers cannot open it directly...") instead of one
+  generic message for both.
+- **The content-acknowledgement message now follows the specified
+  concise pattern** — "{name} selected. {Type} detected. Duration:
+  {duration}. Suggested request: {suggestion}." for a local file, "{Type}
+  address detected. ... Suggested request: {suggestion}." for a URL —
+  built by a single shared function instead of the looser prose summary
+  used before.
+- **Transcript text is now validated before it can reach the transcript
+  editor.** Empty text, whitespace-only text, text that looks like raw
+  JSON, and text that looks like an error or status string are all
+  rejected as "not a usable transcript," never inserted into the editable
+  field.
+- **Automatic provider fallback with one confirmation, implemented for
+  transcription specifically** (the capability named in the acceptance
+  test). If a request fails or returns an unusable result, the assistant
+  now automatically identifies the next healthy compatible provider via
+  the existing `getAlternative()` lookup, asks one concise
+  provider-specific question ("X did not produce a transcript. Y can try
+  next. The audio will be sent to an outside service and charges may
+  apply. Continue?"), and retries automatically on confirmation — without
+  sending the person to Advanced assistance settings or discarding the
+  audio that was already extracted. This required no new architecture:
+  `run()` already accepted a specific `providerId` override, and
+  `getAlternative()` already existed from an earlier sprint.
+- **Design principles explicitly named and documented in the README:**
+  Providers Remain Behind the Scenes, Internal Architecture Must Not
+  Dictate User Experience, and Drop In / Edit / Walk Away, added to the
+  existing Design Philosophy section.
+- **The next-development-priorities roadmap is now explicit and ordered**
+  (Audio Accessibility, then Document Accessibility, each with its full
+  goal list) rather than only present as narrative future-vision text.
+
+### What was reviewed and intentionally not implemented this pass
+
+- **The full six-state provider health model** (Healthy / Untested /
+  Authentication failed / Temporarily unavailable / Unsupported for this
+  task / Disabled) as its own named taxonomy was not built. The existing
+  three-state model (connected / failed / unknown) already drives
+  automatic-selection exclusion correctly for the tested scenario;
+  building and threading a six-state enum through every provider adapter
+  is real work that was judged lower priority than the correctness fixes
+  above, given this pass's scope.
+- **Automatic fallback was implemented for transcription only**, not
+  generalized to every capability (captions, audio description, visual
+  analysis). The pattern (`getAlternative()` plus a specific-provider
+  retry) generalizes directly; doing so for every capability was left for
+  a future pass rather than risking a rushed, less-tested version of each.
+- **Large/long-form video processing (chunked transcription, provider
+  duration limits, frame sampling by scene) and walk-away infrastructure
+  (Wake Lock, browser notifications, resume-after-refresh) remain
+  unimplemented**, as stated explicitly in the assignment's own scope
+  boundary ("do not begin the audio or document phases"; these are
+  adjacent, larger pieces of the same "real long-form video" problem).
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed the merged opening section's `<section>`/`<details>` tag
+  counts remain balanced and every `getElementById` reference from
+  `app.js` still resolves (the same four pre-existing missing IDs from
+  earlier increments remain; no new ones were introduced).
+- Manually traced the "Start does double duty" path, the filename/path
+  detection branches, and the transcript-fallback retry path through the
+  code to confirm each reaches the intended function with the intended
+  arguments.
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available to
+  actually exercise a live Azure Speech failure, a JAWS/NVDA session, or
+  a real file drag-and-drop.
+
+## Phase 35 Tightening 2 - Paste-a-File Bug, Reading Order - Completed
+
+A real JAWS session pasting a file from Windows File Explorer directly
+into the content field surfaced the actual reason "the video did not
+appear as an active file": copying a file in a file manager (Ctrl+C) and
+pasting it (Ctrl+V) into a web page does not produce filename text to
+paste — it produces a real file object, delivered through
+`clipboardData.files`, not `clipboardData` text data. The content field's
+`paste` handling only ever existed implicitly as plain text entry; a
+pasted file had nothing to land in and silently did nothing, which is
+exactly what the transcript showed: "Type in text. Pasted from
+clipboard," then the field remained blank.
+
+- **`content-input` now has its own `paste` handler that checks
+  `event.clipboardData.files` first.** If a real file was pasted (copied
+  in the OS file manager, pasted with Ctrl+V), it goes straight to
+  `handleFile()`, exactly like a dropped file or one chosen from the
+  native picker. Only when no file is present does paste fall through to
+  normal text entry (a typed or pasted web address). This is a third,
+  previously-missing content-acquisition path — file picker, drag-and-
+  drop, and now OS-level copy/paste of a file — alongside the
+  already-working typed/pasted URL path.
+- **Reading order swapped: content input now comes before the request
+  field.** Real use showed the natural order is add content first, then
+  say what you want — not the reverse implied by the acceptance test's
+  literal wording. The placeholder and help text for both fields were
+  updated to match ("Add content above" instead of "Add content below").
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed `getElementById` reference integrity is unchanged (the same
+  four pre-existing missing IDs remain; no new ones were introduced).
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available to
+  actually paste a copied file, which is exactly the scenario this fix
+  addresses. This fix is a direct, targeted response to a real JAWS
+  session's exact reproduction steps, but has not itself been re-run.
+
+## Workflow Continuation Bug - Root Cause Fixed - Completed
+
+Real testing produced this sequence: Azure Speech attempted transcription
+and returned nothing; the assistant correctly offered Gemini as the next
+provider; Gemini produced a transcript; the transcript was reviewed and
+saved; the workflow then reported "Create transcript could not be
+completed" and paused the accessibility plan anyway — despite the
+transcript having been genuinely created.
+
+**Root cause, found by inspecting the workflow completion path rather than
+adding a workaround around the symptom:** `createTranscript()` in
+`js/browser-provider.js` — the function that packages an approved
+transcript into its saved output file — referenced a variable named
+`description`. That variable was never declared anywhere in that
+function; the actual reviewed text was held in a different, correctly-
+named variable, `transcriptText`, which was checked for existence but
+never actually used. Every single approved transcript, from every
+provider, threw a `ReferenceError` at that line while building the output
+artifact — after the real work (drafting, review, approval) had already
+succeeded, and before the job could reach its normal completion path.
+`workflow-runner.js`'s existing error handling caught that exception
+exactly as it's supposed to catch a genuine failure and reported
+"Create transcript could not be completed," which was truthful about the
+exception it caught but wrong about what actually happened.
+
+**Why this fix, by itself, satisfies the full list of required
+corrections:** the job-completion path this crash was preventing already
+does everything asked for — `completeProgress()` in `js/app.js` already
+calls `SharedKnowledge.recordJob()` (saving the artifact into Shared
+Knowledge and rebuilding the accessibility plan and assessment from it),
+and already calls `WorkflowChain.markCompleted()` followed immediately by
+`continueWorkflowChain()` when the job belongs to an active "Make This
+Accessible" chain, which advances the plan to the next available step
+automatically without pausing. None of that machinery was broken; it
+simply never ran, because the job crashed one step before reaching it.
+Provider health was already being updated correctly by the Gemini/Azure
+Speech adapters themselves (from an earlier sprint), independent of this
+bug. The only genuinely missing piece — nothing in the job recorded which
+provider had actually produced the successful draft — is now filled in
+directly: `js/app.js` remembers the provider name from a successful
+`AIProviderLayer.run()` result, includes it when the transcript is saved,
+and `createTranscript()` writes a `Provider:` line into the saved
+artifact alongside the transcript text.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Manually confirmed no other occurrence of this exact bug pattern exists:
+  searched every reference to a bare `description` variable in
+  `js/browser-provider.js` and confirmed the one other function that uses
+  it (`createImageDescription`) correctly declares its own local
+  `description` variable, unlike `createTranscript`, which did not.
+- Manually traced the full completion path from a successful
+  `createTranscript()` return through `OutputManager.register()`,
+  `finishJob()`, `onComplete`, and `completeProgress()` to confirm
+  `SharedKnowledge.recordJob()` and `WorkflowChain.markCompleted()` +
+  `continueWorkflowChain()` are both reached on success, with nothing
+  else in that path throwing.
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser to actually run
+  the reported Azure Speech → Gemini → review → save sequence end to end.
+  This is a precise fix for a specifically diagnosed defect, not a
+  guess, but it has not itself been re-verified live.
+
+## Workflow Intelligence Pass - Completed
+
+- **Fixed a genuine SharedServices state contradiction.** The application
+  could report "No Apps folder is remembered" while simultaneously
+  reporting Azure Speech and Azure Vision as "Available," because
+  availability was based solely on whether credentials happened to be
+  cached from a past import, entirely independent of whether the Apps
+  folder connection itself was still remembered. `js/shared-services.js`
+  now maintains a synchronously-readable cached flag for whether the
+  folder is remembered (the underlying check is inherently async —
+  IndexedDB — but `isAvailable()` must answer synchronously, since it's
+  called throughout automatic provider selection), populated at startup
+  and kept in sync on choose/reconnect/clear. Azure Speech and Azure
+  Vision now report available only when both a credential exists and the
+  folder connection is remembered. Clearing SharedServices already only
+  touched its own credential store and directory handle — verified by
+  inspection that OpenAI, Gemini, and Anthropic each manage their own
+  separate credential store keys, so this was already correctly isolated.
+- **Provider fallback now continues through a full ranked list, not one
+  hop.** Previously, if the first-choice provider failed, the assistant
+  offered exactly one named alternative and stopped there regardless of
+  whether further healthy providers existed. `getAlternative()` now
+  accepts a list of already-tried provider IDs, and the transcript
+  fallback chain threads a growing list through each retry, continuing
+  until a usable result is produced or every healthy compatible provider
+  has been tried. This also directly satisfies "if OpenAI is healthy it
+  must participate": it was always registered and scored, it simply never
+  got a turn under the old one-hop logic. A provider that previously
+  failed authentication and later passes a real test was already correctly
+  cleared of its stale failed status (verified by inspection — each
+  provider's successful test overwrites its own recorded health) needing
+  no change.
+- **Caption cues are now validated and automatically repaired before
+  review**, not dumped raw into the editable list. `CaptionReview.repair()`
+  fixes what's mechanically fixable — cues overlapping the previous one,
+  cues extending past the media's actual duration — and only drops a cue
+  outright when it has no parseable timing at all to repair from. The
+  person doing the review now sees corrected timing with a note about
+  what was fixed, not dozens of invalid cues to fix by hand. This same
+  pattern was not yet applied to audio-description cues, which share a
+  similar structure; that is flagged as straightforward future work
+  rather than done here, to keep this pass scoped to what was reported.
+
+### What was already correct (verified, not changed)
+
+- Workflow continuation on a saved, approved transcript — fixed in the
+  prior pass (a `ReferenceError` in `createTranscript()`); confirmed still
+  working by re-reading the completion path.
+- Elapsed/estimated-remaining progress reporting — implemented in an
+  earlier phase.
+- Shared Knowledge reuse of completed-stage output — `completeProgress()`
+  already calls `SharedKnowledge.recordJob()` on every successful job.
+- Automatic continuation of "Make This Accessible" after a review
+  checkpoint is approved — already wired through `continueWorkflowChain()`.
+
+### What was not addressed this pass
+
+**Provider presentation (Issue 2)** — reframing the provider list from
+"selection" language to "status" language throughout the Assistance
+settings section was not done. The section is already collapsed behind
+"More options" and automatic selection is already the default behavior;
+auditing every remaining piece of picker-style wording in that section
+was judged lower priority than the four correctness issues above, given
+this pass's scope, and was not touched to avoid a rushed, partial pass at
+it.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Manually traced `chooseAppsDirectory()`, `reconnectSavedDirectory()`,
+  `clear()`, and `initialize()` to confirm the cached remembered-folder
+  flag is set or cleared on every path that changes it.
+- Manually traced the multi-hop transcript fallback with a simulated
+  three-provider scenario (by reading the code, not running it) to
+  confirm `triedProviderIds` grows correctly and `getAlternative()`
+  excludes everything already tried.
+- Manually verified `CaptionReview.repair()` against constructed edge
+  cases (an end time past the source duration, two overlapping cues, one
+  cue with an unparseable timestamp) by tracing the logic by hand.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  (the same four pre-existing missing IDs remain; no new ones were
+  introduced).
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser available.
+
+## Reviewer-First Workflow - Completed
+
+This pass changes the core relationship between the application and the
+person using it. The user is the accessibility **reviewer**, not the
+author. The application is designed for blind users; a blind reviewer
+cannot look at a video and invent a visual description, and cannot
+usefully review dozens of raw timestamp fields one at a time. Both of
+those were real problems in the running application, not hypothetical
+ones — one produced a genuine accessibility failure (see below).
+
+- **The blank-narration-field bug is fixed.** Opening audio-description
+  review previously always populated one empty, required narration text
+  field with no explanation of what it was for. A blind reviewer who
+  couldn't see the video had no way to know what belonged there, and
+  entering anything just to satisfy the required field became the entire
+  audio description. This is gone. Opening audio-description review now
+  always attempts a real AI-generated draft first (with automatic
+  fallback across every healthy compatible provider) and never shows a
+  cue-editing field until either a real draft exists or every provider
+  has genuinely failed.
+- **Captions and audio description are now reviewed, not authored, by
+  default.** Both review screens open with a concise summary — cue count,
+  duration covered, validation status — not an expanded list of every
+  timestamp and text field. Detailed per-cue editing exists behind an
+  explicit "Edit individual caption cues" / "Edit individual
+  audio-description cues" disclosure, closed by default.
+- **A quality gate on audio-description drafts.** A multi-minute video
+  that comes back with only one narration cue is treated as suspicious,
+  not accepted — the assistant automatically tries another provider
+  rather than presenting a single accidental-looking cue as a finished
+  draft.
+- **Multi-hop provider fallback, matching the transcript pattern, for
+  both captions and audio description.** Each keeps trying healthy
+  compatible providers, with one confirmation per new external provider,
+  until a usable result exists or every provider has failed. Manual
+  authoring is only ever revealed as an explicit last resort, with the
+  specific stated language: "manual authoring is available as an advanced
+  option... you may need help from someone who can review the visual
+  content."
+- **Every cue field has a complete, self-contained accessible name** —
+  "Caption cue 3 start time," "Audio-description cue 2 narration" — not a
+  generic "Start time" that depends on fieldset/legend grouping being
+  announced.
+- **Focus moves to meaning, not into a field.** Opening a review screen
+  focuses the summary. A validation problem focuses a concise summary
+  ("3 caption cues have a timing or text problem...") with automatic
+  repair attempted first, not a per-cue announcement or focus dropped
+  into the first invalid field. A successful save announces "Captions
+  saved. Continuing the accessibility workflow," not silence or a jump to
+  the top of the page.
+- **Durations are spoken in words, not digits.** The single biggest
+  concrete complaint behind this pass: duration was being rendered as
+  colon-separated digits ("2:36") in the very first thing a person hears
+  after adding content, which is not a naturally spoken or readable
+  format for someone who can't glance at it. `MediaInspector`'s duration
+  formatter now produces "2 minutes 36 seconds" everywhere it's used in
+  live spoken summaries. Precise `00:00:00.000` timestamps still exist
+  inside the caption/audio-description VTT and script data itself — that
+  format is a real technical requirement of those file formats, not a
+  display choice, and only appears now inside the collapsed, explicitly-
+  opened advanced cue editors, never in a summary or announcement.
+
+### What was not addressed this pass
+
+The direction documents describe a considerably larger vision: a true
+multi-stage visual-analysis pipeline (scene segmentation, dialogue-gap
+detection, an accessibility-relevance reasoning stage, a second AI
+provider critiquing the first one's draft before the human ever sees it),
+coordinated multi-provider division of labor by capability, and a quality
+scoring model based on genuine coverage rather than file existence. None
+of that was built this pass. What exists today is a single-stage
+AI-generates-then-validates loop with multi-provider fallback and one
+crude quality gate (cue count vs. video length) — a real improvement on
+what existed before, and a defensible step toward the described vision,
+but not the vision itself. Building the full multi-stage pipeline with a
+second-provider critique step is substantial, independent work and would
+need its own scoped phase rather than being layered onto this pass.
+
+Two other things flagged and intentionally left alone: the downloadable
+publication-manifest and accessibility-package text files still use
+`MM:SS`-style timestamps for chapter/section markers (a written document
+convention, not a live announcement); and the video-player scrubber's
+time display in the Viewer was not touched, since a native media
+element's own time display is standard and expected there.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed the collapsed cue-editor `<details>` elements and their
+  summary/detail wiring are structurally sound (tag counts balanced,
+  every referenced ID resolves).
+- Manually traced the audio-description open path for both branches (a
+  compatible provider available vs. none available) to confirm neither
+  one populates a blank required field — the one specifically reported.
+- Manually traced the caption and audio-description save paths to confirm
+  a validation failure attempts automatic repair before falling back to a
+  concise summary, and that a successful save announces completion before
+  handing off to workflow continuation.
+- Live testing was **not** performed — this environment has no network
+  access, no real provider credentials, and no browser to actually
+  exercise these flows with JAWS or NVDA.
+
+## Local Production Engine (Optional) - Completed
+
+An optional local helper (`tools/local-production-helper/production_helper.py`,
+Python standard library only, no dependencies) detects and uses the
+person's own installed FFmpeg/FFprobe to render a real MP4 with the
+original video, the approved described-audio mix, an alternate original-
+audio track, and captions muxed in as a selectable track — instead of the
+browser-only MediaRecorder re-recording approach, which still exists and
+is used automatically whenever the helper isn't running or FFmpeg isn't
+found. **This was genuinely built and tested in this environment**, not
+only traced by hand: a real render was executed end to end (upload →
+FFmpeg mux → FFprobe-verified output with the correct video, dual audio,
+and subtitle streams) against synthetic test files, since this sandbox
+happens to have FFmpeg installed.
+
+- **Security model:** binds to `127.0.0.1` only; never uses a shell; every
+  FFmpeg/FFprobe invocation is one of two fixed argument-list templates
+  (probe, render) — the browser can select which one to run and supply
+  asset IDs and simple booleans, never raw command-line arguments or a
+  client-supplied path. All files are referenced by server-generated
+  UUIDs written into a single temporary working directory.
+- **`js/local-production.js`** is the browser-side client — a separate
+  namespace (`window.LocalProduction`), never registered with
+  `AIProviderLayer`, since FFmpeg is a local production engine, not an AI
+  provider.
+- **A "Local production" status is shown inside More options** (found in
+  the Publication pipeline subsection): ready, not running, or FFmpeg not
+  found, with technical executable paths/versions behind their own
+  further disclosure, and a "Locate FFmpeg" action that explains why the
+  helper can't accept an arbitrary browser-supplied path (the same reason
+  it never accepts raw commands) and points to a real fix.
+- **Honest limitation found during testing:** FFmpeg (this build) does not
+  reliably apply the `-metadata:s:a:N title=...` track-title tags in the
+  MP4 muxer, even though the tracks themselves, their order, and their
+  language/codec are all correct. Track selection by a player still works
+  correctly by order and language; only the human-readable title label is
+  unreliable. Documented rather than silently dropped or claimed to work.
+- **Not implemented:** true chunked/checkpointed rendering (a single
+  render is one FFmpeg invocation — it either completes or it doesn't;
+  genuine mid-render checkpointing would require chunked processing,
+  which is a separate, larger piece of work), and automatic discovery
+  beyond PATH and a short list of common Windows install locations (no
+  registry search).
+
+## Workflow Polish Pass - Completed
+
+Direct, specific feedback after real use of the reviewer-first workflow:
+
+1. **Focus no longer returns to "What can I help you accomplish today?"
+   after completing, pausing, or cancelling a step in an active
+   accessibility plan.** It moves to the new Current Task summary
+   instead (see below). This was a real, confirmed bug —
+   `continueWorkflowChain()`, `cancelWorkflowChain()`, and
+   `pauseWorkflowChainStep()` all called `directGoalSection.focus()`
+   unconditionally.
+2. **A new "Current Task" summary** shows what's completed and the single
+   next recommended action, with one button — not a requirement to
+   navigate through Accessibility Assessment, Smart Recommendations, or
+   reports to find what to do next. Those five sections (assessment,
+   recommendations, plan, shared knowledge, advanced analysis) are now
+   consolidated behind one collapsed "More details" disclosure, the same
+   pattern used for "More options."
+3. **Audio-description generation now includes a second-provider critique
+   pass** when a second healthy compatible provider is available: the
+   first provider drafts, the second is asked specifically to find
+   missing visuals, redundancy, timing conflicts, and subjective wording
+   and return an improved version, and the improved version is used only
+   if it validates at least as well as the original. This is real,
+   working "generate, critique, improve," not a placeholder — but it is
+   one critique pass with the existing transcript/knowledge context, not
+   the full multi-stage scene-segmentation/OCR/object-detection pipeline
+   described in earlier direction documents, which this application does
+   not implement.
+4. **Rendering architecture already matches what was asked:** browser-
+   based rendering remains the default and always-available path: the
+   local FFmpeg engine (see above) is tried first only when genuinely
+   available and falls back automatically and silently to the existing
+   browser renderer otherwise. The user-visible experience (a downloadable
+   accessible video) is identical either way.
+5. **Shared Knowledge / "Future analysis required" consistency (issue 16
+   from an earlier pass) was not re-verified this pass** — flagged
+   honestly rather than claimed fixed without checking.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- The local production helper was actually run and exercised end to end
+  in this environment (see above) — the one piece of this pass verified
+  by execution rather than only by reading the code.
+- Manually traced all three focus-fix call sites
+  (`continueWorkflowChain`, `cancelWorkflowChain`,
+  `pauseWorkflowChainStep`) to confirm each now focuses Current Task
+  when it has content, rather than unconditionally focusing the request
+  field.
+- Manually traced the audio-description critique path to confirm the
+  original validated draft is kept if the critique call throws, returns
+  no cues, or returns a worse-validating result — a critique pass cannot
+  make a previously-good draft fail.
+- Confirmed section/details tag balance and full `getElementById`
+  reference integrity after consolidating five sections into "More
+  details" (the same four pre-existing missing IDs remain; none new).
+- Live testing of the browser application itself was **not** performed —
+  no browser available in this environment. Only the local production
+  helper was actually executed; everything else was verified by reading
+  and tracing the code.
+
+## "Render Accessible Video Is Not Available" - Root Cause Fixed
+
+Real testing showed "Make This Accessible" starting, running, and then
+immediately pausing with "Render accessible video is not available with
+the current source or browser capabilities" — before any rendering was
+ever attempted.
+
+**Root cause:** `render-accessible-video` was fully implemented in
+`BrowserProvider.execute()` (`createPublicationExport()`, which calls
+`PublicationRenderer.render()`) but was missing from that provider's
+`workflows` list in `js/provider-manager.js` — the list
+`getCapability()` uses to decide whether a workflow can run at all. Every
+other workflow the Browser Provider implements was listed; this one
+wasn't. The result: `capability.canRun` was `false` unconditionally,
+regardless of whether the browser actually supported rendering, and the
+workflow chain blocked the step before ever calling the rendering code.
+This is the same class of bug as the `create-transcript` `description`
+variable found in an earlier pass — real functionality that was
+implemented but never actually reachable, for an unrelated, narrow
+reason.
+
+**Fix:** added `'render-accessible-video'` to the Browser Provider's
+`workflows` list. Cross-checked every other workflow ID `js/intent-
+engine.js` defines against every provider's `workflows` list to confirm
+this was the only orphaned one.
+
+**What this fix does and does not guarantee:** the chain will now
+genuinely attempt to render instead of refusing to try. Whether the
+render itself succeeds depends on real browser support
+(`MediaRecorder`, `video.captureStream()`, `AudioContext`) or the local
+FFmpeg helper being available — neither of which could be exercised in
+this environment (no browser here). This fix removes a false block; it
+does not, by itself, prove the render will complete successfully on a
+real machine.
+
+### Testing performed
+
+- `node --check` on `js/provider-manager.js` and every other JavaScript
+  file (all pass).
+- Extracted every `workflowId` from `js/intent-engine.js` and every
+  `workflows` array from `js/provider-manager.js` and confirmed all 17
+  intent workflow IDs now have a matching provider entry — before the
+  fix, `render-accessible-video` was the only one with none.
+- Live testing was **not** performed — no browser available in this
+  environment to confirm the render itself completes.
+
+## Restored-Work Quality Gates - Completed
+
+Real testing restored old browser data containing a one-cue audio-
+description script and found the application treated it as a completed,
+production-ready audio description — queuing final rendering with known-
+insufficient AD, and recommending package creation while rendering was
+still pending.
+
+- **Root cause:** completion status for audio description was determined
+  by presence alone (`model.accessibility.audioDescription.present`), with
+  no quality check — in `js/recommendation-engine.js`'s `isPresent()`,
+  used both for fresh work and anything restored from Shared Knowledge.
+  A single accidental cue and a fully reviewed script looked identical to
+  every part of the app that asked "is this done."
+- **Fixed at the source and at the gate.** `js/shared-knowledge.js` no
+  longer records a saved audio description as `'complete'`/high-confidence
+  when it has fewer than two cues — it's recorded as `'needs review'` with
+  an honest reason. `js/recommendation-engine.js`'s `isPresent()` applies
+  the same two-cue floor when reading back *any* stored record, including
+  one restored from old data saved before this fix existed, and audio
+  description's completion no longer falls back to a historical "was
+  marked completed once" shortcut the way other workflows still do —
+  presence-with-quality is now the only source of truth for this one.
+- **Rendering now enforces production readiness directly.**
+  `createPublicationExport()` in `js/browser-provider.js` checks for a
+  present transcript, present captions, and a present audio description
+  with at least two cues before calling the renderer at all, throwing a
+  specific "still needed: ..." error naming what's missing rather than
+  attempting to render incomplete work. Because the workflow chain
+  re-evaluates completion state on every continuation, a render that fails
+  this check causes audio description to correctly reappear as the next
+  step rather than the chain simply stopping.
+- **Current Task's next-action selection no longer suggests package
+  creation ahead of rendering.** `pickNextAction()` explicitly prefers
+  `render-accessible-video` over `accessibility-package` when both are
+  technically available, and prefers whatever step an active workflow
+  chain is already on over any other suggestion.
+- **Stale Working state is now fully cleared on failure and cancellation,
+  not just on success.** `failProgress()` and `cancelProgress()` now also
+  refresh Current Task and move focus there (or to the request field as a
+  fallback) — previously only a successful completion did this, so a
+  failure or cancellation could leave focus stranded after the Working
+  section was hidden.
+
+### What was not addressed this pass
+
+- **Issue 4 (mapping deeper analysis into granular Shared Knowledge
+  fields like `visual.sceneChanges`, `visual.dialogueGaps`,
+  `audio.speakers.count`)** was not implemented. This application's
+  current advanced-analysis result shape does not yet produce that level
+  of structured field data to map from — building it is a data-model
+  change, not a wiring fix, and was judged too large to do safely in this
+  pass alongside the quality-gate fixes above.
+- **Issue 6 (full artifact provenance and supersession — fingerprint,
+  origin, review/quality state, dependencies, current/superseded/invalid
+  status on every artifact)** was not implemented. The two-cue floor
+  added this pass is a real, working quality gate, but it is a narrower,
+  more targeted fix than a general provenance model that could invalidate
+  any artifact type for any reason without deleting it. That remains
+  future work.
+- **Issue 7's exact end-to-end scenario** (real restored browser data,
+  live regeneration, live rendering) was reasoned through by reading the
+  code, not executed — this environment has no browser and no real
+  Shared Knowledge data to restore.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Manually traced a constructed one-cue audio-description record through
+  `isPresent()`, `workflowIsComplete()`, and `createPublicationExport()`
+  to confirm it is now identified as incomplete at every one of those
+  points, not just one.
+- Manually traced a two-or-more-cue record through the same three points
+  to confirm it is still correctly treated as complete — the fix narrows
+  what counts as sufficient, it does not make everything insufficient.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  (the same four pre-existing missing IDs remain; no new ones were
+  introduced).
+- Live testing was **not** performed — no browser, no real Shared
+  Knowledge data, and no way to reproduce the exact restored-work scenario
+  in this environment.
+
+## Narration Styles Replace Provider Voice Names - Completed
+
+The narration voice selector previously exposed raw OpenAI TTS voice
+identifiers — Alloy, Ash, Coral, Echo, Fable, Nova, Onyx, Sage, Shimmer —
+directly to the user. Those are implementation detail, not something a
+person choosing how their video should sound needs to know about.
+
+- **`js/narration-style.js`** is a new, small catalog module mapping nine
+  human-friendly styles (Automatic, Professional documentary, Educational,
+  Friendly guide, Warm conversational, Corporate training, Expressive
+  storytelling, Children's educational, Calm neutral) to a specific
+  provider and voice. Provider/voice names never appear in the normal
+  workflow — only inside the collapsed "Voice details" disclosure.
+- **Automatic remains the default** and resolves to a specific style
+  using a best-effort, filename-based content hint (for example,
+  "training" or "onboarding" in the filename suggests Corporate training;
+  "museum" or "tour" suggests Friendly guide). This is explicitly *not*
+  real content understanding — the application does not analyze video
+  content to choose a narration style — and the code and this README both
+  say so rather than overstating it. It is a low-cost, always-overridable
+  starting suggestion, not a claim of content awareness.
+- **Preview** synthesizes and plays a short sample ("Welcome to the Media
+  Workflow Assistant. This is a sample of the [Style] narration style.")
+  using the same consent flow as narration generation elsewhere in the
+  app — if it requires a connected service or may cost money, that's
+  explained before anything is generated, via the existing
+  `confirmAssistanceUse()` pattern. Preview does not move focus; status
+  updates in place.
+- **The preference is saved** (`localStorage`) and used as the default
+  style for future audio-description reviews, per the requirement that
+  future projects should default to a saved style.
+- **Changing narration style never regenerates the audio-description
+  script.** This didn't need new code — voice selection was already a
+  separate form field from the narration cues themselves; selecting a
+  style only changes what gets passed to narration synthesis at save
+  time.
+- **Honesty about provider order:** the direction document specifies a
+  preferred order of Azure Speech, then OpenAI, then Gemini, then local
+  voices. Only OpenAI's narration-audio capability actually exists in
+  this codebase — Azure Speech, Gemini, and local text-to-speech are not
+  implemented. Every style currently resolves to an OpenAI voice; the
+  module's shape (`resolveVoice()` returning a provider/voice pair per
+  style) is intentionally ready for other providers to be added later
+  without changing how styles are presented, but no other engine was
+  built or claimed to exist.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Confirmed no remaining reference to the removed `narration-voice`
+  element anywhere in `index.html` or `js/app.js`.
+- Manually traced `resolveVoice('automatic', sourceName)` against several
+  constructed filenames to confirm the content-hint suggestions match the
+  documented examples, and that an unrecognized filename correctly falls
+  back to Automatic's default voice rather than guessing.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  (the same four pre-existing missing IDs remain; no new ones were
+  introduced).
+- Live testing was **not** performed — no network access, no real OpenAI
+  credentials, and no browser available to actually play a preview clip
+  in this environment.
+
+## Render Job Permanently Stuck In Queue - Fixed
+
+Real testing showed a render job announced as "queued," then "queued at
+position 2," with elapsed time frozen at 0 seconds for almost two
+minutes — no progress, no rendering, no validation, nothing. The analysis
+that came with this report was correct: this was not an audio-description
+problem, not FFmpeg, not a provider — it was the job queue itself.
+
+**Two real, structural bugs in `js/execution-engine.js`, both fixed:**
+
+1. **No guaranteed cleanup if `runner.run(job)` ever rejects.**
+   `processNext()` had no `try`/`catch`/`finally` around
+   `await runner.run(job)`. `WorkflowRunner.run()` is designed to always
+   resolve, never reject — it catches every error internally — but it
+   still calls two callbacks (`onComplete`, `onError`) as part of that
+   same try block, and if *either callback itself* ever threw, that
+   exception would escape `run()` uncaught. When that happens, the two
+   lines that reset the engine's state (`this.activeJob = null;
+   this.processing = false;`) — which sat *after* the `await` with no
+   protection — would simply never execute. `this.processing` would stay
+   `true` forever, and every job enqueued after that point would sit in
+   the queue with literally nothing ever checking it again. This is
+   exactly the reported symptom: a queue that exists with no worker
+   consuming it. `processNext()` now wraps the run in `try/finally`, so
+   the engine's state is *guaranteed* to reset no matter what happens
+   inside a job — including something that shouldn't be possible today.
+2. **A race in how the next job gets picked up.** `enqueue()` called
+   `processNext()` synchronously. `enqueue()` is frequently called from
+   *inside* another job's own completion handling (a workflow-chain step
+   finishing calls `continueWorkflowChain()`, which calls `runIntent()`
+   for the next step, which calls `enqueue()`) — and that entire chain
+   runs synchronously, still on the call stack of the *previous* job's
+   `processNext()`, before that call has resettled `this.processing`.
+   Simulated both the old and new versions directly in Node to confirm:
+   the old synchronous call actually self-corrected in a simple two-job
+   case (verified — it is not, by itself, the cause of a multi-minute
+   stall), but it is a genuine race condition that made the system more
+   fragile than necessary. `enqueue()` now defers its `processNext()`
+   call to a microtask (`Promise.resolve().then(...)`), so it always
+   checks state that has already settled rather than state mid-unwind.
+- **The misleading "Elapsed: 0 seconds" display is also fixed.**
+  `job.startedAt` is only ever set once a job actually begins running,
+  not while it's sitting in the queue — so a genuinely queued (not
+  stuck, just waiting its turn) job was already reporting a frozen "0
+  seconds," which looks identical to a hung timer. It now reports "Still
+  waiting in the queue" instead of a fabricated zero.
+- **Instrumentation added, as requested:** `[job-queue]` console logging
+  at queue insertion, worker pickup, completion, failure, and
+  cancellation, so this class of problem is directly observable next
+  time rather than inferred from symptoms.
+
+**What this fix does and does not prove:** the `try/finally` guarantee
+in `processNext()` closes off an entire class of "queue jams forever"
+failure the old code had no protection against, and the deferred
+`enqueue()` removes a genuine (if usually self-correcting) race. What
+this fix cannot do from this environment is confirm which of these was
+the *actual* historical trigger, or rule out a genuine hang (as opposed
+to an uncaught rejection) inside the render step itself — no browser is
+available here to reproduce "queued at position 2" against real FFmpeg
+or MediaRecorder rendering.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- **Actually simulated the queue logic in Node**, not just read by eye:
+  built a minimal standalone reproduction of both the old and new
+  `enqueue()`/`processNext()` interaction with a mock job runner whose
+  completion synchronously enqueues the next job (mirroring workflow-
+  chain continuation exactly), confirmed the new deferred version
+  correctly drains a two-job chain, and confirmed the old synchronous
+  version happens to self-correct in that same simple case — narrowing
+  down which of the two fixes is the structural guarantee versus the
+  robustness improvement, rather than asserting both fixed the bug
+  without checking.
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  (the same four pre-existing missing IDs remain; no new ones were
+  introduced).
+- Live testing against the real render pipeline was **not** performed —
+  no browser available in this environment to reproduce the exact
+  reported freeze end to end.
+
+## Automatic Final Rendering, With an Honest Browser Limitation - Completed
+
+Real testing showed a render step that automatically failed with a
+generic "could not be completed" message, and a manual retry button that
+appeared not to do anything. The root technical cause is a genuine
+browser platform restriction, not a bug that can be coded around: modern
+browsers only allow `video.play()`, `audio.play()`, and
+`AudioContext.resume()` — all required by the browser-based renderer —
+when they happen as a direct, immediate result of a real click. By the
+time automatic chain continuation reaches the render step, several
+asynchronous layers (the job queue, provider dispatch, artifact fetching)
+have already happened, and that "this was a real click" permission is
+gone. This is why it failed automatically, and why a delayed retry could
+still fail too.
+
+- **Rendering still starts automatically by default.** Nothing changed
+  about that — render is still just the next chain step, run the same way
+  every other step is.
+- **A brief, cancellable pause was added before it starts**, with a
+  "Render later" button. If nothing is clicked, rendering proceeds
+  automatically after a few seconds — this is an opt-out, not a
+  requirement to click through. If Render later is clicked, every
+  completed artifact is preserved, no render job is created, and a single
+  "Render now" button is offered afterward.
+- **The specific browser-permission failure is now caught and handled
+  honestly, not reported as a failed accessibility plan.**
+  `PublicationRenderer.render()` tags this specific error
+  (`error.needsUserActivation`), and `failProgress()` in `js/app.js`
+  branches on it: instead of "the accessibility plan paused because X
+  could not be completed," the person hears "Final browser rendering
+  requires one activation," with focus landing directly on a dedicated
+  "Start final rendering" button — not folded into the generic failure
+  path, and not silently retried without saying why.
+- **"Your accessible video is ready" is now announced specifically when
+  rendering completes**, with results shown immediately, before the chain
+  continues automatically to package creation — previously this specific
+  announcement only existed for a job run outside an active chain, so a
+  chain-driven render (the normal case) never actually said it.
+- **Genuine, stated limitation:** even the dedicated "Start final
+  rendering" button cannot *guarantee* the browser will honor the click,
+  because meaningful async work (checking the job queue, re-validating
+  production readiness, fetching artifact blobs) still happens between
+  the click and the actual `play()`/`resume()` calls — full preservation
+  of "this was a real click" all the way through several async layers
+  was not attempted this pass, since restructuring the job queue itself
+  to support a synchronous fast-path was judged too large a change to do
+  safely alongside this fix. The local FFmpeg production helper avoids
+  this limitation entirely (it never needs browser playback at all) and
+  remains the recommended path when it's running.
+- **Interview speaker context (documented, not built, as directed).**
+  A future improvement: before transcription, let the person optionally
+  list speaker names in speaking order (for example, "First speaker:
+  Dean. Second speaker: David Marcano. Third speaker: Joe McCormick"),
+  used to guide speaker labeling in the transcript. Not implemented this
+  pass — explicitly deferred per the direction not to delay the rendering
+  correction to build reusable voice recognition now.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Manually traced the render-later timer path (both "let it proceed" and
+  "click Render later before it fires") to confirm neither path creates a
+  render job prematurely and both leave completed artifacts untouched.
+- Manually traced a constructed `NotAllowedError` through
+  `PublicationRenderer.render()` → `ProviderManager.execute()` →
+  `WorkflowRunner.run()` → `failProgress()` to confirm the
+  `needsUserActivation` tag survives being caught and re-thrown at each
+  layer (each layer passes the original error object through rather than
+  wrapping it in a new one, which is what makes this work).
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  (the same four pre-existing missing IDs remain; no new ones were
+  introduced), and that `<section>` tag counts remain balanced after
+  adding the new Render later / Start final rendering buttons.
+- Live testing was **not** performed — no browser available in this
+  environment to confirm real Chrome autoplay-policy behavior, whether
+  six seconds is a reasonable pause duration in practice, or whether
+  "Start final rendering" actually succeeds where automatic rendering
+  failed.
+
+## Two Confirmed Bugs From Real Testing - Fixed
+
+Real testing showed the render step failing again with the old, generic
+"could not be completed" message — not the new "Start final rendering"
+retry path from the previous pass — and, separately, focus jumping back
+to the very top of the page after running deeper AI analysis.
+
+**Render still fell back to a dead end.** The previous pass only offered
+the direct-retry path when the specific error was a `NotAllowedError`.
+Real testing shows the render can fail for other reasons too (possibly
+`AbortError` from an interrupted `play()`, or something else in browser
+media setup) — reasons that were never confirmed, only inferred, since
+this environment has no browser to reproduce them in. Rather than keep
+guessing at the exact error name, the fix was broadened: **any**
+render-accessible-video failure now offers the same direct "Start final
+rendering" retry, with the real error message included rather than a
+generic one, instead of only the one specific case detected before. A
+`console.error` was also added logging the real underlying error, so the
+exact cause is directly observable next time instead of inferred.
+
+**Focus jumping to the top of the page — root cause found and fixed.**
+`runDeepAnalysis()` in `js/advanced-analysis.js` never moved focus
+anywhere after finishing: it rewrites a large section of the page
+(`render()` replaces the analysis output's entire `innerHTML`) while
+focus stayed wherever it happened to be — on the "Run deeper AI analysis"
+button. A screen reader encountering a large, unmanaged DOM rewrite like
+that can lose its place and restart reading from the top of the page,
+which is what the transcript showed. Focus now moves explicitly to the
+status message when analysis finishes (success, failure, or
+unavailable), which is the standard fix for this class of problem —
+anchoring focus to something meaningful stops the reader from having
+nowhere reliable to land.
+
+### Testing performed
+
+- `node --check` on every JavaScript file (all pass).
+- Manually traced a constructed non-`NotAllowedError` render failure
+  through `failProgress()` to confirm it now reaches the direct-retry
+  path with the real error message included, not the old generic
+  "accessibility plan paused" dead end.
+- Manually confirmed `advanced-analysis-status` has `tabindex="-1"` and is
+  the target of `.focus()` on every exit path of `runDeepAnalysis()`
+  (success, failure, and the unavailable-capability early return).
+- Confirmed every `getElementById` reference from `app.js` still resolves
+  (the same four pre-existing missing IDs remain; no new ones were
+  introduced).
+- Live testing was **not** performed — this environment has no browser,
+  so the exact original error behind the render failure was not
+  confirmed, only made survivable regardless of what it turns out to be;
+  and the focus fix could not be re-verified against real JAWS.
+
 ## Remaining Roadmap
 
-### Phase 32 - Automated Playback Quality Assurance
+### Phase 33 - Automated Playback Quality Assurance
 
 Inspect completed media playback, caption timing, track availability, audio-description placement, packaging integrity, and delivery behavior with repeatable diagnostics before release.
 
 ## Next Development Phase
 
-Phase 32 - Automated Playback Quality Assurance.
+Phase 33 - Automated Playback Quality Assurance.
+
+## Next Development Priorities
+
+The current assignment's priority is completing the real, end-to-end "Make
+this video accessible" workflow — provider health and fallback, transcript
+validation, and the assistant-first interface. Audio and document work are
+explicitly not started; they are next, in this order:
+
+**Next: Audio Accessibility**
+
+- Transcribe audio
+- Speaker identification
+- Timestamped transcript
+- Meaningful sound notation
+- Summary and meeting notes
+- Audio cleanup and normalization
+- Caption generation when appropriate
+
+**After audio: Document Accessibility**
+
+- Detect scanned versus tagged documents
+- OCR
+- Reading order
+- Headings, lists, tables
+- Language, title, bookmarks
+- Decorative versus meaningful graphics
+- Alternative text drafting
+- Form-field detection, accessible labels, tab order
+- Fillable PDF creation
+- Human review for low-confidence structure
+- Accessible output and remediation report
+
+
+# Long-Term Vision
+
+The Media Workflow Assistant is the first implementation of a broader Open Door Design vision: an Intelligent Accessibility Assistant.
+
+The long-term objective is to allow users to describe an accessibility goal in plain language while the application determines the appropriate workflow, coordinates the required technologies, selects the most appropriate AI providers, and produces the most accessible result possible. Users should not need to understand AI providers, accessibility techniques, or processing pipelines. The assistant should automate repetitive work and involve the user only when human judgment is required.
+
+## Future Accessibility Goals
+
+Examples of future capabilities include:
+
+- Upload a video and say "Make this video accessible."
+  - Analyze media
+  - Generate transcripts
+  - Create synchronized captions
+  - Detect speakers
+  - Draft audio descriptions
+  - Generate narration
+  - Produce an accessible video
+  - Create a publication package
+  - Perform a final accessibility review
+
+- Upload an audio recording and say "Transcribe this interview."
+  - Speaker identification
+  - Timestamped transcript
+  - Confidence review
+  - Multiple export formats
+
+- Upload an image and say "Describe this image."
+  - Draft alternative text
+  - Detect decorative versus meaningful images
+  - OCR embedded text
+  - Offer extended descriptions when appropriate
+
+- Upload a scanned PDF and say "Make this document accessible."
+  - OCR scanned pages
+  - Build or repair the tag tree
+  - Detect headings, lists, tables, reading order, language, and document title
+  - Distinguish decorative images from meaningful images
+  - Draft alternative text
+  - Detect and repair bookmarks
+  - Produce an accessibility report
+  - Preserve the original document
+
+- Upload a PDF form and say "Make this form fillable."
+  - Detect likely form fields
+  - Create accessible controls
+  - Associate labels
+  - Preserve logical tab order
+  - Identify areas requiring human review
+
+- Upload a Word, PowerPoint, Excel, EPUB, or PDF document and say "Make this accessible."
+  - Detect accessibility issues
+  - Apply high-confidence corrections automatically
+  - Explain suggested corrections
+  - Preserve document appearance
+  - Produce remediation reports
+
+- Enter a website address and say "Evaluate this website."
+  - Crawl pages
+  - Group WCAG findings
+  - Recommend remediation
+  - Generate VPAT-ready evidence
+  - Track improvements over time
+
+## Design Philosophy
+
+The objective is not to replace accessibility professionals. The objective is to eliminate repetitive work so specialists can focus on review, quality, and informed decision-making.
+
+The assistant should always distinguish between:
+
+- High-confidence automatic corrections
+- Suggested corrections requiring human review
+- Decisions that should remain under human control
+
+Every future enhancement should support one guiding principle:
+
+Does this help someone accomplish an accessibility goal with less technical knowledge and less repetitive work?
+
+
+## Core Interaction Model (Project Direction)
+
+The primary user interaction with the Intelligent Accessibility Assistant is an editable combo box driven by natural language.
+
+The assistant should inspect the supplied content first and propose the most likely accessibility goal.
+
+Examples
+
+Video
+Default:
+- Make this video accessible
+
+Suggestions:
+- Make this video accessible
+- Transcribe this video
+- Create captions
+- Generate audio descriptions
+- Extract the audio
+- Compress this video
+
+Audio
+Default:
+- Transcribe this audio
+
+Scanned PDF
+Default:
+- Make this PDF accessible
+
+Website
+Default:
+- Evaluate this website
+
+Design Principles
+
+- The control MUST be an editable combo box, not a restricted drop-down.
+- Suggestions are recommendations, never limitations.
+- Users may accept the suggestion, choose another suggestion, or type any request in plain language.
+- The assistant is responsible for interpreting the request, selecting workflows, choosing healthy providers, and coordinating execution.
+- Users should never need to understand workflow names, AI providers, or internal architecture.
+- Suggestions should adapt to the supplied content and eventually learn from previous usage.

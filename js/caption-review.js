@@ -63,6 +63,32 @@
     };
   }
 
+  // Automatically fixes the timing problems that are mechanically fixable — cues extending past
+  // the media's real duration, and cues overlapping the previous one — rather than handing the
+  // person dozens of invalid cues to repair by hand. Only a cue with no parseable timing at all is
+  // dropped, since there is no time data to repair it from.
+  function repair(cues, durationSeconds) {
+    const duration = Number(durationSeconds) > 0 ? Number(durationSeconds) : null;
+    const removed = [];
+    let previousEnd = 0;
+    const repaired = cues
+      .map((cue, index) => {
+        let start = timestampToSeconds(cue.start);
+        let end = timestampToSeconds(cue.end);
+        if (start === null || end === null) { removed.push(index + 1); return null; }
+        if (end <= start) end = start + 1;
+        if (start < previousEnd) start = previousEnd;
+        if (end <= start) end = start + 1;
+        if (duration !== null && start > duration) { removed.push(index + 1); return null; }
+        if (duration !== null && end > duration) end = duration;
+        if (end <= start) { removed.push(index + 1); return null; }
+        previousEnd = end;
+        return { ...cue, start: secondsToTimestamp(start), end: secondsToTimestamp(end) };
+      })
+      .filter(Boolean);
+    return { cues: repaired, removedCount: removed.length };
+  }
+
   function validate(cues, durationSeconds) {
     const errors = [];
     let previousEnd = -1;
@@ -89,5 +115,5 @@
     return `${lines.join('\n')}\n`;
   }
 
-  window.CaptionReview = { build, validate, toWebVtt, timestampToSeconds, secondsToTimestamp };
+  window.CaptionReview = { build, validate, repair, toWebVtt, timestampToSeconds, secondsToTimestamp };
 })();

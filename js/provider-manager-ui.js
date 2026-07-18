@@ -18,7 +18,16 @@
     byId('whisper-endpoint').value = local.whisperEndpoint || 'http://localhost:9000/transcribe'; byId('whisper-model').value = local.whisperModel || 'base';
     byId('local-configuration-status').textContent = `${local.ollamaAvailable ? 'Ollama available.' : 'Ollama not detected.'} ${local.whisperAvailable ? 'Local Whisper available.' : 'Local Whisper not detected.'}`;
     renderAzure();
-    const configured = [openai.hasApiKey, window.AzureOpenAIProvider.getConfiguration().hasApiKey, gemini.hasApiKey, anthropic.hasApiKey, local.ollamaAvailable || local.whisperAvailable].filter(Boolean).length;
+    const shared = window.ODDSharedServices ? window.ODDSharedServices.getConfiguration() : { hasAzureSpeech: false, hasAzureVision: false };
+    const configured = [
+      openai.hasApiKey,
+      window.AzureOpenAIProvider.getConfiguration().hasApiKey,
+      gemini.hasApiKey,
+      anthropic.hasApiKey,
+      local.ollamaAvailable || local.whisperAvailable,
+      shared.hasAzureSpeech,
+      shared.hasAzureVision
+    ].filter(Boolean).length;
     byId('provider-manager-summary').textContent = `${configured} provider group${configured === 1 ? '' : 's'} configured. Keys remain encrypted in this browser profile and are not included in project exports.`;
   }
 
@@ -44,6 +53,7 @@
   byId('test-whisper-provider').addEventListener('click', async () => { try { await saveLocal(); const result = await window.LocalServiceProvider.testWhisper(); setStatus(result.message); render(); } catch (error) { setStatus(`Local Whisper was not detected. ${error.message}`); } });
   byId('clear-local-provider').addEventListener('click', async () => { await window.LocalServiceProvider.clear(); setStatus('Local service settings cleared.'); render(); });
   document.addEventListener('provider-credentials-ready', render);
+  document.addEventListener('shared-services-updated', render);
   document.addEventListener('DOMContentLoaded', render);
   window.ProviderManagerUI = { render };
 })();

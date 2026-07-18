@@ -5,6 +5,34 @@
     const describedAudio = findArtifact(artifacts, (item) => item.mimeType === 'audio/wav' || /described-audio\.wav$/i.test(item.name));
     if (!captions || !captions.content) throw new Error('Create and review WebVTT captions before rendering the publication export.');
     if (!describedAudio || !describedAudio.url) throw new Error('Create the described-audio mix before rendering the publication export.');
+
+    if (window.LocalProduction) {
+      try {
+        const health = await window.LocalProduction.checkHealth();
+        if (health.helperRunning && health.ffmpeg && health.ffmpeg.found) {
+          if (onProgress) onProgress({ progress: 10, message: 'Rendering locally with FFmpeg.' });
+          const describedAudioBlob = await (await fetch(describedAudio.url)).blob();
+          const result = await window.LocalProduction.renderAccessibleVideo({
+            videoFile: sourceFile,
+            describedAudioBlob,
+            captionsText: captions.content,
+            keepOriginalAudio: true,
+            outputName: `${safeBase(sourceFile.name)}-accessible`,
+            onProgress: (update) => { if (onProgress) onProgress({ progress: 60, message: update.message || 'Rendering.' }); }
+          });
+          if (onProgress) onProgress({ progress: 95, message: 'Downloading the rendered video from the local production helper.' });
+          const videoResponse = await fetch(result.downloadUrl);
+          const videoBlob = await videoResponse.blob();
+          if (!videoBlob.size) throw new Error('The local production helper did not return a usable video file.');
+          return buildOutputs(sourceFile.name, videoBlob, captions.content, options, 'mp4');
+        }
+      } catch (error) {
+        // Local rendering is a preferred path, not the only path. Fall through to the existing
+        // browser-only rendering below rather than failing the whole workflow.
+        if (onProgress) onProgress({ progress: 10, message: `Local rendering was not used (${error.message}). Trying browser-based rendering instead.` });
+      }
+    }
+
     if (!window.MediaRecorder) throw new Error('This browser does not support local video rendering with MediaRecorder.');
 
     const mimeType = chooseMimeType();
@@ -51,10 +79,20 @@
       };
       if (signal) signal.addEventListener('abort', cancel, { once: true });
       recorder.start(1000);
-      await context.resume();
-      video.currentTime = 0; audio.currentTime = 0;
-      if (onProgress) onProgress({ progress: 10, message: 'Started local accessible-video rendering.' });
-      await Promise.all([video.play(), audio.play()]);
+      try {
+        await context.resume();
+        video.currentTime = 0; audio.currentTime = 0;
+        if (onProgress) onProgress({ progress: 10, message: 'Started local accessible-video rendering.' });
+        await Promise.all([video.play(), audio.play()]);
+      } catch (error) {
+        console.error('[render] playback/audio-context setup failed:', error);
+        if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
+          const activationError = new Error('Final browser rendering requires one activation.');
+          activationError.needsUserActivation = true;
+          throw activationError;
+        }
+        throw error;
+      }
       await monitor(video, recorder, signal, onProgress);
       audio.pause();
       if (recorder.state !== 'inactive') recorder.stop();
@@ -72,9 +110,9 @@
     }
   }
 
-  function buildOutputs(sourceName, videoBlob, captionsText, options) {
+  function buildOutputs(sourceName, videoBlob, captionsText, options, extension) {
     const base = safeBase(sourceName);
-    const videoName = `${base}-accessible.webm`;
+    const videoName = `${base}-accessible.${extension || 'webm'}`;
     const captionsName = `${base}-captions.vtt`;
     const playerName = 'index.html';
     const manifestName = 'publication-manifest.json';
@@ -121,9 +159,11 @@
         { name: validationName, data: validationBytes }
       ]);
       const zipBlob = new Blob([zipBytes], { type: 'application/zip' });
+      const isMp4 = /\.mp4$/i.test(videoName);
+      const producedBy = isMp4 ? 'Locally rendered with FFmpeg' : 'A locally rendered WebM';
       return [
-        { name: videoName, type: 'Accessible publication video', mimeType: videoBlob.type || 'video/webm', description: 'A locally rendered WebM containing the original picture and approved described-audio soundtrack.', url: URL.createObjectURL(videoBlob), size: videoBlob.size },
-        { name: `${base}-publication.zip`, type: 'Publication-ready accessible video package', mimeType: 'application/zip', description: 'A portable package containing the accessible WebM, selectable WebVTT captions, an accessible HTML player, manifest, and validation checklist.', url: URL.createObjectURL(zipBlob), size: zipBlob.size },
+        { name: videoName, type: 'Accessible publication video', mimeType: videoBlob.type || (isMp4 ? 'video/mp4' : 'video/webm'), description: `${producedBy} containing the original picture and approved described-audio soundtrack${isMp4 ? ', with the original audio and captions muxed in as selectable tracks' : ''}.`, url: URL.createObjectURL(videoBlob), size: videoBlob.size },
+        { name: `${base}-publication.zip`, type: 'Publication-ready accessible video package', mimeType: 'application/zip', description: `A portable package containing the accessible ${isMp4 ? 'MP4' : 'WebM'}, selectable WebVTT captions, an accessible HTML player, manifest, and validation checklist.`, url: URL.createObjectURL(zipBlob), size: zipBlob.size },
         { name: validationName, type: 'Publication validation checklist', mimeType: 'text/plain', description: 'A readable final playback and caption verification checklist.', content: validation }
       ];
     });
@@ -131,7 +171,8 @@
 
   function playerHtml(sourceName, videoName, captionsName, options) {
     const title = escapeHtml(options.title || `Accessible video: ${sourceName}`);
-    return `<!doctype html>\n<html lang="${escapeHtml(options.language || 'en')}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>${title}</title>\n<style>body{font-family:system-ui,sans-serif;max-width:70rem;margin:0 auto;padding:1rem;line-height:1.5}video{width:100%;height:auto;background:#000}video:focus{outline:3px solid currentColor;outline-offset:3px}</style>\n</head>\n<body>\n<main>\n<h1>${title}</h1>\n<video controls preload="metadata">\n<source src="${encodeURI(videoName)}" type="video/webm">\n<track kind="captions" src="${encodeURI(captionsName)}" srclang="${escapeHtml(options.language || 'en')}" label="${escapeHtml(options.captionLabel || 'English')}" default>\n<p>Your browser does not support HTML video. Download the video and caption files from this package.</p>\n</video>\n<p>This version includes an audio-described soundtrack. Captions can be turned on or off with the player's captions control.</p>\n</main>\n</body>\n</html>\n`;
+    const videoType = /\.mp4$/i.test(videoName) ? 'video/mp4' : 'video/webm';
+    return `<!doctype html>\n<html lang="${escapeHtml(options.language || 'en')}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>${title}</title>\n<style>body{font-family:system-ui,sans-serif;max-width:70rem;margin:0 auto;padding:1rem;line-height:1.5}video{width:100%;height:auto;background:#000}video:focus{outline:3px solid currentColor;outline-offset:3px}</style>\n</head>\n<body>\n<main>\n<h1>${title}</h1>\n<video controls preload="metadata">\n<source src="${encodeURI(videoName)}" type="${videoType}">\n<track kind="captions" src="${encodeURI(captionsName)}" srclang="${escapeHtml(options.language || 'en')}" label="${escapeHtml(options.captionLabel || 'English')}" default>\n<p>Your browser does not support HTML video. Download the video and caption files from this package.</p>\n</video>\n<p>This version includes an audio-described soundtrack. Captions can be turned on or off with the player's captions control.</p>\n</main>\n</body>\n</html>\n`;
   }
 
   function waitForMedia(element) {

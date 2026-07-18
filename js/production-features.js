@@ -6,7 +6,7 @@
   const TERMINAL = new Set(['completed', 'completed-with-warnings', 'failed', 'cancelled']);
   const RECOVERABLE = new Set(['queued', 'preparing', 'running', 'waiting-for-review', 'recovering', 'retrying', 'paused']);
   const transitions = {
-    ready:['queued','cancelled'], queued:['preparing','paused','cancelled'], preparing:['running','paused','failed','cancelled'],
+    ready:['queued','failed','cancelled'], queued:['preparing','failed','paused','cancelled'], preparing:['running','paused','failed','cancelled'],
     running:['waiting-for-review','paused','retrying','completed','completed-with-warnings','failed','cancelled'],
     'waiting-for-review':['queued','paused','cancelled'], paused:['queued','recovering','cancelled'], recovering:['queued','running','paused','failed','cancelled'],
     retrying:['queued','running','failed','cancelled'], failed:['retrying','queued','cancelled'], completed:[], 'completed-with-warnings':[], cancelled:[]
@@ -68,7 +68,7 @@
 
   function transition(job, next, detail) {
     const current = job.status || 'ready';
-    if (current !== next && !(transitions[current] || []).includes(next)) throw new Error(`Invalid job state transition from ${current} to ${next}.`);
+    if (current !== next && !['failed', 'cancelled'].includes(next) && !(transitions[current] || []).includes(next)) throw new Error(`Invalid job state transition from ${current} to ${next}.`);
     job.status = next; job.updatedAt = new Date();
     if (detail && detail.error) job.errorDetails = { message:detail.error.message || String(detail.error), at:now(), recoverable:Boolean(detail.recoverable) };
     saveJob(job); recordHistory(job, stateLabel(next), detail && detail.message); emit(`${job.intent ? job.intent.title : 'Job'} is ${stateLabel(next).toLowerCase()}.`); return job;

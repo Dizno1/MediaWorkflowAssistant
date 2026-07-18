@@ -172,7 +172,7 @@
     button.disabled = true;
     status.textContent = 'Building the publication package.';
     try {
-      const title = byId('publication-title').value.trim();
+      const title = byId('publication-title').value.trim() || project.name;
       const files = await packageFiles(project, title, selectedProfile, selectedTarget, lastValidation);
       const bytes = window.ZipBuilder.create(files);
       const blob = new Blob([bytes], { type: 'application/zip' });

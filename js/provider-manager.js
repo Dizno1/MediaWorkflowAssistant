@@ -7,7 +7,7 @@
       name: 'Browser Provider',
       kind: 'local browser',
       available: Boolean(browserProvider),
-      workflows: ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description', 'generate-alt-text'],
+      workflows: ['prepare-for-ai', 'accessibility-package', 'compress-video', 'extract-audio', 'create-transcript', 'create-captions', 'audio-description', 'generate-alt-text', 'render-accessible-video'],
       description: 'Runs file information, media conversion, and guided transcript, caption, and audio description workspaces directly in the browser.',
       unavailableReason: browserProvider ? '' : 'Browser provider failed to load.',
       instance: browserProvider

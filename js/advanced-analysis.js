@@ -69,6 +69,7 @@
     if (!context || !context.inspection) return;
     if (!window.AIProviderLayer || !window.AIProviderLayer.getExecutionNotice('advanced-accessibility-analysis').canRun) {
       status.textContent = 'Deeper AI analysis is unavailable. Add a supported service in Advanced assistance settings. The local quality analysis remains available.';
+      status.focus();
       return;
     }
     const guidance = window.AIProviderLayer.getExecutionNotice('advanced-accessibility-analysis');
@@ -81,7 +82,7 @@
       lastReport = merged; render(merged); status.textContent = `${result.providerName || 'The configured service'} completed the deeper analysis. Review the findings before publication.`;
       if (context.knowledge) { context.knowledge.analysis = context.knowledge.analysis || {}; context.knowledge.analysis.advancedAccessibility = merged; window.SharedKnowledge.save(context.knowledge); }
     } catch (error) { status.textContent = error.message; }
-    finally { button.disabled = false; }
+    finally { button.disabled = false; status.focus(); }
   }
 
   function normalizeProviderReport(result, fallback) {

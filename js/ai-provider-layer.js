@@ -36,6 +36,7 @@
       external: Boolean(provider.external),
       requiresConfirmation: Boolean(provider.requiresConfirmation || provider.external || provider.costCategory === 'may-charge' || provider.costCategory === 'unknown'),
       available: provider.isAvailable ? Boolean(provider.isAvailable()) : true,
+      health: typeof provider.health === 'function' ? (safeHealth(provider)) : { status: 'unknown', testedAt: '' },
       capabilities: Array.isArray(capabilities) ? capabilities.slice() : [],
       selected: provider.id === selectionMode
     };
@@ -58,9 +59,14 @@
       const selected = providers.get(selectionMode);
       if (supports(selected, capability)) return selected;
     }
-    return Array.from(providers.values())
-      .filter((provider) => supports(provider, capability))
-      .sort((a, b) => score(b, capability) - score(a, capability))[0] || null;
+    const candidates = Array.from(providers.values()).filter((provider) => supports(provider, capability));
+    // A provider whose most recent real test or real usage attempt failed must not win automatic
+    // selection over a healthy or untested alternative. If every compatible provider has failed
+    // health, none are silently retried automatically; the caller sees "no available method" and
+    // the person can re-test or manually select a specific provider to retry it.
+    const notFailed = candidates.filter((provider) => healthScore(provider) === 0);
+    const pool = notFailed.length ? notFailed : (candidates.length ? [] : candidates);
+    return pool.sort((a, b) => score(b, capability) - score(a, capability))[0] || null;
   }
 
   function getCapability(capability) {
@@ -104,9 +110,19 @@
     if (description.requiresConfirmation && !options.confirmed) {
       throw new Error('Review and confirm the privacy and cost notice before using this service.');
     }
-    const result = await provider.run(capability, sanitizeContext(context), options);
+    let result;
+    try {
+      result = await provider.run(capability, sanitizeContext(context), options);
+    } catch (error) {
+      if (error && error.name !== 'AbortError') { error.providerId = provider.id; error.providerName = provider.name; error.capability = capability; }
+      throw error;
+    }
     if (!result || typeof result !== 'object') throw new Error('The assistance service returned an invalid result.');
     return { ...result, providerId: provider.id, providerName: provider.name, capability, costCategory: description.costCategory, external: description.external };
+  }
+
+  function safeHealth(provider) {
+    try { return provider.health() || { status: 'unknown', testedAt: '' }; } catch (error) { return { status: 'unknown', testedAt: '' }; }
   }
 
   function score(provider, capability) {
@@ -114,7 +130,18 @@
     const privacy = provider.external ? 0 : 35;
     const cost = provider.costCategory === 'no-additional-cost' ? 30 : provider.costCategory === 'included' ? 20 : provider.costCategory === 'may-charge' ? -20 : -10;
     const preferred = provider.preferredCapabilities && provider.preferredCapabilities.includes(capability) ? 15 : 0;
-    return quality + privacy + cost + preferred;
+    const health = healthScore(provider);
+    return quality + privacy + cost + preferred + health;
+  }
+
+  // A provider that most recently failed a real connection test is scored below one that is
+  // known-working or untested, so a demonstrably broken credential does not keep winning
+  // automatic selection over a healthy alternative. Unknown/untested health has no effect.
+  function healthScore(provider) {
+    if (typeof provider.health !== 'function') return 0;
+    let info; try { info = provider.health(); } catch (error) { return 0; }
+    if (!info || info.status !== 'failed') return 0;
+    return -40;
   }
 
   function supports(provider, capability) {
@@ -157,6 +184,29 @@
     };
   }
 
+  // Provider response bodies are never safe to show verbatim: some providers echo back a
+  // masked fragment of the submitted credential in their own error text (for example,
+  // OpenAI's 401 body includes a truncated copy of the rejected key). Every adapter should
+  // call this instead of throwing `result.error.message` or similar raw provider text.
+  function plainLanguageError(providerLabel, status, kind) {
+    if (kind === 'network') return 'Network unavailable. Check the internet connection and try again.';
+    if (kind === 'config') return 'Configuration incomplete. Add the required settings in Provider Manager.';
+    if (kind === 'model') return `Unsupported model. ${providerLabel} did not accept the configured model.`;
+    if (kind === 'endpoint') return 'Invalid endpoint. Check the configured address in Provider Manager.';
+    if (status === 401 || status === 403) return 'Authentication failed. The saved credential was rejected.';
+    if (status === 429) return `${providerLabel} reported a rate limit or quota issue. Check the account usage and billing status.`;
+    if (status) return `${providerLabel} returned an error (HTTP ${status}). Try again, or check the configuration in Provider Manager.`;
+    return `${providerLabel} returned an unexpected error. Try again, or check the configuration in Provider Manager.`;
+  }
+
+  function getAlternative(capability, excludeProviderId) {
+    const excluded = Array.isArray(excludeProviderId) ? excludeProviderId : [excludeProviderId];
+    const alternative = Array.from(providers.values())
+      .filter((item) => !excluded.includes(item.id) && supports(item, capability))
+      .sort((a, b) => score(b, capability) - score(a, capability))[0];
+    return alternative ? describe(alternative) : null;
+  }
+
   function subscribe(listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -176,5 +226,5 @@
     } catch (error) { return 'automatic'; }
   }
 
-  window.AIProviderLayer = { register, unregister, list, select, getSelectionMode, getProviderFor, getCapability, getExecutionNotice, run, subscribe };
+  window.AIProviderLayer = { register, unregister, list, select, getSelectionMode, getProviderFor, getCapability, getExecutionNotice, getAlternative, plainLanguageError, run, subscribe };
 })();

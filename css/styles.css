@@ -83,22 +83,41 @@ main {
   padding: 1.25rem;
 }
 
+.panel > details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.25rem 0;
+}
+
+.panel > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel > details > summary::before {
+  content: "\25B8 ";
+}
+
+.panel > details[open] > summary::before {
+  content: "\25BE ";
+}
+
+.panel > details > summary h2 {
+  display: inline;
+}
+
 .drop-zone {
   align-items: center;
   border: 3px dashed var(--accent);
   border-radius: 1rem;
-  cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  justify-content: center;
-  min-height: 11rem;
-  padding: 2rem;
-  text-align: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 1.25rem;
 }
 
-.drop-zone strong {
-  font-size: 1.35rem;
+.drop-zone input[type="text"] {
+  flex: 1 1 16rem;
+  min-width: 0;
 }
 
 .drop-zone.is-dragging {
@@ -943,3 +962,10 @@ button:disabled:hover {
 }
 .shared-services-import h3 { margin-top: 0; }
 .shared-services-import input[type="file"] { max-width: 100%; }
+
+/* Phase 32 first-time setup and SharedServices discovery */
+.shared-services-import h4 { margin-bottom: .4rem; }
+.shared-services-import code { overflow-wrap: anywhere; }
+.shared-services-import details { margin-block: 1rem; }
+.shared-services-import .technical-provider-tools { border-top: 1px solid currentColor; padding-top: .75rem; }
+#shared-services-status:not(:empty) { border-left: .35rem solid currentColor; margin-top: 1rem; padding: .65rem .8rem; }

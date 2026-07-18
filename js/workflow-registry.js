@@ -174,7 +174,7 @@
       mediaTypes: ['video', 'audio', 'image', 'document', 'archive', 'unknown'],
       requirements: [],
       outputs: ['accessibility package ZIP', 'readable manifest'],
-      steps: ['Collect Shared Knowledge', 'Collect available outputs', 'Write the package manifest', 'Create the ZIP package', 'Register the package']
+      steps: ['Collect what has been learned about this source', 'Collect available outputs', 'Write the package manifest', 'Create the ZIP package', 'Register the package']
     },
     {
       id: 'prepare-for-ai',
