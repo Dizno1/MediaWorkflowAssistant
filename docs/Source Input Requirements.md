@@ -1,6 +1,6 @@
 Source Input Requirements
 
-The Media Workflow Assistant must eventually accept content from two source types.
+The Open Door Accessible Assistant must eventually accept content from two source types.
 
 Local file
 

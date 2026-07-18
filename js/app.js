@@ -1731,7 +1731,7 @@
     narrationPreviewStatus.textContent = `Creating a sample of the ${resolved.style.label} narration style.`;
     try {
       const result = await window.AIProviderLayer.run('narration-audio', {
-        narrationCues: [{ text: `Welcome to the Media Workflow Assistant. This is a sample of the ${resolved.style.label} narration style.` }],
+        narrationCues: [{ text: `Welcome to the Open Door Accessible Assistant. This is a sample of the ${resolved.style.label} narration style.` }],
         narrationVoice: resolved.voice,
         narrationSpeed: Number(narrationSpeedInput.value) || 1
       }, { confirmed: approval.confirmed });

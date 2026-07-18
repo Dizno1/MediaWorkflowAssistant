@@ -1,4 +1,4 @@
-# MediaWorkflowAssistant
+# OpenDoorAccessibleAssistant
 
 An accessibility-first media workflow application that analyzes media and helps users accomplish captioning, transcription, audio description, compression, conversion, and AI preparation through goal-oriented workflows.
 
@@ -2069,7 +2069,7 @@ explicitly not started; they are next, in this order:
 
 # Long-Term Vision
 
-The Media Workflow Assistant is the first implementation of a broader Open Door Design vision: an Intelligent Accessibility Assistant.
+The Open Door Accessible Assistant is the first implementation of a broader Open Door Design vision: an Open Door Accessible Assistant.
 
 The long-term objective is to allow users to describe an accessibility goal in plain language while the application determines the appropriate workflow, coordinates the required technologies, selects the most appropriate AI providers, and produces the most accessible result possible. Users should not need to understand AI providers, accessibility techniques, or processing pipelines. The assistant should automate repetitive work and involve the user only when human judgment is required.
 
@@ -2148,7 +2148,7 @@ Does this help someone accomplish an accessibility goal with less technical know
 
 ## Core Interaction Model (Project Direction)
 
-The primary user interaction with the Intelligent Accessibility Assistant is an editable combo box driven by natural language.
+The primary user interaction with the Open Door Accessible Assistant is an editable combo box driven by natural language.
 
 The assistant should inspect the supplied content first and propose the most likely accessibility goal.
 

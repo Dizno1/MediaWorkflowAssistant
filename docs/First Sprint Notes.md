@@ -2,7 +2,7 @@
 
 ## Objective
 
-Create the first working Media Workflow Assistant shell.
+Create the first working Open Door Accessible Assistant shell.
 
 ## Completed
 

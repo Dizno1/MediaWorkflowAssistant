@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Media Workflow Assistant - Local Production Helper
+Open Door Accessible Assistant - Local Production Helper
 
 Runs on the person's own computer, alongside the browser application. It
 detects an existing FFmpeg/FFprobe installation and performs local video
@@ -319,7 +319,7 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 def main():
     detect_runtimes()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"Media Workflow Assistant local production helper running at http://{HOST}:{PORT}")
+    print(f"Open Door Accessible Assistant local production helper running at http://{HOST}:{PORT}")
     print(f"FFmpeg: {'found at ' + STATE['ffmpeg']['path'] if STATE['ffmpeg']['found'] else 'not found'}")
     print(f"FFprobe: {'found at ' + STATE['ffprobe']['path'] if STATE['ffprobe']['found'] else 'not found'}")
     print("This only accepts connections from this computer. Press Ctrl+C to stop.")
